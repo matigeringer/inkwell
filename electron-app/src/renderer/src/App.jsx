@@ -1,33 +1,36 @@
-import Versions from './components/Versions'
-import electronLogo from './assets/electron.svg'
-
 function App() {
-  const ipcHandle = () => window.electron.ipcRenderer.send('ping')
+  const handleCreate = () => {
+    // Action handler placeholder for future functionality
+    console.log('Crear clickeado')
+  }
 
   return (
-    <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-      </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
-            Documentation
-          </a>
+    <div className="app-container">
+      <aside className="sidebar">
+        <div className="brand-section">
+          <h1 className="app-title">Fountain</h1>
         </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
-          </a>
-        </div>
-      </div>
-      <Versions></Versions>
-    </>
+      </aside>
+
+      <main className="main-content">
+        <button className="btn-create" onClick={handleCreate} type="button">
+          <span className="btn-icon">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+          </span>
+          <span>Crear</span>
+        </button>
+      </main>
+    </div>
   )
 }
 
