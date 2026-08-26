@@ -1,5 +1,6 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { join, basename } from 'path'
+import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
@@ -51,6 +52,73 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on('ping', () => console.log('pong'))
+
+  // Manejadores IPC para guardar archivos Markdown
+  ipcMain.handle('file:save', async (event, { content, filePath, defaultName } = {}) => {
+    try {
+      let targetPath = filePath
+      if (!targetPath) {
+        const win = BrowserWindow.fromWebContents(event.sender)
+        const result = await dialog.showSaveDialog(win, {
+          title: 'Guardar documento Markdown',
+          defaultPath: defaultName || 'documento.md',
+          filters: [
+            { name: 'Markdown (*.md)', extensions: ['md', 'markdown'] },
+            { name: 'Todos los archivos (*.*)', extensions: ['*'] }
+          ]
+        })
+
+        if (result.canceled || !result.filePath) {
+          return { canceled: true }
+        }
+        targetPath = result.filePath
+      }
+
+      await fs.writeFile(targetPath, content ?? '', 'utf-8')
+      return {
+        success: true,
+        filePath: targetPath,
+        fileName: basename(targetPath)
+      }
+    } catch (error) {
+      console.error('Error al guardar archivo:', error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  })
+
+  ipcMain.handle('file:save-as', async (event, { content, defaultName } = {}) => {
+    try {
+      const win = BrowserWindow.fromWebContents(event.sender)
+      const result = await dialog.showSaveDialog(win, {
+        title: 'Guardar documento Markdown como...',
+        defaultPath: defaultName || 'documento.md',
+        filters: [
+          { name: 'Markdown (*.md)', extensions: ['md', 'markdown'] },
+          { name: 'Todos los archivos (*.*)', extensions: ['*'] }
+        ]
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { canceled: true }
+      }
+
+      await fs.writeFile(result.filePath, content ?? '', 'utf-8')
+      return {
+        success: true,
+        filePath: result.filePath,
+        fileName: basename(result.filePath)
+      }
+    } catch (error) {
+      console.error('Error al guardar archivo como:', error)
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+  })
 
   createWindow()
 
