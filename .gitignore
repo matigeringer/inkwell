@@ -1,0 +1,69 @@
+# Dependencies
+node_modules/
+jspm_packages/
+web_modules/
+.pnp
+.pnp.js
+
+# Build outputs & Bundles
+dist/
+out/
+release/
+*.exe
+*.dmg
+*.AppImage
+*.deb
+*.snap
+*.rpm
+*.zip
+*.tar.gz
+
+# Electron & Vite build caches / outputs
+dist-electron/
+dist-ssr/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables & secrets
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+!.env.example
+
+# Linters & Cache
+.eslintcache
+.cache/
+.parcel-cache/
+.turbo/
+.vite/
+*.tsbuildinfo
+
+# OS metadata & temporary files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+*.tmp
+*.temp
+
+# IDEs and Editors
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
