@@ -1,25 +1,101 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useEditor, EditorContent } from '@tiptap/react'
+import StarterKit from '@tiptap/starter-kit'
+import { Markdown } from 'tiptap-markdown'
+import Placeholder from '@tiptap/extension-placeholder'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import Link from '@tiptap/extension-link'
 
 export default function Editor({ initialDoc, onBack }) {
-  const [content, setContent] = useState(initialDoc?.content || '')
   const [filePath, setFilePath] = useState(initialDoc?.filePath || null)
   const [fileName, setFileName] = useState(initialDoc?.fileName || 'documento.md')
   const [saveStatus, setSaveStatus] = useState('unsaved') // 'unsaved' | 'saving' | 'saved' | 'error'
   const [errorMessage, setErrorMessage] = useState('')
-  const textareaRef = useRef(null)
+  const [, setTick] = useState(0) // Forzar re-render en cambios para estadísticas
 
-  // Enfocar el área de texto al montar
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus()
+  const editor = useEditor({
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3, 4, 5, 6]
+        },
+        codeBlock: {
+          HTMLAttributes: {
+            class: 'fountain-code-block'
+          }
+        },
+        bulletList: {
+          HTMLAttributes: {
+            class: 'fountain-bullet-list'
+          }
+        },
+        orderedList: {
+          HTMLAttributes: {
+            class: 'fountain-ordered-list'
+          }
+        },
+        blockquote: {
+          HTMLAttributes: {
+            class: 'fountain-blockquote'
+          }
+        },
+        horizontalRule: {
+          HTMLAttributes: {
+            class: 'fountain-hr'
+          }
+        }
+      }),
+      Markdown.configure({
+        html: false,
+        tightLists: true,
+        tightListClass: 'tight',
+        bulletListMarker: '-',
+        linkify: true,
+        breaks: false,
+        transformPastedText: true,
+        transformCopiedText: true
+      }),
+      Placeholder.configure({
+        placeholder: 'Empezá a escribir o usá Markdown (# Título, **negrita**, - lista, > cita)...'
+      }),
+      TaskList.configure({
+        HTMLAttributes: {
+          class: 'fountain-task-list'
+        }
+      }),
+      TaskItem.configure({
+        nested: true,
+        HTMLAttributes: {
+          class: 'fountain-task-item'
+        }
+      }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        HTMLAttributes: {
+          class: 'fountain-link'
+        }
+      })
+    ],
+    content: initialDoc?.content || '',
+    autofocus: 'end',
+    editorProps: {
+      attributes: {
+        class: 'fountain-editor-content'
+      }
+    },
+    onUpdate: () => {
+      setSaveStatus('unsaved')
+      setTick((t) => t + 1)
     }
-  }, [])
+  })
 
-  // Manejar cambios en el texto
-  const handleChange = (e) => {
-    setContent(e.target.value)
-    setSaveStatus('unsaved')
-  }
+  // Obtener contenido en formato Markdown
+  const getMarkdownContent = useCallback(() => {
+    if (!editor) return initialDoc?.content || ''
+    return editor.storage.markdown.getMarkdown()
+  }, [editor, initialDoc?.content])
 
   // Guardar archivo (normal o si es nuevo abre diálogo)
   const handleSave = useCallback(async () => {
@@ -32,8 +108,10 @@ export default function Editor({ initialDoc, onBack }) {
       setSaveStatus('saving')
       setErrorMessage('')
 
+      const markdownContent = getMarkdownContent()
+
       const res = await window.api.saveFile({
-        content,
+        content: markdownContent,
         filePath,
         defaultName: fileName
       })
@@ -55,7 +133,7 @@ export default function Editor({ initialDoc, onBack }) {
       setSaveStatus('error')
       setErrorMessage(err.message || 'Error inesperado al guardar')
     }
-  }, [content, filePath, fileName])
+  }, [getMarkdownContent, filePath, fileName])
 
   // Guardar como (siempre abre diálogo nativo)
   const handleSaveAs = useCallback(async () => {
@@ -65,8 +143,10 @@ export default function Editor({ initialDoc, onBack }) {
       setSaveStatus('saving')
       setErrorMessage('')
 
+      const markdownContent = getMarkdownContent()
+
       const res = await window.api.saveFileAs({
-        content,
+        content: markdownContent,
         defaultName: fileName
       })
 
@@ -87,7 +167,7 @@ export default function Editor({ initialDoc, onBack }) {
       setSaveStatus('error')
       setErrorMessage(err.message || 'Error inesperado al guardar')
     }
-  }, [content, fileName, filePath])
+  }, [getMarkdownContent, fileName, filePath])
 
   // Atajos de teclado (Ctrl+S / Cmd+S)
   useEffect(() => {
@@ -102,32 +182,17 @@ export default function Editor({ initialDoc, onBack }) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleSave])
 
-  // Soporte de tecla Tab dentro del textarea
-  const handleKeyDownTextarea = (e) => {
-    if (e.key === 'Tab') {
-      e.preventDefault()
-      const textarea = textareaRef.current
-      if (!textarea) return
-
-      const start = textarea.selectionStart
-      const end = textarea.selectionEnd
-
-      // Insertar 2 espacios para sangría
-      const tabSpaces = '  '
-      const newContent = content.substring(0, start) + tabSpaces + content.substring(end)
-      setContent(newContent)
-      setSaveStatus('unsaved')
-
-      // Mover el cursor después de los espacios insertados
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + tabSpaces.length
-      }, 0)
+  // Enfocar al hacer click en el lienzo fuera del texto
+  const handleCanvasClick = (e) => {
+    if (e.target === e.currentTarget && editor) {
+      editor.commands.focus('end')
     }
   }
 
   // Cálculos estadísticos para escritores
-  const words = content.trim() ? content.trim().split(/\s+/).length : 0
-  const characters = content.length
+  const plainText = editor ? editor.getText() : ''
+  const words = plainText.trim() ? plainText.trim().split(/\s+/).filter(Boolean).length : 0
+  const characters = plainText.length
   const readingTime = Math.max(1, Math.ceil(words / 200))
 
   return (
@@ -203,18 +268,10 @@ export default function Editor({ initialDoc, onBack }) {
         </div>
       </header>
 
-      {/* Lienzo de escritura centralizado */}
-      <main className="editor-main">
-        <div className="editor-canvas">
-          <textarea
-            ref={textareaRef}
-            className="markdown-textarea"
-            value={content}
-            onChange={handleChange}
-            onKeyDown={handleKeyDownTextarea}
-            placeholder="# Empezá a escribir tu texto en Markdown acá..."
-            spellCheck="true"
-          />
+      {/* Lienzo de escritura WYSIWYG centralizado */}
+      <main className="editor-main" onClick={handleCanvasClick}>
+        <div className="editor-canvas" onClick={handleCanvasClick}>
+          <EditorContent editor={editor} className="tiptap-wrapper" />
         </div>
       </main>
 
