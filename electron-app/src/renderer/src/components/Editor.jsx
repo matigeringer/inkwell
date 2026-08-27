@@ -6,12 +6,14 @@ import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Link from '@tiptap/extension-link'
+import { ArrowLeftIcon, SaveIcon, SaveAsIcon, SettingsIcon, ZenFocusIcon } from './Icons'
 
-export default function Editor({ initialDoc, onBack }) {
+export default function Editor({ initialDoc, onBack, onOpenProfile }) {
   const [filePath, setFilePath] = useState(initialDoc?.filePath || null)
   const [fileName, setFileName] = useState(initialDoc?.fileName || 'documento.md')
   const [saveStatus, setSaveStatus] = useState('unsaved') // 'unsaved' | 'saving' | 'saved' | 'error'
   const [errorMessage, setErrorMessage] = useState('')
+  const [isZenMode, setIsZenMode] = useState(false)
   const [, setTick] = useState(0) // Forzar re-render en cambios para estadísticas
 
   const editor = useEditor({
@@ -57,7 +59,8 @@ export default function Editor({ initialDoc, onBack }) {
         transformCopiedText: true
       }),
       Placeholder.configure({
-        placeholder: 'Empezá a escribir o usá Markdown (# Título, **negrita**, - lista, > cita)...'
+        placeholder:
+          'Empezá a escribir tu manuscrito o usá Markdown (# Título, *cursiva*, **negrita**, > cita)...'
       }),
       TaskList.configure({
         HTMLAttributes: {
@@ -196,33 +199,28 @@ export default function Editor({ initialDoc, onBack }) {
   const readingTime = Math.max(1, Math.ceil(words / 200))
 
   return (
-    <div className="editor-view">
+    <div className={`editor-view ${isZenMode ? 'zen-mode-active' : ''}`}>
       {/* Barra superior de herramientas y estado */}
       <header className="editor-header">
         <div className="header-left">
-          <button className="btn-icon-text" onClick={onBack} title="Volver a la pantalla de inicio">
-            <svg
-              className="icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="19" y1="12" x2="5" y2="12" />
-              <polyline points="12 19 5 12 12 5" />
-            </svg>
+          <button
+            className="btn-header-back"
+            onClick={onBack}
+            title="Volver a la pantalla de inicio"
+            aria-label="Volver a inicio"
+          >
+            <ArrowLeftIcon size={17} />
             <span>Inicio</span>
           </button>
 
-          <div className="file-info">
-            <span className="file-name" title={filePath || fileName}>
+          <div className="doc-meta-header">
+            <span className="doc-title-text" title={filePath || fileName}>
               {fileName}
             </span>
-            <div className={`status-badge status-${saveStatus}`}>
-              <span className="status-dot" />
-              <span className="status-label">
+            <span className="doc-meta-separator">•</span>
+            <div className={`doc-status status-${saveStatus}`}>
+              <span className="doc-status-dot" />
+              <span className="doc-status-label">
                 {saveStatus === 'saved' && 'Guardado'}
                 {saveStatus === 'unsaved' && 'Sin guardar'}
                 {saveStatus === 'saving' && 'Guardando...'}
@@ -236,32 +234,43 @@ export default function Editor({ initialDoc, onBack }) {
           {errorMessage && <span className="error-badge">{errorMessage}</span>}
 
           <button
-            className="btn-secondary"
+            className={`btn-icon-sober ${isZenMode ? 'active' : ''}`}
+            onClick={() => setIsZenMode(!isZenMode)}
+            title={isZenMode ? 'Salir del modo concentración' : 'Modo concentración (Zen)'}
+            aria-label="Modo concentración"
+          >
+            <ZenFocusIcon size={16} />
+          </button>
+
+          {onOpenProfile && (
+            <button
+              className="btn-icon-sober"
+              onClick={onOpenProfile}
+              title="Preferencias de lectura y tipografía"
+              aria-label="Preferencias"
+            >
+              <SettingsIcon size={16} />
+            </button>
+          )}
+
+          <div className="header-divider" />
+
+          <button
+            className="btn-sober-secondary"
             onClick={handleSaveAs}
             title="Guardar como una nueva copia"
           >
-            <span>Guardar como...</span>
+            <SaveAsIcon size={15} />
+            <span>Guardar como</span>
           </button>
 
           <button
-            className="btn-primary"
+            className="btn-sober-primary"
             onClick={handleSave}
             disabled={saveStatus === 'saving'}
             title="Guardar archivo (Ctrl+S)"
           >
-            <svg
-              className="icon"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" />
-              <polyline points="7 3 7 8 15 8" />
-            </svg>
+            <SaveIcon size={15} />
             <span>Guardar</span>
             <kbd className="shortcut-hint">Ctrl+S</kbd>
           </button>

@@ -4,6 +4,9 @@ import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 
+// Desactivar sandbox para entornos Linux con particiones montadas con nosuid
+app.commandLine.appendSwitch('no-sandbox')
+
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({

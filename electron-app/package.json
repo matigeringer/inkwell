@@ -8,8 +8,8 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
-    "start": "electron-vite preview",
-    "dev": "electron-vite dev",
+    "start": "electron-vite preview --noSandbox",
+    "dev": "electron-vite dev --noSandbox",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",

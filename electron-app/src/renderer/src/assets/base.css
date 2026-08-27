@@ -1,18 +1,105 @@
 :root {
-  --bg-primary: #000000;
-  --bg-sidebar: #09090b;
-  --border-color: #27272a;
-  --text-primary: #ffffff;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  /* Paleta Modo Claro (Parchment & Sumi Ink) */
+  --bg-canvas: #fbf9f5;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #f4efeb;
+  --bg-sidebar-hover: rgba(45, 35, 25, 0.05);
+  --bg-hover: rgba(45, 35, 25, 0.04);
+  --bg-active: rgba(45, 35, 25, 0.08);
+  --bg-card: #ffffff;
+  --bg-input: #faf7f2;
+  --bg-overlay: rgba(28, 25, 23, 0.4);
 
-  --btn-bg: #ffffff;
-  --btn-text: #000000;
-  --btn-bg-hover: #e4e4e7;
-  --btn-border: #ffffff;
+  --border-subtle: rgba(60, 50, 40, 0.08);
+  --border-medium: rgba(60, 50, 40, 0.16);
+  --border-focus: #2d5a47;
 
-  --font-sans:
-    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --text-primary: #1c1917;
+  --text-secondary: #57534e;
+  --text-muted: #8c867e;
+  --text-faint: #c4beb4;
+
+  --accent-primary: #2d5a47;
+  --accent-primary-hover: #234637;
+  --accent-primary-subtle: rgba(45, 90, 71, 0.09);
+  --accent-text: #ffffff;
+
+  --accent-secondary: #b8692a;
+  --accent-secondary-subtle: rgba(184, 105, 42, 0.12);
+
+  --btn-bg: #2d5a47;
+  --btn-text: #ffffff;
+  --btn-bg-hover: #234637;
+  --btn-border: #2d5a47;
+
+  --btn-secondary-bg: rgba(45, 35, 25, 0.04);
+  --btn-secondary-border: rgba(60, 50, 40, 0.12);
+  --btn-secondary-text: #44403c;
+  --btn-secondary-hover: rgba(45, 35, 25, 0.08);
+
+  --shadow-sm: 0 1px 3px rgba(45, 35, 25, 0.04), 0 1px 2px rgba(45, 35, 25, 0.02);
+  --shadow-md: 0 4px 16px rgba(45, 35, 25, 0.06), 0 1px 3px rgba(45, 35, 25, 0.04);
+  --shadow-lg: 0 16px 36px rgba(45, 35, 25, 0.09), 0 2px 6px rgba(45, 35, 25, 0.04);
+
+  /* Familias tipográficas */
+  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+  --font-editor: var(--font-serif);
+  --font-size-editor: 1.4rem;
+  --editor-max-width: 820px;
+
+  /* Compatibilidad con variables legacy */
+  --bg-primary: var(--bg-canvas);
+  --border-color: var(--border-subtle);
+  --font-sans: var(--font-ui);
+}
+
+[data-theme='dark'] {
+  /* Paleta Modo Oscuro (Obsidian & Velvet Ink) */
+  --bg-canvas: #131316;
+  --bg-surface: #1b1b20;
+  --bg-sidebar: #17171b;
+  --bg-sidebar-hover: rgba(245, 240, 230, 0.05);
+  --bg-hover: rgba(245, 240, 230, 0.05);
+  --bg-active: rgba(245, 240, 230, 0.09);
+  --bg-card: #1b1b20;
+  --bg-input: #151518;
+  --bg-overlay: rgba(0, 0, 0, 0.65);
+
+  --border-subtle: rgba(245, 240, 230, 0.07);
+  --border-medium: rgba(245, 240, 230, 0.14);
+  --border-focus: #5aa384;
+
+  --text-primary: #f5f2ec;
+  --text-secondary: #a8a29e;
+  --text-muted: #6c6762;
+  --text-faint: #44403c;
+
+  --accent-primary: #46846b;
+  --accent-primary-hover: #559b7e;
+  --accent-primary-subtle: rgba(70, 132, 107, 0.18);
+  --accent-text: #ffffff;
+
+  --accent-secondary: #dc8f43;
+  --accent-secondary-subtle: rgba(220, 143, 67, 0.16);
+
+  --btn-bg: #46846b;
+  --btn-text: #ffffff;
+  --btn-bg-hover: #559b7e;
+  --btn-border: #46846b;
+
+  --btn-secondary-bg: rgba(245, 240, 230, 0.04);
+  --btn-secondary-border: rgba(245, 240, 230, 0.1);
+  --btn-secondary-text: #d6d3d1;
+  --btn-secondary-hover: rgba(245, 240, 230, 0.08);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.6);
+
+  --bg-primary: var(--bg-canvas);
+  --border-color: var(--border-subtle);
 }
 
 *,
@@ -28,13 +115,16 @@ body {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background-color: var(--bg-primary);
+  background-color: var(--bg-canvas);
   color: var(--text-primary);
-  font-family: var(--font-sans);
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  font-family: var(--font-ui);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 #root {
