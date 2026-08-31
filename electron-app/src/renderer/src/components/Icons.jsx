@@ -372,3 +372,90 @@ export function ZenFocusIcon({ className = '', size = 18, ...props }) {
     </svg>
   )
 }
+
+export function MaximizeIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+    </svg>
+  )
+}
+
+export function MinimizeIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+    </svg>
+  )
+}
+
+export function KeyboardIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <rect x="2" y="4" width="20" height="16" rx="2" ry="2" />
+      <line x1="6" y1="8" x2="6" y2="8" strokeWidth="2.5" />
+      <line x1="10" y1="8" x2="10" y2="8" strokeWidth="2.5" />
+      <line x1="14" y1="8" x2="14" y2="8" strokeWidth="2.5" />
+      <line x1="18" y1="8" x2="18" y2="8" strokeWidth="2.5" />
+      <line x1="6" y1="12" x2="6" y2="12" strokeWidth="2.5" />
+      <line x1="10" y1="12" x2="10" y2="12" strokeWidth="2.5" />
+      <line x1="14" y1="12" x2="14" y2="12" strokeWidth="2.5" />
+      <line x1="18" y1="12" x2="18" y2="12" strokeWidth="2.5" />
+      <line x1="7" y1="16" x2="17" y2="16" />
+    </svg>
+  )
+}
+
+export function BarChartIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  )
+}

@@ -25,6 +25,15 @@ function createWindow() {
     mainWindow.show()
   })
 
+  // Sincronizar estado de pantalla completa con el renderer
+  mainWindow.on('enter-full-screen', () => {
+    mainWindow.webContents.send('window:fullscreen-changed', true)
+  })
+
+  mainWindow.on('leave-full-screen', () => {
+    mainWindow.webContents.send('window:fullscreen-changed', false)
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -121,6 +130,31 @@ app.whenReady().then(() => {
         error: error.message
       }
     }
+  })
+
+  // Manejadores IPC para control de Pantalla Completa (Modo Zen)
+  ipcMain.handle('window:set-fullscreen', (event, flag) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      win.setFullScreen(Boolean(flag))
+      return win.isFullScreen()
+    }
+    return false
+  })
+
+  ipcMain.handle('window:toggle-fullscreen', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win) {
+      const nextState = !win.isFullScreen()
+      win.setFullScreen(nextState)
+      return nextState
+    }
+    return false
+  })
+
+  ipcMain.handle('window:is-fullscreen', (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    return win ? win.isFullScreen() : false
   })
 
   createWindow()

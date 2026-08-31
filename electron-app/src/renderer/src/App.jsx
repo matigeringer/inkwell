@@ -122,6 +122,7 @@ function App() {
           initialDoc={activeDoc}
           onBack={handleBackToHome}
           preferences={preferences}
+          onUpdatePreferences={handleUpdatePreferences}
           onOpenProfile={() => setIsProfileOpen(true)}
         />
         <ProfileModal
