@@ -1,19 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Editor from './components/Editor'
 import ProfileModal from './components/ProfileModal'
+import FileTree from './components/FileTree'
 import {
   FeatherIcon,
   PlusIcon,
   SunIcon,
   MoonIcon,
   MonitorIcon,
-  SettingsIcon
+  SettingsIcon,
+  FolderIcon,
+  FileTextIcon
 } from './components/Icons'
 
 function App() {
   const [view, setView] = useState('home') // 'home' | 'editor'
   const [activeDoc, setActiveDoc] = useState(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [openedFolder, setOpenedFolder] = useState(null)
 
   // Preferencias con persistencia en localStorage
   const [preferences, setPreferences] = useState(() => {
@@ -31,6 +35,29 @@ function App() {
       fontSize: '1.40rem'
     }
   })
+
+  // Recuperar última carpeta de trabajo guardada al inicio
+  useEffect(() => {
+    const lastFolder = localStorage.getItem('fountain_last_folder')
+    if (lastFolder && window.api?.readFolderTree) {
+      window.api
+        .readFolderTree(lastFolder)
+        .then((res) => {
+          if (res && res.success) {
+            setOpenedFolder({
+              path: res.folderPath,
+              name: res.folderName,
+              tree: res.tree
+            })
+          } else {
+            localStorage.removeItem('fountain_last_folder')
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('fountain_last_folder')
+        })
+    }
+  }, [])
 
   // Sincronizar tema y variables CSS en el DOM
   useEffect(() => {
@@ -99,18 +126,116 @@ function App() {
     setView('editor')
   }
 
+  // Abrir carpeta de trabajo
+  const handleOpenFolder = async () => {
+    if (!window.api?.openFolder) return
+    try {
+      const res = await window.api.openFolder()
+      if (res && res.success) {
+        setOpenedFolder({
+          path: res.folderPath,
+          name: res.folderName,
+          tree: res.tree
+        })
+        localStorage.setItem('fountain_last_folder', res.folderPath)
+      }
+    } catch (err) {
+      console.error('Error al abrir carpeta:', err)
+    }
+  }
+
+  // Actualizar árbol de archivos
+  const handleRefreshFolderTree = async () => {
+    if (!openedFolder?.path || !window.api?.readFolderTree) return
+    try {
+      const res = await window.api.readFolderTree(openedFolder.path)
+      if (res && res.success) {
+        setOpenedFolder({
+          path: res.folderPath,
+          name: res.folderName,
+          tree: res.tree
+        })
+      }
+    } catch (err) {
+      console.error('Error al actualizar árbol de carpeta:', err)
+    }
+  }
+
+  // Cerrar carpeta de trabajo actual
+  const handleCloseFolder = () => {
+    setOpenedFolder(null)
+    localStorage.removeItem('fountain_last_folder')
+  }
+
+  // Abrir archivo individual directamente
+  const handleOpenFile = async () => {
+    if (!window.api?.openFileDialog) return
+    try {
+      const res = await window.api.openFileDialog()
+      if (res && res.success) {
+        setActiveDoc({
+          id: Date.now().toString(),
+          fileName: res.fileName,
+          filePath: res.filePath,
+          content: res.content
+        })
+        setView('editor')
+      }
+    } catch (err) {
+      console.error('Error al abrir archivo:', err)
+    }
+  }
+
+  // Seleccionar archivo desde el árbol
+  const handleSelectFile = useCallback(async (filePath) => {
+    if (!window.api?.readFile) return
+    try {
+      const res = await window.api.readFile(filePath)
+      if (res && res.success) {
+        setActiveDoc({
+          id: Date.now().toString(),
+          fileName: res.fileName,
+          filePath: res.filePath,
+          content: res.content
+        })
+        setView('editor')
+      }
+    } catch (err) {
+      console.error('Error al abrir archivo seleccionado:', err)
+    }
+  }, [])
+
   const handleBackToHome = () => {
     setView('home')
   }
 
-  // Atajo global Ctrl+N / Cmd+N para crear nuevo documento
+  // Atajos globales de la aplicación
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'n' || e.key === 'N') && view === 'home') {
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey
+
+      // Ctrl+N: Nuevo documento
+      if (isCtrlOrMeta && !e.shiftKey && (e.key === 'n' || e.key === 'N') && view === 'home') {
         e.preventDefault()
         handleCreate()
+        return
+      }
+
+      // Ctrl+O: Abrir archivo
+      if (isCtrlOrMeta && !e.shiftKey && (e.key === 'o' || e.key === 'O') && view === 'home') {
+        e.preventDefault()
+        handleOpenFile()
+        return
+      }
+
+      // Ctrl+Shift+O: Abrir carpeta
+      if (isCtrlOrMeta && e.shiftKey && (e.key === 'o' || e.key === 'O') && view === 'home') {
+        e.preventDefault()
+        handleOpenFolder()
+        return
       }
     }
+
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [view])
@@ -119,11 +244,16 @@ function App() {
     return (
       <>
         <Editor
+          key={activeDoc?.id || activeDoc?.filePath || 'doc'}
           initialDoc={activeDoc}
           onBack={handleBackToHome}
           preferences={preferences}
           onUpdatePreferences={handleUpdatePreferences}
           onOpenProfile={() => setIsProfileOpen(true)}
+          openedFolder={openedFolder}
+          onRefreshFolderTree={handleRefreshFolderTree}
+          onCloseFolder={handleCloseFolder}
+          onOpenFolder={handleOpenFolder}
         />
         <ProfileModal
           isOpen={isProfileOpen}
@@ -162,7 +292,50 @@ function App() {
               <span>Nuevo documento</span>
               <kbd className="sidebar-kbd">Ctrl+N</kbd>
             </button>
+
+            <button
+              className="btn-sidebar-secondary"
+              onClick={handleOpenFile}
+              type="button"
+              title="Abrir archivo Markdown existente (Ctrl+O)"
+            >
+              <FileTextIcon size={15} />
+              <span>Abrir archivo...</span>
+              <kbd className="sidebar-kbd">Ctrl+O</kbd>
+            </button>
+
+            <button
+              className="btn-sidebar-secondary"
+              onClick={handleOpenFolder}
+              type="button"
+              title="Abrir carpeta con manuscritos (Ctrl+Shift+O)"
+            >
+              <FolderIcon size={15} />
+              <span>Abrir carpeta...</span>
+              <kbd className="sidebar-kbd">Ctrl+Shift+O</kbd>
+            </button>
           </div>
+
+          {/* Explorador de archivos si hay carpeta abierta en la pantalla principal */}
+          {openedFolder ? (
+            <div className="sidebar-tree-section">
+              <FileTree
+                openedFolder={openedFolder}
+                activeFilePath={null}
+                onSelectFile={handleSelectFile}
+                onRefreshTree={handleRefreshFolderTree}
+                onCloseFolder={handleCloseFolder}
+              />
+            </div>
+          ) : (
+            <div className="sidebar-workspace-hint">
+              <span className="hint-label">Organización</span>
+              <p className="hint-desc">
+                Abre una carpeta para organizar capítulos, borradores y notas en un árbol
+                jerárquico.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Pie de la barra lateral con preferencias y acceso a temas */}
@@ -217,6 +390,28 @@ function App() {
               </span>
               <span>Empezar a escribir</span>
             </button>
+
+            <div className="welcome-secondary-actions">
+              <button
+                className="btn-hero-secondary"
+                onClick={handleOpenFile}
+                type="button"
+                title="Abrir archivo Markdown existente"
+              >
+                <FileTextIcon size={16} />
+                <span>Abrir archivo</span>
+              </button>
+
+              <button
+                className="btn-hero-secondary"
+                onClick={handleOpenFolder}
+                type="button"
+                title="Abrir carpeta de trabajo"
+              >
+                <FolderIcon size={16} />
+                <span>Abrir carpeta</span>
+              </button>
+            </div>
           </div>
         </div>
       </main>

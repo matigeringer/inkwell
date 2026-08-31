@@ -3,8 +3,24 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
+  // Archivos
   saveFile: (data) => ipcRenderer.invoke('file:save', data),
   saveFileAs: (data) => ipcRenderer.invoke('file:save-as', data),
+  openFileDialog: () => ipcRenderer.invoke('file:open-dialog'),
+  readFile: (filePath) => ipcRenderer.invoke('file:read', filePath),
+  createFile: (data) => ipcRenderer.invoke('file:create', data),
+
+  // Carpetas y Espacios de Trabajo
+  openFolder: () => ipcRenderer.invoke('folder:open'),
+  readFolderTree: (folderPath) => ipcRenderer.invoke('folder:read-tree', folderPath),
+  createFolder: (data) => ipcRenderer.invoke('folder:create', data),
+
+  // Operaciones comunes
+  renameItem: (data) => ipcRenderer.invoke('item:rename', data),
+  deleteItem: (targetPath) => ipcRenderer.invoke('item:delete', targetPath),
+  showInFolder: (targetPath) => ipcRenderer.invoke('item:show-in-folder', targetPath),
+
+  // Control de Pantalla Completa / Zen
   setFullScreen: (flag) => ipcRenderer.invoke('window:set-fullscreen', flag),
   toggleFullScreen: () => ipcRenderer.invoke('window:toggle-fullscreen'),
   isFullScreen: () => ipcRenderer.invoke('window:is-fullscreen'),

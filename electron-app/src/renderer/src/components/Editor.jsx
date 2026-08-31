@@ -14,8 +14,10 @@ import {
   ZenFocusIcon,
   KeyboardIcon,
   BarChartIcon,
-  CloseIcon
+  CloseIcon,
+  SidebarIcon
 } from './Icons'
+import FileTree from './FileTree'
 
 const FONT_SIZES_SCALE = [
   '1.00rem',
@@ -33,13 +35,18 @@ export default function Editor({
   onBack,
   preferences,
   onUpdatePreferences,
-  onOpenProfile
+  onOpenProfile,
+  openedFolder,
+  onRefreshFolderTree,
+  onCloseFolder,
+  onOpenFolder
 }) {
   const [filePath, setFilePath] = useState(initialDoc?.filePath || null)
   const [fileName, setFileName] = useState(initialDoc?.fileName || 'documento.md')
   const [saveStatus, setSaveStatus] = useState('unsaved') // 'unsaved' | 'saving' | 'saved' | 'error'
   const [errorMessage, setErrorMessage] = useState('')
   const [isZenMode, setIsZenMode] = useState(false)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(Boolean(openedFolder))
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [isMouseActive, setIsMouseActive] = useState(false)
@@ -137,6 +144,157 @@ export default function Editor({
     }, 2200)
   }, [])
 
+  // Obtener contenido en formato Markdown
+  const getMarkdownContent = useCallback(() => {
+    if (!editor) return initialDoc?.content || ''
+    return editor.storage.markdown.getMarkdown()
+  }, [editor, initialDoc?.content])
+
+  // Guardar archivo (normal o si es nuevo abre diálogo)
+  const handleSave = useCallback(async () => {
+    if (!window.api?.saveFile) {
+      console.warn('API de Electron no disponible')
+      showToast('Guardado simulado (modo navegador)', 'info')
+      setSaveStatus('saved')
+      return
+    }
+
+    try {
+      setSaveStatus('saving')
+      setErrorMessage('')
+
+      const markdownContent = getMarkdownContent()
+
+      const res = await window.api.saveFile({
+        content: markdownContent,
+        filePath,
+        defaultName: fileName
+      })
+
+      if (res.canceled) {
+        setSaveStatus(filePath ? 'saved' : 'unsaved')
+        return
+      }
+
+      if (res.success) {
+        setFilePath(res.filePath)
+        setFileName(res.fileName)
+        setSaveStatus('saved')
+        showToast(`Guardado: ${res.fileName}`)
+        if (onRefreshFolderTree) {
+          onRefreshFolderTree()
+        }
+      } else {
+        setSaveStatus('error')
+        setErrorMessage(res.error || 'Error al guardar el archivo')
+        showToast(res.error || 'Error al guardar', 'error')
+      }
+    } catch (err) {
+      setSaveStatus('error')
+      setErrorMessage(err.message || 'Error inesperado al guardar')
+      showToast('Error inesperado al guardar', 'error')
+    }
+  }, [getMarkdownContent, filePath, fileName, onRefreshFolderTree, showToast])
+
+  // Guardar como (siempre abre diálogo nativo)
+  const handleSaveAs = useCallback(async () => {
+    if (!window.api?.saveFileAs) return
+
+    try {
+      setSaveStatus('saving')
+      setErrorMessage('')
+
+      const markdownContent = getMarkdownContent()
+
+      const res = await window.api.saveFileAs({
+        content: markdownContent,
+        defaultName: fileName
+      })
+
+      if (res.canceled) {
+        setSaveStatus(filePath ? 'saved' : 'unsaved')
+        return
+      }
+
+      if (res.success) {
+        setFilePath(res.filePath)
+        setFileName(res.fileName)
+        setSaveStatus('saved')
+        showToast(`Guardado como: ${res.fileName}`)
+        if (onRefreshFolderTree) {
+          onRefreshFolderTree()
+        }
+      } else {
+        setSaveStatus('error')
+        setErrorMessage(res.error || 'Error al guardar el archivo')
+        showToast(res.error || 'Error al guardar', 'error')
+      }
+    } catch (err) {
+      setSaveStatus('error')
+      setErrorMessage(err.message || 'Error inesperado al guardar')
+      showToast('Error al guardar copia', 'error')
+    }
+  }, [getMarkdownContent, fileName, filePath, onRefreshFolderTree, showToast])
+
+  // Cambiar de documento de forma fluida desde el explorador
+  const handleSwitchDoc = useCallback(
+    async (targetFilePath) => {
+      if (targetFilePath === filePath) return
+
+      // Si el documento actual tiene ruta y cambios sin guardar, auto-guardar
+      if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
+        try {
+          const markdownContent = getMarkdownContent()
+          await window.api.saveFile({
+            content: markdownContent,
+            filePath,
+            defaultName: fileName
+          })
+        } catch (err) {
+          console.warn('No se pudo autoguardar antes de cambiar:', err)
+        }
+      }
+
+      if (!window.api?.readFile) return
+      try {
+        const res = await window.api.readFile(targetFilePath)
+        if (res && res.success) {
+          setFilePath(res.filePath)
+          setFileName(res.fileName)
+          setSaveStatus('saved')
+          if (editor) {
+            editor.commands.setContent(res.content || '', false)
+          }
+          showToast(`Abierto: ${res.fileName}`)
+        } else {
+          showToast(res.error || 'Error al abrir archivo', 'error')
+        }
+      } catch (err) {
+        showToast(err.message || 'Error al leer archivo', 'error')
+      }
+    },
+    [filePath, fileName, saveStatus, editor, getMarkdownContent, showToast]
+  )
+
+  // Abrir archivo individual directamente con diálogo
+  const handleOpenFileDirectly = useCallback(async () => {
+    if (!window.api?.openFileDialog) return
+    try {
+      const res = await window.api.openFileDialog()
+      if (res && res.success) {
+        setFilePath(res.filePath)
+        setFileName(res.fileName)
+        setSaveStatus('saved')
+        if (editor) {
+          editor.commands.setContent(res.content || '', false)
+        }
+        showToast(`Abierto: ${res.fileName}`)
+      }
+    } catch (err) {
+      showToast(err.message || 'Error al abrir archivo', 'error')
+    }
+  }, [editor, showToast])
+
   // Sincronizar y alternar Modo Zen con Pantalla Completa
   const toggleZenMode = useCallback(
     async (forcedState) => {
@@ -190,92 +348,6 @@ export default function Editor({
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
     }
   }, [])
-
-  // Obtener contenido en formato Markdown
-  const getMarkdownContent = useCallback(() => {
-    if (!editor) return initialDoc?.content || ''
-    return editor.storage.markdown.getMarkdown()
-  }, [editor, initialDoc?.content])
-
-  // Guardar archivo (normal o si es nuevo abre diálogo)
-  const handleSave = useCallback(async () => {
-    if (!window.api?.saveFile) {
-      console.warn('API de Electron no disponible')
-      showToast('Guardado simulado (modo navegador)', 'info')
-      setSaveStatus('saved')
-      return
-    }
-
-    try {
-      setSaveStatus('saving')
-      setErrorMessage('')
-
-      const markdownContent = getMarkdownContent()
-
-      const res = await window.api.saveFile({
-        content: markdownContent,
-        filePath,
-        defaultName: fileName
-      })
-
-      if (res.canceled) {
-        setSaveStatus(filePath ? 'saved' : 'unsaved')
-        return
-      }
-
-      if (res.success) {
-        setFilePath(res.filePath)
-        setFileName(res.fileName)
-        setSaveStatus('saved')
-        showToast(`Guardado: ${res.fileName}`)
-      } else {
-        setSaveStatus('error')
-        setErrorMessage(res.error || 'Error al guardar el archivo')
-        showToast(res.error || 'Error al guardar', 'error')
-      }
-    } catch (err) {
-      setSaveStatus('error')
-      setErrorMessage(err.message || 'Error inesperado al guardar')
-      showToast('Error inesperado al guardar', 'error')
-    }
-  }, [getMarkdownContent, filePath, fileName, showToast])
-
-  // Guardar como (siempre abre diálogo nativo)
-  const handleSaveAs = useCallback(async () => {
-    if (!window.api?.saveFileAs) return
-
-    try {
-      setSaveStatus('saving')
-      setErrorMessage('')
-
-      const markdownContent = getMarkdownContent()
-
-      const res = await window.api.saveFileAs({
-        content: markdownContent,
-        defaultName: fileName
-      })
-
-      if (res.canceled) {
-        setSaveStatus(filePath ? 'saved' : 'unsaved')
-        return
-      }
-
-      if (res.success) {
-        setFilePath(res.filePath)
-        setFileName(res.fileName)
-        setSaveStatus('saved')
-        showToast(`Guardado como: ${res.fileName}`)
-      } else {
-        setSaveStatus('error')
-        setErrorMessage(res.error || 'Error al guardar el archivo')
-        showToast(res.error || 'Error al guardar', 'error')
-      }
-    } catch (err) {
-      setSaveStatus('error')
-      setErrorMessage(err.message || 'Error inesperado al guardar')
-      showToast('Error al guardar copia', 'error')
-    }
-  }, [getMarkdownContent, fileName, filePath, showToast])
 
   // Alternar Tema (Claro / Oscuro)
   const cycleTheme = useCallback(() => {
@@ -408,42 +480,68 @@ export default function Editor({
         return
       }
 
-      // 7. Ctrl+Shift+T: Alternar Tema
+      // 7. Ctrl+O: Abrir archivo
+      if (isCtrlOrMeta && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault()
+        handleOpenFileDirectly()
+        return
+      }
+
+      // 8. Ctrl+Shift+O: Abrir carpeta
+      if (isCtrlOrMeta && e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault()
+        if (onOpenFolder) onOpenFolder()
+        return
+      }
+
+      // 9. Ctrl+\ o Ctrl+B: Alternar barra lateral / explorador
+      if (
+        (isCtrlOrMeta && e.key === '\\') ||
+        (isCtrlOrMeta && !e.shiftKey && (e.key === 'b' || e.key === 'B'))
+      ) {
+        if (!isZenMode && openedFolder) {
+          e.preventDefault()
+          setIsSidebarOpen((prev) => !prev)
+          return
+        }
+      }
+
+      // 10. Ctrl+Shift+T: Alternar Tema
       if (isCtrlOrMeta && e.shiftKey && (e.key === 't' || e.key === 'T')) {
         e.preventDefault()
         cycleTheme()
         return
       }
 
-      // 8. Ctrl+Shift+L: Alternar Tipografía
+      // 11. Ctrl+Shift+L: Alternar Tipografía
       if (isCtrlOrMeta && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
         e.preventDefault()
         cycleFontFamily()
         return
       }
 
-      // 9. Ctrl+Shift+C: Mostrar / Ocultar estadísticas HUD
+      // 12. Ctrl+Shift+C: Mostrar / Ocultar estadísticas HUD
       if (isCtrlOrMeta && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
         e.preventDefault()
         setShowStatsHud((prev) => !prev)
         return
       }
 
-      // 10. Ctrl+= / Ctrl++: Aumentar tamaño de fuente
+      // 13. Ctrl+= / Ctrl++: Aumentar tamaño de fuente
       if (isCtrlOrMeta && (e.key === '=' || e.key === '+')) {
         e.preventDefault()
         adjustFontSize(1)
         return
       }
 
-      // 11. Ctrl+-: Disminuir tamaño de fuente
+      // 14. Ctrl+-: Disminuir tamaño de fuente
       if (isCtrlOrMeta && (e.key === '-' || e.key === '_')) {
         e.preventDefault()
         adjustFontSize(-1)
         return
       }
 
-      // 12. Ctrl+0: Restablecer tamaño de fuente
+      // 15. Ctrl+0: Restablecer tamaño de fuente
       if (isCtrlOrMeta && e.key === '0') {
         e.preventDefault()
         resetFontSize()
@@ -460,9 +558,12 @@ export default function Editor({
     isZenMode,
     isShortcutsModalOpen,
     showStatsHud,
+    openedFolder,
     toggleZenMode,
     handleSave,
     handleSaveAs,
+    handleOpenFileDirectly,
+    onOpenFolder,
     cycleTheme,
     cycleFontFamily,
     adjustFontSize,
@@ -500,6 +601,21 @@ export default function Editor({
             <ArrowLeftIcon size={17} />
             <span>Inicio</span>
           </button>
+
+          {openedFolder && (
+            <button
+              className={`btn-icon-sober ${isSidebarOpen ? 'active' : ''}`}
+              onClick={() => setIsSidebarOpen((prev) => !prev)}
+              title={
+                isSidebarOpen
+                  ? 'Ocultar explorador de archivos (Ctrl+\\ o Ctrl+B)'
+                  : 'Mostrar explorador de archivos (Ctrl+\\ o Ctrl+B)'
+              }
+              aria-label="Alternar explorador de archivos"
+            >
+              <SidebarIcon size={16} />
+            </button>
+          )}
 
           <div className="doc-meta-header">
             <span className="doc-title-text" title={filePath || fileName}>
@@ -680,7 +796,7 @@ export default function Editor({
                     Atajos de Teclado
                   </h2>
                   <p className="modal-subtitle">
-                    Controla Fountain y el Modo Zen sin usar el ratón
+                    Controla Fountain y el explorador sin usar el ratón
                   </p>
                 </div>
               </div>
@@ -694,6 +810,53 @@ export default function Editor({
             </header>
 
             <div className="modal-body zen-shortcuts-body">
+              {/* Sección Archivos y Espacio de Trabajo */}
+              <section className="shortcuts-section">
+                <h4 className="shortcuts-section-title">Archivos y Espacio de Trabajo</h4>
+                <div className="shortcuts-list">
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">Guardar documento</span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>S</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">Guardar copia como...</span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">Abrir archivo Markdown</span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>O</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">Abrir carpeta de trabajo</span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">Alternar barra del explorador</span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>\</kbd>
+                      <span className="shortcut-or">o</span>
+                      <kbd>Ctrl</kbd>+<kbd>B</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">Ver esta ayuda de atajos</span>
+                    <div className="shortcut-keys">
+                      <kbd>F1</kbd>
+                      <span className="shortcut-or">o</span>
+                      <kbd>Ctrl</kbd>+<kbd>/</kbd>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
               {/* Sección Modo Zen */}
               <section className="shortcuts-section">
                 <h4 className="shortcuts-section-title">Modo Zen y Pantalla Completa</h4>
@@ -718,33 +881,6 @@ export default function Editor({
                     <span className="shortcut-desc">Mostrar / Ocultar estadísticas</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Sección Archivo y Guardado */}
-              <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">Archivo y Guardado</h4>
-                <div className="shortcuts-list">
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">Guardar documento</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>S</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">Guardar copia como...</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">Ver esta ayuda de atajos</span>
-                    <div className="shortcut-keys">
-                      <kbd>F1</kbd>
-                      <span className="shortcut-or">o</span>
-                      <kbd>Ctrl</kbd>+<kbd>/</kbd>
                     </div>
                   </div>
                 </div>
@@ -822,12 +958,28 @@ export default function Editor({
         </div>
       )}
 
-      {/* Lienzo de escritura WYSIWYG centralizado */}
-      <main className="editor-main" onClick={handleCanvasClick}>
-        <div className="editor-canvas" onClick={handleCanvasClick}>
-          <EditorContent editor={editor} className="tiptap-wrapper" />
-        </div>
-      </main>
+      {/* Disposición dividida para panel lateral y lienzo */}
+      <div className="editor-workspace-layout">
+        {openedFolder && isSidebarOpen && !isZenMode && (
+          <aside className="editor-sidebar-panel">
+            <FileTree
+              openedFolder={openedFolder}
+              activeFilePath={filePath}
+              onSelectFile={handleSwitchDoc}
+              onRefreshTree={onRefreshFolderTree}
+              onCloseFolder={onCloseFolder}
+              showToast={showToast}
+            />
+          </aside>
+        )}
+
+        {/* Lienzo de escritura WYSIWYG centralizado */}
+        <main className="editor-main" onClick={handleCanvasClick}>
+          <div className="editor-canvas" onClick={handleCanvasClick}>
+            <EditorContent editor={editor} className="tiptap-wrapper" />
+          </div>
+        </main>
+      </div>
 
       {/* Barra de estado discreta inferior (se oculta totalmente en Zen) */}
       <footer className="editor-footer">
