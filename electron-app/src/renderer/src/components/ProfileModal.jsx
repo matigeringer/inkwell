@@ -6,7 +6,11 @@ import {
   MonitorIcon,
   TypeIcon,
   CheckIcon,
-  SettingsIcon
+  SettingsIcon,
+  TypewriterIcon,
+  AlignLeftIcon,
+  AlignJustifyIcon,
+  AlignCenterIcon
 } from './Icons'
 
 export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePreferences }) {
@@ -47,6 +51,27 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
     }
   ]
 
+  const alignments = [
+    {
+      id: 'left',
+      name: 'Izquierda',
+      desc: 'Alineación natural estándar',
+      icon: AlignLeftIcon
+    },
+    {
+      id: 'justify',
+      name: 'Justificado',
+      desc: 'Márgenes uniformes estilo editorial',
+      icon: AlignJustifyIcon
+    },
+    {
+      id: 'center',
+      name: 'Centrado',
+      desc: 'Centrado lírico o dramatúrgico',
+      icon: AlignCenterIcon
+    }
+  ]
+
   const fonts = [
     {
       id: 'serif',
@@ -78,6 +103,8 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
   ]
 
   const currentFontSize = preferences.fontSize || '1.40rem'
+  const currentTextAlign = preferences.textAlign || 'left'
+  const currentTypewriter = Boolean(preferences.typewriterMode)
   const currentFontFamily =
     preferences.fontFamily === 'sans'
       ? 'var(--font-ui)'
@@ -103,7 +130,9 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
               <h2 id="modal-title" className="modal-title">
                 Preferencias
               </h2>
-              <p className="modal-subtitle">Personaliza el tema y la tipografía de lectura</p>
+              <p className="modal-subtitle">
+                Personaliza el tema, la tipografía y el modo de escritura
+              </p>
             </div>
           </div>
 
@@ -146,6 +175,72 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
             </div>
           </section>
 
+          {/* Modo Máquina de Escribir (Typewriter Scrolling) */}
+          <section className="pref-section">
+            <label className="pref-label">
+              <TypewriterIcon size={16} />
+              <span>Desplazamiento Estilo Máquina de Escribir</span>
+            </label>
+            <div
+              className={`typewriter-toggle-card ${currentTypewriter ? 'active' : ''}`}
+              onClick={() => onUpdatePreferences({ typewriterMode: !currentTypewriter })}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onUpdatePreferences({ typewriterMode: !currentTypewriter })
+                }
+              }}
+            >
+              <div className="typewriter-card-left">
+                <TypewriterIcon size={20} className="typewriter-card-icon" />
+                <div className="typewriter-card-texts">
+                  <div className="typewriter-card-title-row">
+                    <span className="typewriter-card-title">Typewriter Scrolling</span>
+                    {currentTypewriter && <span className="font-active-pill">Activo</span>}
+                  </div>
+                  <span className="typewriter-card-desc">
+                    Mantiene la línea actual donde escribes siempre fija en el centro vertical de la
+                    pantalla. (Atajo: Ctrl+Shift+Y)
+                  </span>
+                </div>
+              </div>
+              <div className={`pref-switch ${currentTypewriter ? 'checked' : ''}`}>
+                <div className="pref-switch-thumb" />
+              </div>
+            </div>
+          </section>
+
+          {/* Alineación de Texto del Manuscrito */}
+          <section className="pref-section">
+            <label className="pref-label">
+              <AlignJustifyIcon size={16} />
+              <span>Alineación de Escritura y Párrafo</span>
+            </label>
+            <div className="align-options-grid">
+              {alignments.map((a) => {
+                const Icon = a.icon
+                const isSelected = currentTextAlign === a.id
+                return (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className={`align-option-btn ${isSelected ? 'active' : ''}`}
+                    onClick={() => onUpdatePreferences({ textAlign: a.id })}
+                  >
+                    <div className="align-option-header">
+                      <Icon size={18} />
+                      {isSelected && <CheckIcon size={14} className="check-mark" />}
+                    </div>
+                    <span className="align-option-name">{a.name}</span>
+                    <span className="align-option-desc">{a.desc}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+
           {/* Tipografía de Escritura */}
           <section className="pref-section">
             <label className="pref-label">
@@ -179,7 +274,7 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
           {/* Tamaño de texto del editor con vista previa en vivo */}
           <section className="pref-section">
             <label className="pref-label">
-              <span>Tamaño de Texto del Editor</span>
+              <span>Tamaño y Muestra de Texto del Editor</span>
             </label>
             <div className="size-selector-grid">
               {fontSizes.map((s) => {
@@ -198,15 +293,18 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
             </div>
 
             <div className="size-live-preview-box">
-              <span className="size-preview-label">Muestra de tamaño:</span>
+              <span className="size-preview-label">Vista previa en tiempo real:</span>
               <p
                 className="size-preview-text"
                 style={{
                   fontSize: currentFontSize,
-                  fontFamily: currentFontFamily
+                  fontFamily: currentFontFamily,
+                  textAlign: currentTextAlign
                 }}
               >
-                El arte de escribir consiste en plasmar ideas con claridad y serenidad.
+                El arte de escribir consiste en plasmar ideas con claridad, serenidad y ritmo,
+                manteniendo un equilibrio armonioso entre la forma de las palabras y el lienzo sobre
+                el que descansan.
               </p>
             </div>
           </section>

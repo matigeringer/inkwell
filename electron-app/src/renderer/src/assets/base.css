@@ -47,6 +47,7 @@
   --font-mono: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
   --font-editor: var(--font-serif);
   --font-size-editor: 1.4rem;
+  --text-align-editor: left;
   --editor-max-width: 820px;
 
   /* Compatibilidad con variables legacy */

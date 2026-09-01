@@ -678,3 +678,90 @@ export function FolderTreeIcon({ className = '', size = 18, ...props }) {
     </svg>
   )
 }
+
+export function TypewriterIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      {/* Visual target center line with typewriter carriage indicator */}
+      <line x1="3" y1="12" x2="21" y2="12" strokeDasharray="2 2" strokeOpacity="0.6" />
+      <rect x="4" y="6" width="16" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2.5" />
+      <line x1="12" y1="3" x2="12" y2="6" />
+      <line x1="12" y1="18" x2="12" y2="21" />
+    </svg>
+  )
+}
+
+export function AlignLeftIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <line x1="21" y1="6" x2="3" y2="6" />
+      <line x1="15" y1="12" x2="3" y2="12" />
+      <line x1="17" y1="18" x2="3" y2="18" />
+    </svg>
+  )
+}
+
+export function AlignJustifyIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <line x1="21" y1="6" x2="3" y2="6" />
+      <line x1="21" y1="12" x2="3" y2="12" />
+      <line x1="21" y1="18" x2="3" y2="18" />
+    </svg>
+  )
+}
+
+export function AlignCenterIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <line x1="21" y1="6" x2="3" y2="6" />
+      <line x1="17" y1="12" x2="7" y2="12" />
+      <line x1="19" y1="18" x2="5" y2="18" />
+    </svg>
+  )
+}

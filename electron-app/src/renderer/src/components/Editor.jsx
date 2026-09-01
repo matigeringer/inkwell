@@ -15,7 +15,11 @@ import {
   KeyboardIcon,
   BarChartIcon,
   CloseIcon,
-  SidebarIcon
+  SidebarIcon,
+  TypewriterIcon,
+  AlignLeftIcon,
+  AlignJustifyIcon,
+  AlignCenterIcon
 } from './Icons'
 import FileTree from './FileTree'
 
@@ -53,7 +57,78 @@ export default function Editor({
   const mouseTimerRef = useRef(null)
   const [toast, setToast] = useState(null)
   const toastTimeoutRef = useRef(null)
+  const scrollContainerRef = useRef(null)
+  const typewriterModeRef = useRef(Boolean(preferences?.typewriterMode))
+  const isUserManualScrollingRef = useRef(false)
+  const manualScrollTimerRef = useRef(null)
   const [, setTick] = useState(0) // Forzar re-render en cambios para estadísticas
+
+  // Sincronizar ref de modo máquina de escribir
+  useEffect(() => {
+    typewriterModeRef.current = Boolean(preferences?.typewriterMode)
+  }, [preferences?.typewriterMode])
+
+  // Centrado vertical continuo estilo Typewriter (emulación de rodillo fijo)
+  const centerCursor = useCallback((targetEditor, smooth = false, force = false) => {
+    if (!scrollContainerRef.current) return
+    if (!targetEditor?.view || !targetEditor?.state) return
+    if (isUserManualScrollingRef.current && !force) return
+
+    requestAnimationFrame(() => {
+      try {
+        if (isUserManualScrollingRef.current && !force) return
+        const { selection } = targetEditor.state
+        if (!selection) return
+
+        // Usar la posición exacta del caret activo (head), incluso en párrafos largos con soft wraps
+        const caretPos = selection.head ?? selection.from
+        const coords = targetEditor.view.coordsAtPos(caretPos)
+        if (!coords) return
+
+        const container = scrollContainerRef.current
+        if (!container) return
+
+        const containerRect = container.getBoundingClientRect()
+        const targetY = containerRect.top + containerRect.height / 2
+        const cursorY = (coords.top + coords.bottom) / 2
+        const delta = cursorY - targetY
+
+        if (Math.abs(delta) > 1.5) {
+          if (smooth) {
+            container.scrollBy({ top: delta, behavior: 'smooth' })
+          } else {
+            container.scrollTop += delta
+          }
+        }
+      } catch {
+        // Silenciar errores de cálculo en transiciones
+      }
+    })
+  }, [])
+
+  // Permitir desplazamiento manual libre con rueda/trackpad sin pelear con el usuario
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleWheel = () => {
+      if (!typewriterModeRef.current) return
+      isUserManualScrollingRef.current = true
+      if (manualScrollTimerRef.current) {
+        clearTimeout(manualScrollTimerRef.current)
+      }
+      // Reanudar detección tras 3s de inactividad de scroll
+      manualScrollTimerRef.current = setTimeout(() => {
+        isUserManualScrollingRef.current = false
+      }, 3000)
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: true })
+    return () => {
+      container.removeEventListener('wheel', handleWheel)
+      if (manualScrollTimerRef.current) clearTimeout(manualScrollTimerRef.current)
+    }
+  }, [])
 
   const editor = useEditor({
     extensions: [
@@ -125,13 +200,89 @@ export default function Editor({
     editorProps: {
       attributes: {
         class: 'fountain-editor-content'
+      },
+      handleDOMEvents: {
+        keydown: (_view, event) => {
+          const wasManual = isUserManualScrollingRef.current
+          isUserManualScrollingRef.current = false
+          if (manualScrollTimerRef.current) clearTimeout(manualScrollTimerRef.current)
+
+          if (typewriterModeRef.current && editor) {
+            const isNavKey =
+              event.key === 'ArrowUp' ||
+              event.key === 'ArrowDown' ||
+              event.key === 'PageUp' ||
+              event.key === 'PageDown' ||
+              event.key === 'Home' ||
+              event.key === 'End'
+
+            if (wasManual) {
+              setTimeout(() => {
+                centerCursor(editor, true, true)
+              }, 15)
+            } else if (isNavKey) {
+              setTimeout(() => {
+                centerCursor(editor, true, false)
+              }, 10)
+            }
+          }
+          return false
+        },
+        mousedown: () => {
+          const wasManual = isUserManualScrollingRef.current
+          isUserManualScrollingRef.current = false
+          if (manualScrollTimerRef.current) clearTimeout(manualScrollTimerRef.current)
+
+          if (typewriterModeRef.current && editor) {
+            setTimeout(() => {
+              centerCursor(editor, wasManual, true)
+            }, 30)
+          }
+          return false
+        }
       }
     },
-    onUpdate: () => {
+    onSelectionUpdate: ({ editor: ed }) => {
+      if (typewriterModeRef.current) {
+        centerCursor(ed, false)
+      }
+    },
+    onUpdate: ({ editor: ed }) => {
       setSaveStatus('unsaved')
       setTick((t) => t + 1)
+      if (typewriterModeRef.current) {
+        // Bloqueo vertical inmediato al escribir o dar saltos de línea (Enter)
+        centerCursor(ed, false, true)
+      }
+    },
+    onFocus: ({ editor: ed }) => {
+      if (typewriterModeRef.current) {
+        centerCursor(ed, true, true)
+      }
     }
   })
+
+  // Centrar al cambiar preferencias si está activo
+  useEffect(() => {
+    if (preferences?.typewriterMode && editor) {
+      const timer = setTimeout(() => {
+        centerCursor(editor, true, true)
+      }, 80)
+      return () => clearTimeout(timer)
+    }
+    return undefined
+  }, [preferences?.typewriterMode, editor, centerCursor])
+
+  // Re-centrar en cambios de tamaño de ventana si Typewriter está activo
+  useEffect(() => {
+    const handleResize = () => {
+      if (typewriterModeRef.current && editor) {
+        centerCursor(editor, true, true)
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [editor, centerCursor])
 
   // Mostrar mensaje efímero discreto (Toast)
   const showToast = useCallback((message, type = 'info') => {
@@ -380,6 +531,43 @@ export default function Editor({
     showToast(`Tipografía: ${fontName}`)
   }, [preferences?.fontFamily, onUpdatePreferences, showToast])
 
+  // Alternar Modo Máquina de Escribir (Typewriter Scrolling)
+  const toggleTypewriterMode = useCallback(() => {
+    if (!onUpdatePreferences) return
+    const nextState = !preferences?.typewriterMode
+    onUpdatePreferences({ typewriterMode: nextState })
+    showToast(
+      `Modo Máquina de Escribir: ${nextState ? 'Activado (Línea centrada)' : 'Desactivado'}`
+    )
+    if (nextState) {
+      setTimeout(() => {
+        centerCursor(editor, true)
+      }, 60)
+    }
+  }, [preferences?.typewriterMode, onUpdatePreferences, showToast, centerCursor, editor])
+
+  // Alternar Alineación de Texto (Izquierda -> Justificado -> Centrado)
+  const cycleTextAlign = useCallback(() => {
+    if (!onUpdatePreferences) return
+    const current = preferences?.textAlign || 'left'
+    let next = 'left'
+    let label = 'Alineación: Izquierda'
+
+    if (current === 'left') {
+      next = 'justify'
+      label = 'Alineación: Justificado (Editorial)'
+    } else if (current === 'justify') {
+      next = 'center'
+      label = 'Alineación: Centrado'
+    } else {
+      next = 'left'
+      label = 'Alineación: Izquierda'
+    }
+
+    onUpdatePreferences({ textAlign: next })
+    showToast(label)
+  }, [preferences?.textAlign, onUpdatePreferences, showToast])
+
   // Ajustar tamaño de fuente (+ / - / Reset)
   const adjustFontSize = useCallback(
     (delta) => {
@@ -520,28 +708,42 @@ export default function Editor({
         return
       }
 
-      // 12. Ctrl+Shift+C: Mostrar / Ocultar estadísticas HUD
+      // 12. Ctrl+Shift+Y: Alternar Modo Máquina de Escribir (Typewriter Scrolling)
+      if (isCtrlOrMeta && e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault()
+        toggleTypewriterMode()
+        return
+      }
+
+      // 13. Ctrl+Shift+J: Alternar Alineación / Justificado
+      if (isCtrlOrMeta && e.shiftKey && (e.key === 'j' || e.key === 'J')) {
+        e.preventDefault()
+        cycleTextAlign()
+        return
+      }
+
+      // 14. Ctrl+Shift+C: Mostrar / Ocultar estadísticas HUD
       if (isCtrlOrMeta && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
         e.preventDefault()
         setShowStatsHud((prev) => !prev)
         return
       }
 
-      // 13. Ctrl+= / Ctrl++: Aumentar tamaño de fuente
+      // 15. Ctrl+= / Ctrl++: Aumentar tamaño de fuente
       if (isCtrlOrMeta && (e.key === '=' || e.key === '+')) {
         e.preventDefault()
         adjustFontSize(1)
         return
       }
 
-      // 14. Ctrl+-: Disminuir tamaño de fuente
+      // 16. Ctrl+-: Disminuir tamaño de fuente
       if (isCtrlOrMeta && (e.key === '-' || e.key === '_')) {
         e.preventDefault()
         adjustFontSize(-1)
         return
       }
 
-      // 15. Ctrl+0: Restablecer tamaño de fuente
+      // 17. Ctrl+0: Restablecer tamaño de fuente
       if (isCtrlOrMeta && e.key === '0') {
         e.preventDefault()
         resetFontSize()
@@ -566,6 +768,8 @@ export default function Editor({
     onOpenFolder,
     cycleTheme,
     cycleFontFamily,
+    toggleTypewriterMode,
+    cycleTextAlign,
     adjustFontSize,
     resetFontSize
   ])
@@ -638,6 +842,30 @@ export default function Editor({
           {errorMessage && <span className="error-badge">{errorMessage}</span>}
 
           <button
+            className={`btn-icon-sober ${preferences?.typewriterMode ? 'active' : ''}`}
+            onClick={toggleTypewriterMode}
+            title={`Modo Máquina de Escribir (Ctrl+Shift+Y) - ${preferences?.typewriterMode ? 'Activo (Línea centrada)' : 'Desactivado'}`}
+            aria-label="Alternar modo máquina de escribir"
+          >
+            <TypewriterIcon size={16} />
+          </button>
+
+          <button
+            className={`btn-icon-sober ${preferences?.textAlign === 'justify' ? 'active' : ''}`}
+            onClick={cycleTextAlign}
+            title={`Alineación de texto (Ctrl+Shift+J): ${preferences?.textAlign === 'justify' ? 'Justificado' : preferences?.textAlign === 'center' ? 'Centrado' : 'Izquierda'}`}
+            aria-label="Alternar alineación del texto"
+          >
+            {preferences?.textAlign === 'justify' ? (
+              <AlignJustifyIcon size={16} />
+            ) : preferences?.textAlign === 'center' ? (
+              <AlignCenterIcon size={16} />
+            ) : (
+              <AlignLeftIcon size={16} />
+            )}
+          </button>
+
+          <button
             className={`btn-icon-sober ${isZenMode ? 'active' : ''}`}
             onClick={() => toggleZenMode()}
             title="Modo Zen a Pantalla Completa (F11 o Ctrl+Shift+F)"
@@ -688,6 +916,22 @@ export default function Editor({
           aria-label="Controles discretos de modo Zen"
         >
           <div className="zen-toolbar-pill">
+            <button
+              className={`zen-pill-btn zen-pill-icon-only ${preferences?.typewriterMode ? 'active' : ''}`}
+              onClick={toggleTypewriterMode}
+              title="Modo Máquina de Escribir (Ctrl+Shift+Y)"
+              aria-label="Modo Máquina de Escribir"
+            >
+              <TypewriterIcon size={15} />
+            </button>
+            <button
+              className="zen-pill-btn zen-pill-icon-only"
+              onClick={cycleTextAlign}
+              title="Alternar alineación (Ctrl+Shift+J)"
+              aria-label="Alternar alineación"
+            >
+              <AlignJustifyIcon size={15} />
+            </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
               onClick={() => setShowStatsHud((prev) => !prev)}
@@ -857,9 +1101,9 @@ export default function Editor({
                 </div>
               </section>
 
-              {/* Sección Modo Zen */}
+              {/* Sección Modo Zen y Escritura */}
               <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">Modo Zen y Pantalla Completa</h4>
+                <h4 className="shortcuts-section-title">Modo Zen y Escritura</h4>
                 <div className="shortcuts-list">
                   <div className="shortcut-row">
                     <span className="shortcut-desc">Activar / Alternar Modo Zen</span>
@@ -867,6 +1111,14 @@ export default function Editor({
                       <kbd>F11</kbd>
                       <span className="shortcut-or">o</span>
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">
+                      Alternar Modo Máquina de Escribir (Typewriter)
+                    </span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
@@ -900,6 +1152,14 @@ export default function Editor({
                     <span className="shortcut-desc">Alternar Tipografía (Serif / Sans / Mono)</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">
+                      Alternar Alineación (Izquierda / Justificado / Centrado)
+                    </span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
@@ -974,8 +1234,11 @@ export default function Editor({
         )}
 
         {/* Lienzo de escritura WYSIWYG centralizado */}
-        <main className="editor-main" onClick={handleCanvasClick}>
-          <div className="editor-canvas" onClick={handleCanvasClick}>
+        <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
+          <div
+            className={`editor-canvas ${preferences?.typewriterMode ? 'typewriter-mode-active' : ''}`}
+            onClick={handleCanvasClick}
+          >
             <EditorContent editor={editor} className="tiptap-wrapper" />
           </div>
         </main>

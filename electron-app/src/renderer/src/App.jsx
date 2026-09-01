@@ -32,7 +32,9 @@ function App() {
     return {
       theme: 'light', // 'light' | 'dark' | 'system'
       fontFamily: 'serif', // 'serif' | 'sans' | 'mono'
-      fontSize: '1.40rem'
+      fontSize: '1.40rem',
+      textAlign: 'left', // 'left' | 'justify' | 'center'
+      typewriterMode: false // boolean: centrado vertical continuo
     }
   })
 
@@ -98,6 +100,9 @@ function App() {
 
     // 3. Aplicar tamaño de fuente del editor
     root.style.setProperty('--font-size-editor', preferences.fontSize || '1.40rem')
+
+    // 4. Aplicar alineación de texto del editor
+    root.style.setProperty('--text-align-editor', preferences.textAlign || 'left')
 
     return () => {
       mediaQuery.removeEventListener('change', handleSystemThemeChange)
