@@ -6,10 +6,10 @@ import {
   PlusIcon,
   SunIcon,
   MoonIcon,
-  MonitorIcon,
   SettingsIcon,
   FolderIcon,
-  FileTextIcon
+  FileTextIcon,
+  FeatherIcon
 } from './components/Icons'
 
 function App() {
@@ -23,13 +23,40 @@ function App() {
     try {
       const saved = localStorage.getItem('fountain_preferences')
       if (saved) {
-        return JSON.parse(saved)
+        const parsed = JSON.parse(saved)
+        // Migración limpia si viene de versión anterior
+        let theme = parsed.theme || 'puro'
+        let mode = parsed.mode || 'light'
+
+        if (parsed.theme === 'sepia') {
+          theme = 'sepia'
+          mode = parsed.mode || 'light'
+        } else if (parsed.theme === 'dark') {
+          theme = 'puro'
+          mode = 'dark'
+        } else if (parsed.theme === 'light') {
+          theme = 'puro'
+          mode = 'light'
+        } else if (parsed.theme === 'system') {
+          theme = 'puro'
+          mode = 'system'
+        }
+
+        return {
+          theme: theme === 'sepia' ? 'sepia' : 'puro',
+          mode: ['light', 'dark', 'system'].includes(mode) ? mode : 'light',
+          fontFamily: parsed.fontFamily || 'serif',
+          fontSize: parsed.fontSize || '1.40rem',
+          textAlign: parsed.textAlign || 'left',
+          typewriterMode: Boolean(parsed.typewriterMode)
+        }
       }
     } catch {
       // Ignorar error de parsing
     }
     return {
-      theme: 'light', // 'light' | 'dark' | 'system'
+      theme: 'puro', // 'puro' | 'sepia'
+      mode: 'light', // 'light' | 'dark' | 'system'
       fontFamily: 'serif', // 'serif' | 'sans' | 'mono'
       fontSize: '1.40rem',
       textAlign: 'left', // 'left' | 'justify' | 'center'
@@ -60,7 +87,7 @@ function App() {
     }
   }, [])
 
-  // Sincronizar tema y variables CSS en el DOM
+  // Sincronizar tema, modo y variables CSS en el DOM
   useEffect(() => {
     try {
       localStorage.setItem('fountain_preferences', JSON.stringify(preferences))
@@ -70,23 +97,21 @@ function App() {
 
     const root = document.documentElement
 
-    // 1. Aplicar Tema (Claro / Oscuro / Sistema)
-    const applyTheme = (theme) => {
-      if (theme === 'system') {
-        const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        root.setAttribute('data-theme', isSystemDark ? 'dark' : 'light')
-      } else {
-        root.setAttribute('data-theme', theme)
-      }
+    // 1. Aplicar Tema y Modo efectivo al DOM
+    const applyThemeAndMode = (theme, mode) => {
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      const effectiveMode = mode === 'system' ? (isSystemDark ? 'dark' : 'light') : mode
+      const dataThemeValue = `${theme}-${effectiveMode}`
+      root.setAttribute('data-theme', dataThemeValue)
     }
 
-    applyTheme(preferences.theme)
+    applyThemeAndMode(preferences.theme, preferences.mode)
 
-    // Listener para cambios de tema en el sistema si está en 'system'
+    // Listener para cambios de tema en el sistema si el modo está en 'system'
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handleSystemThemeChange = () => {
-      if (preferences.theme === 'system') {
-        applyTheme('system')
+      if (preferences.mode === 'system') {
+        applyThemeAndMode(preferences.theme, 'system')
       }
     }
     mediaQuery.addEventListener('change', handleSystemThemeChange)
@@ -112,11 +137,14 @@ function App() {
     setPreferences((prev) => ({ ...prev, ...updates }))
   }
 
-  // Alternar tema rápido entre claro y oscuro
+  // Alternar modo rápido (Claro <-> Oscuro) dentro del tema activo sin cambiar nunca el tema
   const handleQuickThemeToggle = () => {
     setPreferences((prev) => {
-      const nextTheme = prev.theme === 'dark' ? 'light' : 'dark'
-      return { ...prev, theme: nextTheme }
+      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+      const currentEffectiveMode =
+        prev.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : prev.mode
+      const nextMode = currentEffectiveMode === 'dark' ? 'light' : 'dark'
+      return { ...prev, mode: nextMode }
     })
   }
 
@@ -244,6 +272,15 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [view])
 
+  // Calcular modo efectivo para la interfaz
+  const isSystemDark =
+    typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false
+  const effectiveMode =
+    preferences.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : preferences.mode
+  const isEffectiveDark = effectiveMode === 'dark'
+
   if (view === 'editor') {
     return (
       <>
@@ -316,16 +353,10 @@ function App() {
               className="btn-quick-theme"
               onClick={handleQuickThemeToggle}
               type="button"
-              title={`Cambiar a modo ${preferences.theme === 'dark' ? 'claro' : 'oscuro'}`}
-              aria-label="Cambiar tema"
+              title={`Modo ${isEffectiveDark ? 'Oscuro' : 'Claro'} (${preferences.theme === 'sepia' ? 'Sepia' : 'Puro'}${preferences.mode === 'system' ? ' - Sistema' : ''}). Clic para alternar.`}
+              aria-label="Cambiar modo de apariencia"
             >
-              {preferences.theme === 'dark' ? (
-                <SunIcon size={16} />
-              ) : preferences.theme === 'light' ? (
-                <MoonIcon size={16} />
-              ) : (
-                <MonitorIcon size={16} />
-              )}
+              {isEffectiveDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
             </button>
           </div>
         </div>
@@ -334,35 +365,49 @@ function App() {
       {/* Contenido principal (Lienzo de Bienvenida) */}
       <main className="main-content">
         <div className="welcome-hero">
+          <div className="welcome-brand">
+            <FeatherIcon size={30} className="welcome-emblem-icon" />
+            <p className="welcome-subtitle">Comienza un nuevo manuscrito</p>
+          </div>
+
           <div className="welcome-actions">
             <button
-              className="btn-hero-action btn-hero-primary"
+              className="welcome-action-card welcome-action-primary"
               onClick={handleCreate}
               type="button"
               title="Crear nuevo documento (Ctrl+N)"
             >
-              <PlusIcon size={16} />
-              <span>Nuevo documento</span>
+              <div className="action-card-left">
+                <PlusIcon size={16} />
+                <span>Nuevo documento</span>
+              </div>
+              <kbd className="action-kbd">Ctrl+N</kbd>
             </button>
 
             <button
-              className="btn-hero-action btn-hero-secondary"
+              className="welcome-action-card"
               onClick={handleOpenFile}
               type="button"
               title="Abrir archivo Markdown existente (Ctrl+O)"
             >
-              <FileTextIcon size={16} />
-              <span>Abrir archivo</span>
+              <div className="action-card-left">
+                <FileTextIcon size={16} />
+                <span>Abrir archivo</span>
+              </div>
+              <kbd className="action-kbd">Ctrl+O</kbd>
             </button>
 
             <button
-              className="btn-hero-action btn-hero-secondary"
+              className="welcome-action-card"
               onClick={handleOpenFolder}
               type="button"
               title="Abrir carpeta de trabajo (Ctrl+Shift+O)"
             >
-              <FolderIcon size={16} />
-              <span>Abrir carpeta</span>
+              <div className="action-card-left">
+                <FolderIcon size={16} />
+                <span>Abrir carpeta</span>
+              </div>
+              <kbd className="action-kbd">Ctrl+Shift+O</kbd>
             </button>
           </div>
         </div>

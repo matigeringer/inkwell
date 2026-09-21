@@ -1,45 +1,47 @@
-:root {
-  /* Paleta Modo Claro (Linen & Ink) */
-  --bg-canvas: #f7f5f0;
-  --bg-surface: #fefdfb;
-  --bg-sidebar: #efebe5;
-  --bg-sidebar-hover: rgba(55, 48, 38, 0.05);
-  --bg-hover: rgba(55, 48, 38, 0.04);
-  --bg-active: rgba(55, 48, 38, 0.08);
-  --bg-card: #fefdfb;
-  --bg-input: #f4f1eb;
-  --bg-overlay: rgba(26, 23, 20, 0.45);
+:root,
+[data-theme='light'],
+[data-theme='puro-light'] {
+  /* Paleta Puro Claro (Inspiración iA Minimal: Blanco puro, gris nítido, azul eléctrico) */
+  --bg-canvas: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #f6f6f8;
+  --bg-sidebar-hover: rgba(0, 0, 0, 0.04);
+  --bg-hover: rgba(0, 0, 0, 0.035);
+  --bg-active: rgba(0, 0, 0, 0.07);
+  --bg-card: #ffffff;
+  --bg-input: #f4f4f6;
+  --bg-overlay: rgba(15, 23, 42, 0.35);
 
-  --border-subtle: rgba(55, 48, 38, 0.07);
-  --border-medium: rgba(55, 48, 38, 0.14);
-  --border-focus: #3d6b56;
+  --border-subtle: rgba(0, 0, 0, 0.06);
+  --border-medium: rgba(0, 0, 0, 0.12);
+  --border-focus: #007aff;
 
-  --text-primary: #22201c;
-  --text-secondary: #5c5750;
-  --text-muted: #908a82;
-  --text-faint: #c8c2b8;
+  --text-primary: #121316;
+  --text-secondary: #52545c;
+  --text-muted: #8b8d97;
+  --text-faint: #c8cbd2;
 
-  --accent-primary: #3d6b56;
-  --accent-primary-hover: #2f5443;
-  --accent-primary-subtle: rgba(61, 107, 86, 0.08);
+  --accent-primary: #007aff;
+  --accent-primary-hover: #0062cc;
+  --accent-primary-subtle: rgba(0, 122, 255, 0.09);
   --accent-text: #ffffff;
 
-  --accent-secondary: #b07028;
-  --accent-secondary-subtle: rgba(176, 112, 40, 0.12);
+  --accent-secondary: #e65100;
+  --accent-secondary-subtle: rgba(230, 81, 0, 0.1);
 
-  --btn-bg: #3d6b56;
+  --btn-bg: #121316;
   --btn-text: #ffffff;
-  --btn-bg-hover: #2f5443;
-  --btn-border: #3d6b56;
+  --btn-bg-hover: #26282e;
+  --btn-border: #121316;
 
-  --btn-secondary-bg: rgba(55, 48, 38, 0.04);
-  --btn-secondary-border: rgba(55, 48, 38, 0.12);
-  --btn-secondary-text: #44403c;
-  --btn-secondary-hover: rgba(55, 48, 38, 0.08);
+  --btn-secondary-bg: #f4f4f6;
+  --btn-secondary-border: rgba(0, 0, 0, 0.08);
+  --btn-secondary-text: #222328;
+  --btn-secondary-hover: #eaebee;
 
-  --shadow-sm: 0 1px 3px rgba(40, 32, 20, 0.04), 0 1px 2px rgba(40, 32, 20, 0.02);
-  --shadow-md: 0 4px 14px rgba(40, 32, 20, 0.06), 0 1px 3px rgba(40, 32, 20, 0.03);
-  --shadow-lg: 0 14px 32px rgba(40, 32, 20, 0.08), 0 2px 6px rgba(40, 32, 20, 0.03);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.09), 0 2px 8px rgba(0, 0, 0, 0.03);
 
   /* Familias tipográficas */
   --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -56,48 +58,144 @@
   --font-sans: var(--font-ui);
 }
 
-[data-theme='dark'] {
-  /* Paleta Modo Oscuro (Obsidian & Sage) */
-  --bg-canvas: #141416;
-  --bg-surface: #1c1c21;
-  --bg-sidebar: #18181c;
-  --bg-sidebar-hover: rgba(240, 232, 220, 0.05);
-  --bg-hover: rgba(240, 232, 220, 0.05);
-  --bg-active: rgba(240, 232, 220, 0.09);
-  --bg-card: #1c1c21;
-  --bg-input: #141416;
-  --bg-overlay: rgba(0, 0, 0, 0.6);
+[data-theme='dark'],
+[data-theme='puro-dark'] {
+  /* Paleta Puro Oscuro (Grafito: Carbón suave y descansado, acento cian) */
+  --bg-canvas: #1c1c1e;
+  --bg-surface: #242426;
+  --bg-sidebar: #161618;
+  --bg-sidebar-hover: rgba(255, 255, 255, 0.05);
+  --bg-hover: rgba(255, 255, 255, 0.045);
+  --bg-active: rgba(255, 255, 255, 0.085);
+  --bg-card: #242426;
+  --bg-input: #161618;
+  --bg-overlay: rgba(0, 0, 0, 0.65);
 
-  --border-subtle: rgba(240, 232, 220, 0.06);
-  --border-medium: rgba(240, 232, 220, 0.11);
-  --border-focus: #5a9e7d;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-medium: rgba(255, 255, 255, 0.14);
+  --border-focus: #38bdf8;
 
-  --text-primary: #e8e4dc;
-  --text-secondary: #9e9890;
-  --text-muted: #686360;
-  --text-faint: #403d3a;
+  --text-primary: #ededed;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-faint: #44444a;
 
-  --accent-primary: #5a9e7d;
-  --accent-primary-hover: #6db38f;
-  --accent-primary-subtle: rgba(90, 158, 125, 0.14);
+  --accent-primary: #38bdf8;
+  --accent-primary-hover: #7dd3fc;
+  --accent-primary-subtle: rgba(56, 189, 248, 0.14);
+  --accent-text: #09090b;
+
+  --accent-secondary: #f97316;
+  --accent-secondary-subtle: rgba(249, 115, 22, 0.15);
+
+  --btn-bg: #ededed;
+  --btn-text: #1c1c1e;
+  --btn-bg-hover: #ffffff;
+  --btn-border: #ededed;
+
+  --btn-secondary-bg: rgba(255, 255, 255, 0.06);
+  --btn-secondary-border: rgba(255, 255, 255, 0.1);
+  --btn-secondary-text: #e4e4e7;
+  --btn-secondary-hover: rgba(255, 255, 255, 0.1);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.65);
+
+  --bg-primary: var(--bg-canvas);
+  --border-color: var(--border-subtle);
+}
+
+[data-theme='sepia'],
+[data-theme='sepia-light'] {
+  /* Paleta Sepia Claro (Editorial Cálido: Lino suave, espresso y terracota) */
+  --bg-canvas: #faf7f2;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #f1ebd8;
+  --bg-sidebar-hover: rgba(45, 38, 30, 0.05);
+  --bg-hover: rgba(45, 38, 30, 0.04);
+  --bg-active: rgba(45, 38, 30, 0.08);
+  --bg-card: #fdfbf7;
+  --bg-input: #eee8d8;
+  --bg-overlay: rgba(30, 24, 18, 0.45);
+
+  --border-subtle: rgba(60, 48, 32, 0.08);
+  --border-medium: rgba(60, 48, 32, 0.15);
+  --border-focus: #b45309;
+
+  --text-primary: #27231f;
+  --text-secondary: #5e564d;
+  --text-muted: #8d8479;
+  --text-faint: #c9c1b4;
+
+  --accent-primary: #b45309;
+  --accent-primary-hover: #92400e;
+  --accent-primary-subtle: rgba(180, 83, 9, 0.1);
   --accent-text: #ffffff;
 
-  --accent-secondary: #d4913e;
-  --accent-secondary-subtle: rgba(212, 145, 62, 0.15);
+  --accent-secondary: #c2410c;
+  --accent-secondary-subtle: rgba(194, 65, 12, 0.12);
 
-  --btn-bg: #5a9e7d;
-  --btn-text: #ffffff;
-  --btn-bg-hover: #6db38f;
-  --btn-border: #5a9e7d;
+  --btn-bg: #27231f;
+  --btn-text: #fbf8f2;
+  --btn-bg-hover: #3d3731;
+  --btn-border: #27231f;
 
-  --btn-secondary-bg: rgba(240, 232, 220, 0.04);
-  --btn-secondary-border: rgba(240, 232, 220, 0.1);
-  --btn-secondary-text: #d6d3d1;
-  --btn-secondary-hover: rgba(240, 232, 220, 0.08);
+  --btn-secondary-bg: rgba(60, 48, 32, 0.05);
+  --btn-secondary-border: rgba(60, 48, 32, 0.12);
+  --btn-secondary-text: #3d3731;
+  --btn-secondary-hover: rgba(60, 48, 32, 0.09);
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 14px 32px rgba(0, 0, 0, 0.55);
+  --shadow-sm: 0 1px 3px rgba(35, 25, 15, 0.04);
+  --shadow-md: 0 4px 14px rgba(35, 25, 15, 0.06);
+  --shadow-lg: 0 16px 36px rgba(35, 25, 15, 0.09);
+
+  --bg-primary: var(--bg-canvas);
+  --border-color: var(--border-subtle);
+}
+
+[data-theme='sepia-dark'] {
+  /* Paleta Sepia Oscuro (Espresso Nocturno: Café tostado cálido, pergamino cremoso y cobre) */
+  --bg-canvas: #1b1613;
+  --bg-surface: #241f1a;
+  --bg-sidebar: #16120f;
+  --bg-sidebar-hover: rgba(245, 230, 210, 0.05);
+  --bg-hover: rgba(245, 230, 210, 0.045);
+  --bg-active: rgba(245, 230, 210, 0.085);
+  --bg-card: #241f1a;
+  --bg-input: #16120f;
+  --bg-overlay: rgba(15, 10, 8, 0.7);
+
+  --border-subtle: rgba(245, 230, 210, 0.08);
+  --border-medium: rgba(245, 230, 210, 0.15);
+  --border-focus: #e07a38;
+
+  --text-primary: #f2ebe1;
+  --text-secondary: #bba998;
+  --text-muted: #857667;
+  --text-faint: #4e443a;
+
+  --accent-primary: #e07a38;
+  --accent-primary-hover: #f08c4a;
+  --accent-primary-subtle: rgba(224, 122, 56, 0.15);
+  --accent-text: #1b1613;
+
+  --accent-secondary: #d97706;
+  --accent-secondary-subtle: rgba(217, 119, 6, 0.14);
+
+  --btn-bg: #f2ebe1;
+  --btn-text: #1b1613;
+  --btn-bg-hover: #ffffff;
+  --btn-border: #f2ebe1;
+
+  --btn-secondary-bg: rgba(245, 230, 210, 0.06);
+  --btn-secondary-border: rgba(245, 230, 210, 0.1);
+  --btn-secondary-text: #ebdccb;
+  --btn-secondary-hover: rgba(245, 230, 210, 0.1);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.7);
 
   --bg-primary: var(--bg-canvas);
   --border-color: var(--border-subtle);

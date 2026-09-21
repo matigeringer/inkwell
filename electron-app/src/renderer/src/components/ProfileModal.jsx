@@ -1,18 +1,22 @@
-import { useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   CloseIcon,
   SunIcon,
   MoonIcon,
   MonitorIcon,
+  PaletteIcon,
   TypeIcon,
   CheckIcon,
   TypewriterIcon,
   AlignLeftIcon,
   AlignJustifyIcon,
-  AlignCenterIcon
+  AlignCenterIcon,
+  FeatherIcon
 } from './Icons'
 
 export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePreferences }) {
+  const [activeTab, setActiveTab] = useState('appearance') // 'appearance' | 'typography' | 'writing'
+
   // Manejar tecla Escape para cerrar
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -26,79 +30,119 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
 
   if (!isOpen) return null
 
+  const tabs = [
+    { id: 'appearance', label: 'Apariencia', icon: PaletteIcon },
+    { id: 'typography', label: 'Tipografía', icon: TypeIcon },
+    { id: 'writing', label: 'Escritura', icon: FeatherIcon }
+  ]
+
   const themes = [
     {
+      id: 'puro',
+      name: 'Puro',
+      desc: 'Minimalismo contemporáneo en blanco y grafito',
+      light: {
+        bg: '#ffffff',
+        sidebar: '#f6f6f8',
+        text: '#121316',
+        accent: '#007aff'
+      },
+      dark: {
+        bg: '#1c1c1e',
+        sidebar: '#161618',
+        text: '#ededed',
+        accent: '#38bdf8'
+      }
+    },
+    {
+      id: 'sepia',
+      name: 'Sepia',
+      desc: 'Calidez editorial en tonos lino y espresso',
+      light: {
+        bg: '#faf7f2',
+        sidebar: '#f1ebd8',
+        text: '#27231f',
+        accent: '#b45309'
+      },
+      dark: {
+        bg: '#1b1613',
+        sidebar: '#16120f',
+        text: '#f2ebe1',
+        accent: '#e07a38'
+      }
+    }
+  ]
+
+  const modes = [
+    {
       id: 'light',
-      name: 'Linen',
-      label: 'Linen',
-      desc: 'Lino cálido y tinta profunda',
+      name: 'Claro',
+      desc: 'Lienzo iluminado',
       icon: SunIcon
     },
     {
       id: 'dark',
-      name: 'Obsidian',
-      label: 'Obsidian',
-      desc: 'Obsidiana y salvia luminosa',
+      name: 'Oscuro',
+      desc: 'Lienzo atenuado',
       icon: MoonIcon
     },
     {
       id: 'system',
       name: 'Sistema',
-      label: 'Automático',
-      desc: 'Sincronizado con el sistema',
+      desc: 'Sincronizado con el SO',
       icon: MonitorIcon
-    }
-  ]
-
-  const alignments = [
-    {
-      id: 'left',
-      name: 'Izquierda',
-      desc: 'Alineación natural estándar',
-      icon: AlignLeftIcon
-    },
-    {
-      id: 'justify',
-      name: 'Justificado',
-      desc: 'Márgenes uniformes estilo editorial',
-      icon: AlignJustifyIcon
-    },
-    {
-      id: 'center',
-      name: 'Centrado',
-      desc: 'Centrado lírico o dramatúrgico',
-      icon: AlignCenterIcon
     }
   ]
 
   const fonts = [
     {
       id: 'serif',
-      name: 'Newsreader (Serif)',
-      desc: 'Diseño editorial cálido para literatura y narrativa',
-      preview: 'En un lugar de la Mancha, de cuyo nombre no quiero acordarme...',
-      familyClass: 'preview-font-serif'
+      name: 'Newsreader',
+      fontClass: 'preview-font-serif',
+      example:
+        'En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor.'
     },
     {
       id: 'sans',
-      name: 'Plus Jakarta (Sans)',
-      desc: 'Moderna, limpia y de máxima claridad visual',
-      preview: 'El pensamiento claro precede a la escritura fluida...',
-      familyClass: 'preview-font-sans'
+      name: 'Plus Jakarta Sans',
+      fontClass: 'preview-font-sans',
+      example:
+        'El pensamiento claro precede a la escritura fluida y directa. Las palabras exactas encuentran su ritmo natural sobre un lienzo silencioso.'
     },
     {
       id: 'mono',
-      name: 'JetBrains (Mono)',
-      desc: 'Estilo máquina de escribir para redacción técnica y borrador',
-      preview: '01. Hipótesis inicial y estructura del manuscrito...',
-      familyClass: 'preview-font-mono'
+      name: 'JetBrains Mono',
+      fontClass: 'preview-font-mono',
+      example:
+        '01. Hipótesis inicial y estructura técnica del borrador: ritmo constante y precisión en cada línea.'
     }
   ]
 
   const fontSizes = [
-    { id: '1.10rem', label: 'Compacto' },
-    { id: '1.40rem', label: 'Estándar' },
-    { id: '1.80rem', label: 'Amplio' }
+    { id: '1.10rem', label: 'Compacto', note: '1.10rem' },
+    { id: '1.40rem', label: 'Estándar', note: '1.40rem' },
+    { id: '1.80rem', label: 'Amplio', note: '1.80rem' }
+  ]
+
+  const alignments = [
+    {
+      id: 'left',
+      name: 'Izquierda',
+      desc: 'Alineación natural',
+      icon: AlignLeftIcon
+    },
+    {
+      id: 'justify',
+      name: 'Justificado',
+      desc: 'Márgenes limpios estilo libro',
+      icon: AlignJustifyIcon
+    },
+    {
+      id: 'center',
+      name: 'Centrado',
+      desc: 'Lírico y dramaturgia',
+      icon: AlignCenterIcon
+    }
   ]
 
   const currentFontSize = preferences.fontSize || '1.40rem'
@@ -114,200 +158,360 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div
-        className="modal-card"
+        className="modal-card modal-card-wide"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
       >
-        <header className="modal-header">
-          <div className="modal-title-group">
+        <header className="modal-header-wide">
+          <div className="modal-header-title-bar">
             <div>
               <h2 id="modal-title" className="modal-title">
                 Preferencias
               </h2>
-              <p className="modal-subtitle">
-                Personaliza el tema, la tipografía y el modo de escritura
-              </p>
+              <p className="modal-subtitle">Configuración del entorno de escritura</p>
             </div>
+            <button
+              className="btn-icon-subtle"
+              onClick={onClose}
+              aria-label="Cerrar modal"
+              title="Cerrar (Esc)"
+            >
+              <CloseIcon size={18} />
+            </button>
           </div>
 
-          <button
-            className="btn-icon-subtle"
-            onClick={onClose}
-            aria-label="Cerrar modal"
-            title="Cerrar (Esc)"
-          >
-            <CloseIcon size={18} />
-          </button>
+          {/* Selector de pestañas segmentadas */}
+          <nav className="modal-segmented-nav" aria-label="Secciones de configuración">
+            {tabs.map((tab) => {
+              const TabIcon = tab.icon
+              const isActive = activeTab === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`segmented-tab-btn ${isActive ? 'is-active' : ''}`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <TabIcon size={15} />
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </nav>
         </header>
 
-        <div className="modal-body">
-          {/* Selector de Tema: Claro / Oscuro / Sistema */}
-          <section className="pref-section">
-            <label className="pref-label">
-              <span>Tema de la Aplicación</span>
-            </label>
-            <div className="theme-grid">
-              {themes.map((t) => {
-                const Icon = t.icon
-                const isSelected = preferences.theme === t.id
-                return (
-                  <button
-                    key={t.id}
-                    type="button"
-                    className={`theme-option ${isSelected ? 'active' : ''} theme-option-${t.id}`}
-                    onClick={() => onUpdatePreferences({ theme: t.id })}
-                  >
-                    <div className="theme-option-header">
-                      <Icon size={18} />
-                      {isSelected && <CheckIcon size={14} className="check-mark" />}
-                    </div>
-                    <span className="theme-name">{t.label}</span>
-                    <span className="theme-desc">{t.desc}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
-
-          {/* Modo Máquina de Escribir (Typewriter Scrolling) */}
-          <section className="pref-section">
-            <label className="pref-label">
-              <TypewriterIcon size={16} />
-              <span>Desplazamiento Estilo Máquina de Escribir</span>
-            </label>
-            <div
-              className={`typewriter-toggle-card ${currentTypewriter ? 'active' : ''}`}
-              onClick={() => onUpdatePreferences({ typewriterMode: !currentTypewriter })}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  onUpdatePreferences({ typewriterMode: !currentTypewriter })
-                }
-              }}
-            >
-              <div className="typewriter-card-left">
-                <TypewriterIcon size={20} className="typewriter-card-icon" />
-                <div className="typewriter-card-texts">
-                  <div className="typewriter-card-title-row">
-                    <span className="typewriter-card-title">Typewriter Scrolling</span>
-                    {currentTypewriter && <span className="font-active-pill">Activo</span>}
-                  </div>
-                  <span className="typewriter-card-desc">
-                    Mantiene la línea actual donde escribes siempre fija en el centro vertical de la
-                    pantalla. (Atajo: Ctrl+Shift+Y)
-                  </span>
+        <div className="modal-body modal-body-wide">
+          {/* PESTAÑA: APARIENCIA & TEMAS */}
+          {activeTab === 'appearance' && (
+            <div className="pref-tab-panel">
+              {/* Sección 1: Paleta de Color */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">Paleta de Color</h3>
+                  <p className="section-desc">
+                    Selecciona el estilo visual del lienzo y la interfaz
+                  </p>
                 </div>
-              </div>
-              <div className={`pref-switch ${currentTypewriter ? 'checked' : ''}`}>
-                <div className="pref-switch-thumb" />
-              </div>
-            </div>
-          </section>
 
-          {/* Alineación de Texto del Manuscrito */}
-          <section className="pref-section">
-            <label className="pref-label">
-              <AlignJustifyIcon size={16} />
-              <span>Alineación de Escritura y Párrafo</span>
-            </label>
-            <div className="align-options-grid">
-              {alignments.map((a) => {
-                const Icon = a.icon
-                const isSelected = currentTextAlign === a.id
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    className={`align-option-btn ${isSelected ? 'active' : ''}`}
-                    onClick={() => onUpdatePreferences({ textAlign: a.id })}
+                <div className="theme-grid-palettes">
+                  {themes.map((t) => {
+                    const isSelected = (preferences.theme || 'puro') === t.id
+                    const currentMode = preferences.mode || 'light'
+
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`theme-card-preview ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ theme: t.id })}
+                      >
+                        {/* Mini maqueta visual que se adapta al modo seleccionado */}
+                        <div className="theme-mini-mockup">
+                          {currentMode === 'system' ? (
+                            <div className="mini-mockup-frame mini-mockup-split">
+                              {/* Mitad izquierda: Claro */}
+                              <div
+                                className="mini-mockup-half"
+                                style={{ backgroundColor: t.light.bg }}
+                              >
+                                <div
+                                  className="mini-mockup-sidebar"
+                                  style={{ backgroundColor: t.light.sidebar }}
+                                >
+                                  <span
+                                    className="mini-mockup-dot"
+                                    style={{ backgroundColor: t.light.accent }}
+                                  />
+                                </div>
+                                <div className="mini-mockup-content">
+                                  <span
+                                    className="mini-line line-primary"
+                                    style={{ backgroundColor: t.light.text }}
+                                  />
+                                  <span
+                                    className="mini-line line-secondary"
+                                    style={{ backgroundColor: t.light.accent }}
+                                  />
+                                </div>
+                              </div>
+                              {/* Mitad derecha: Oscuro */}
+                              <div
+                                className="mini-mockup-half"
+                                style={{
+                                  backgroundColor: t.dark.bg,
+                                  borderLeft: '1px solid var(--border-subtle)'
+                                }}
+                              >
+                                <div
+                                  className="mini-mockup-sidebar"
+                                  style={{ backgroundColor: t.dark.sidebar }}
+                                >
+                                  <span
+                                    className="mini-mockup-dot"
+                                    style={{ backgroundColor: t.dark.accent }}
+                                  />
+                                </div>
+                                <div className="mini-mockup-content">
+                                  <span
+                                    className="mini-line line-primary"
+                                    style={{ backgroundColor: t.dark.text }}
+                                  />
+                                  <span
+                                    className="mini-line line-secondary"
+                                    style={{ backgroundColor: t.dark.accent }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            (() => {
+                              const palette = currentMode === 'dark' ? t.dark : t.light
+                              return (
+                                <div
+                                  className="mini-mockup-frame"
+                                  style={{ backgroundColor: palette.bg }}
+                                >
+                                  <div
+                                    className="mini-mockup-sidebar"
+                                    style={{ backgroundColor: palette.sidebar }}
+                                  >
+                                    <span
+                                      className="mini-mockup-dot"
+                                      style={{ backgroundColor: palette.accent }}
+                                    />
+                                  </div>
+                                  <div className="mini-mockup-content">
+                                    <span
+                                      className="mini-line line-primary"
+                                      style={{ backgroundColor: palette.text }}
+                                    />
+                                    <span
+                                      className="mini-line line-secondary"
+                                      style={{ backgroundColor: palette.accent }}
+                                    />
+                                    <span
+                                      className="mini-line line-subtle"
+                                      style={{ backgroundColor: palette.text }}
+                                    />
+                                  </div>
+                                </div>
+                              )
+                            })()
+                          )}
+                        </div>
+
+                        <div className="theme-card-details">
+                          <div className="theme-card-name-row">
+                            <span className="theme-card-name">{t.name}</span>
+                            {isSelected && <CheckIcon size={14} className="theme-check" />}
+                          </div>
+                          <span className="theme-card-desc">{t.desc}</span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              {/* Sección 2: Modo de Apariencia */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">Modo de Apariencia</h3>
+                  <p className="section-desc">Selecciona la iluminación para la paleta elegida</p>
+                </div>
+
+                <div className="mode-selector-grid">
+                  {modes.map((m) => {
+                    const ModeIcon = m.icon
+                    const isModeSelected = (preferences.mode || 'light') === m.id
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        className={`mode-card-btn ${isModeSelected ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ mode: m.id })}
+                      >
+                        <div className="mode-card-icon">
+                          <ModeIcon size={17} />
+                        </div>
+                        <div className="mode-card-info">
+                          <div className="mode-card-name-row">
+                            <span className="mode-card-name">{m.name}</span>
+                            {isModeSelected && <CheckIcon size={14} className="theme-check" />}
+                          </div>
+                          <span className="mode-card-desc">{m.desc}</span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* PESTAÑA: TIPOGRAFÍA & TAMAÑO */}
+          {activeTab === 'typography' && (
+            <div className="pref-tab-panel">
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">Familia Tipográfica</h3>
+                  <p className="section-desc">Diseño de letra para el editor principal</p>
+                </div>
+
+                <div className="font-grid-specimens">
+                  {fonts.map((f) => {
+                    const isSelected = preferences.fontFamily === f.id
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        className={`font-specimen-card ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ fontFamily: f.id })}
+                      >
+                        <span className={`font-specimen-title ${f.fontClass}`}>{f.name}</span>
+                        {isSelected && <CheckIcon size={15} className="theme-check" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">Tamaño de Fuente</h3>
+                </div>
+
+                <div className="size-selector-pills">
+                  {fontSizes.map((s) => {
+                    const isSelected = currentFontSize === s.id
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className={`size-pill-btn ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ fontSize: s.id })}
+                      >
+                        <span>{s.label}</span>
+                        <span className="size-pill-value">{s.note}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {/* Muestra interactiva de ejemplo */}
+                <div className="live-preview-surface">
+                  <span className="live-preview-tag">Ejemplo</span>
+                  <p
+                    className="live-preview-content"
+                    style={{
+                      fontSize: currentFontSize,
+                      fontFamily: currentFontFamily,
+                      textAlign: currentTextAlign
+                    }}
                   >
-                    <div className="align-option-header">
-                      <Icon size={18} />
-                      {isSelected && <CheckIcon size={14} className="check-mark" />}
+                    {fonts.find((f) => f.id === preferences.fontFamily)?.example ||
+                      fonts[0].example}
+                  </p>
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* PESTAÑA: ESCRITURA & MODO RODILLO */}
+          {activeTab === 'writing' && (
+            <div className="pref-tab-panel">
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">Modo Rodillo (Typewriter)</h3>
+                  <p className="section-desc">Enfoque continuo de concentración vertical</p>
+                </div>
+
+                <div
+                  className={`typewriter-clean-card ${currentTypewriter ? 'is-active' : ''}`}
+                  onClick={() => onUpdatePreferences({ typewriterMode: !currentTypewriter })}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onUpdatePreferences({ typewriterMode: !currentTypewriter })
+                    }
+                  }}
+                >
+                  <div className="typewriter-clean-info">
+                    <div className="typewriter-clean-header">
+                      <TypewriterIcon size={18} />
+                      <span className="typewriter-clean-title">Typewriter Scrolling</span>
+                      {currentTypewriter && <span className="pref-pill-badge">Activo</span>}
                     </div>
-                    <span className="align-option-name">{a.name}</span>
-                    <span className="align-option-desc">{a.desc}</span>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
+                    <p className="typewriter-clean-desc">
+                      Mantiene la línea donde escribes fija en el centro vertical de la pantalla.
+                      Atajo rápido: <kbd className="pref-kbd">Ctrl+Shift+Y</kbd>
+                    </p>
+                  </div>
 
-          {/* Tipografía de Escritura */}
-          <section className="pref-section">
-            <label className="pref-label">
-              <TypeIcon size={16} />
-              <span>Tipografía de Escritura (Editor)</span>
-            </label>
-            <div className="font-options-list">
-              {fonts.map((f) => {
-                const isSelected = preferences.fontFamily === f.id
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    className={`font-option ${isSelected ? 'active' : ''}`}
-                    onClick={() => onUpdatePreferences({ fontFamily: f.id })}
-                  >
-                    <div className="font-option-info">
-                      <div className="font-option-title-row">
-                        <span className="font-option-name">{f.name}</span>
-                        {isSelected && <span className="font-active-pill">Activa</span>}
-                      </div>
-                      <span className="font-option-desc">{f.desc}</span>
-                      <p className={`font-preview-sample ${f.familyClass}`}>{f.preview}</p>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </section>
+                  <div className={`pref-switch-modern ${currentTypewriter ? 'checked' : ''}`}>
+                    <div className="pref-switch-thumb-modern" />
+                  </div>
+                </div>
+              </section>
 
-          {/* Tamaño de texto del editor con vista previa en vivo */}
-          <section className="pref-section">
-            <label className="pref-label">
-              <span>Tamaño y Muestra de Texto del Editor</span>
-            </label>
-            <div className="size-selector-grid">
-              {fontSizes.map((s) => {
-                const isSelected = currentFontSize === s.id
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    className={`size-btn ${isSelected ? 'active' : ''}`}
-                    onClick={() => onUpdatePreferences({ fontSize: s.id })}
-                  >
-                    {s.label}
-                  </button>
-                )
-              })}
-            </div>
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">Alineación del Párrafo</h3>
+                  <p className="section-desc">Disposición del cuerpo de texto en el lienzo</p>
+                </div>
 
-            <div className="size-live-preview-box">
-              <span className="size-preview-label">Vista previa en tiempo real:</span>
-              <p
-                className="size-preview-text"
-                style={{
-                  fontSize: currentFontSize,
-                  fontFamily: currentFontFamily,
-                  textAlign: currentTextAlign
-                }}
-              >
-                El arte de escribir consiste en plasmar ideas con claridad, serenidad y ritmo,
-                manteniendo un equilibrio armonioso entre la forma de las palabras y el lienzo sobre
-                el que descansan.
-              </p>
+                <div className="align-grid-modern">
+                  {alignments.map((a) => {
+                    const Icon = a.icon
+                    const isSelected = currentTextAlign === a.id
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className={`align-card-btn ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ textAlign: a.id })}
+                      >
+                        <div className="align-card-icon-row">
+                          <Icon size={18} />
+                          {isSelected && <CheckIcon size={14} className="theme-check" />}
+                        </div>
+                        <span className="align-card-name">{a.name}</span>
+                        <span className="align-card-desc">{a.desc}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
             </div>
-          </section>
+          )}
         </div>
 
-        <footer className="modal-footer">
-          <button className="btn-done" onClick={onClose}>
+        <footer className="modal-footer-wide">
+          <button className="btn-modal-close" onClick={onClose}>
             Listo
           </button>
         </footer>

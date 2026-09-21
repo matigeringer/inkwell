@@ -500,14 +500,25 @@ export default function Editor({
     }
   }, [])
 
-  // Alternar Tema (Claro / Oscuro)
+  // Alternar Modo (Claro / Oscuro) dentro del tema activo sin cambiar de tema
   const cycleTheme = useCallback(() => {
     if (!onUpdatePreferences) return
-    const currentTheme = preferences?.theme || 'light'
-    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark'
-    onUpdatePreferences({ theme: nextTheme })
-    showToast(`Tema: ${nextTheme === 'dark' ? 'Obsidian (Oscuro)' : 'Parchment (Claro)'}`)
-  }, [preferences?.theme, onUpdatePreferences, showToast])
+    const isSystemDark =
+      typeof window !== 'undefined' && window.matchMedia
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches
+        : false
+    const currentEffectiveMode =
+      preferences?.mode === 'system'
+        ? isSystemDark
+          ? 'dark'
+          : 'light'
+        : preferences?.mode || 'light'
+    const nextMode = currentEffectiveMode === 'dark' ? 'light' : 'dark'
+    onUpdatePreferences({ mode: nextMode })
+    const themeName = preferences?.theme === 'sepia' ? 'Sepia' : 'Puro'
+    const modeName = nextMode === 'dark' ? 'Oscuro' : 'Claro'
+    showToast(`${themeName}: Modo ${modeName}`)
+  }, [preferences?.theme, preferences?.mode, onUpdatePreferences, showToast])
 
   // Alternar Familia Tipográfica (Serif -> Sans -> Mono)
   const cycleFontFamily = useCallback(() => {
@@ -1136,7 +1147,7 @@ export default function Editor({
                 <h4 className="shortcuts-section-title">Tipografía y Apariencia</h4>
                 <div className="shortcuts-list">
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Alternar Tema (Claro / Oscuro)</span>
+                    <span className="shortcut-desc">Alternar Modo (Claro / Oscuro)</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>
                     </div>
