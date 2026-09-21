@@ -3,7 +3,6 @@ import Editor from './components/Editor'
 import ProfileModal from './components/ProfileModal'
 import FileTree from './components/FileTree'
 import {
-  FeatherIcon,
   PlusIcon,
   SunIcon,
   MoonIcon,
@@ -277,48 +276,9 @@ function App() {
         <div className="sidebar-top">
           <div className="brand-section">
             <div className="brand-header">
-              <div className="brand-logo-badge">
-                <FeatherIcon size={20} className="brand-feather" />
-              </div>
-              <div className="brand-texts">
-                <h1 className="app-title">Fountain</h1>
-              </div>
+              <h1 className="app-title">Fountain</h1>
             </div>
-          </div>
-
-          <div className="sidebar-actions">
-            <button
-              className="btn-sidebar-create"
-              onClick={handleCreate}
-              type="button"
-              title="Crear nuevo documento (Ctrl+N)"
-            >
-              <PlusIcon size={16} />
-              <span>Nuevo documento</span>
-              <kbd className="sidebar-kbd">Ctrl+N</kbd>
-            </button>
-
-            <button
-              className="btn-sidebar-secondary"
-              onClick={handleOpenFile}
-              type="button"
-              title="Abrir archivo Markdown existente (Ctrl+O)"
-            >
-              <FileTextIcon size={15} />
-              <span>Abrir archivo...</span>
-              <kbd className="sidebar-kbd">Ctrl+O</kbd>
-            </button>
-
-            <button
-              className="btn-sidebar-secondary"
-              onClick={handleOpenFolder}
-              type="button"
-              title="Abrir carpeta con manuscritos (Ctrl+Shift+O)"
-            >
-              <FolderIcon size={15} />
-              <span>Abrir carpeta...</span>
-              <kbd className="sidebar-kbd">Ctrl+Shift+O</kbd>
-            </button>
+            <hr className="brand-rule" />
           </div>
 
           {/* Explorador de archivos si hay carpeta abierta en la pantalla principal */}
@@ -333,13 +293,9 @@ function App() {
               />
             </div>
           ) : (
-            <div className="sidebar-workspace-hint">
-              <span className="hint-label">Organización</span>
-              <p className="hint-desc">
-                Abre una carpeta para organizar capítulos, borradores y notas en un árbol
-                jerárquico.
-              </p>
-            </div>
+            <p className="sidebar-workspace-hint">
+              Abre una carpeta para organizar tus manuscritos.
+            </p>
           )}
         </div>
 
@@ -378,45 +334,36 @@ function App() {
       {/* Contenido principal (Lienzo de Bienvenida) */}
       <main className="main-content">
         <div className="welcome-hero">
-          <div className="welcome-emblem">
-            <FeatherIcon size={38} className="welcome-feather-icon" />
-          </div>
-
-          <h2 className="welcome-title">El espacio para tus palabras</h2>
-          <p className="welcome-description">
-            Un entorno sereno y libre de distracciones diseñado para la concentración, el ensayo y
-            la narrativa literaria.
-          </p>
-
           <div className="welcome-actions">
-            <button className="btn-hero-create" onClick={handleCreate} type="button">
-              <span className="btn-icon">
-                <PlusIcon size={18} />
-              </span>
-              <span>Empezar a escribir</span>
+            <button
+              className="btn-hero-action btn-hero-primary"
+              onClick={handleCreate}
+              type="button"
+              title="Crear nuevo documento (Ctrl+N)"
+            >
+              <PlusIcon size={16} />
+              <span>Nuevo documento</span>
             </button>
 
-            <div className="welcome-secondary-actions">
-              <button
-                className="btn-hero-secondary"
-                onClick={handleOpenFile}
-                type="button"
-                title="Abrir archivo Markdown existente"
-              >
-                <FileTextIcon size={16} />
-                <span>Abrir archivo</span>
-              </button>
+            <button
+              className="btn-hero-action btn-hero-secondary"
+              onClick={handleOpenFile}
+              type="button"
+              title="Abrir archivo Markdown existente (Ctrl+O)"
+            >
+              <FileTextIcon size={16} />
+              <span>Abrir archivo</span>
+            </button>
 
-              <button
-                className="btn-hero-secondary"
-                onClick={handleOpenFolder}
-                type="button"
-                title="Abrir carpeta de trabajo"
-              >
-                <FolderIcon size={16} />
-                <span>Abrir carpeta</span>
-              </button>
-            </div>
+            <button
+              className="btn-hero-action btn-hero-secondary"
+              onClick={handleOpenFolder}
+              type="button"
+              title="Abrir carpeta de trabajo (Ctrl+Shift+O)"
+            >
+              <FolderIcon size={16} />
+              <span>Abrir carpeta</span>
+            </button>
           </div>
         </div>
       </main>

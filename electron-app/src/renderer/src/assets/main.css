@@ -34,57 +34,43 @@
 .sidebar-top {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 1.25rem;
 }
 
-/* Brand Header - Title in Italics */
+/* Brand Header - Pure Typographical Identity */
 .brand-section {
-  padding: 0.25rem 0.5rem;
+  padding: 0.25rem 0.25rem 0 0.25rem;
 }
 
 .brand-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-}
-
-.brand-logo-badge {
-  width: 34px;
-  height: 34px;
-  border-radius: 9px;
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
   justify-content: center;
-  border: 1px solid var(--border-subtle);
-  flex-shrink: 0;
-  transition: all 0.2s ease;
 }
 
-.brand-feather {
-  display: block;
-  transform: rotate(-10deg);
-}
-
-.brand-texts {
-  display: flex;
-  align-items: center;
+.brand-rule {
+  border: none;
+  height: 1px;
+  background-color: var(--border-subtle);
+  margin: 0.85rem auto 0.25rem auto;
+  width: 100%;
 }
 
 .app-title {
   font-family: var(--font-serif);
   font-style: italic;
-  font-size: 1.65rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
   line-height: 1;
   margin: 0;
   padding: 0;
   display: inline-flex;
   align-items: center;
-  transform: translateY(-1px);
+  justify-content: center;
+  text-align: center;
+  width: 100%;
 }
 
 /* Sidebar Actions */
@@ -99,24 +85,23 @@
   align-items: center;
   gap: 0.65rem;
   width: 100%;
-  padding: 0.65rem 0.85rem;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
+  padding: 0.6rem 0.85rem;
+  background-color: transparent;
+  border: 1.5px solid var(--accent-primary);
   border-radius: 8px;
-  color: var(--text-primary);
+  color: var(--accent-primary);
   font-family: var(--font-ui);
   font-size: 0.88rem;
-  font-weight: 500;
+  font-weight: 550;
   cursor: pointer;
-  box-shadow: var(--shadow-sm);
   transition: all 0.18s ease;
 }
 
 .btn-sidebar-create:hover {
-  background-color: var(--bg-hover);
-  border-color: var(--border-medium);
+  background-color: var(--accent-primary-subtle);
+  border-color: var(--accent-primary-hover);
+  color: var(--accent-primary-hover);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
 }
 
 .btn-sidebar-create:active {
@@ -159,28 +144,12 @@
 }
 
 .sidebar-workspace-hint {
-  padding: 0.85rem;
-  background-color: var(--bg-surface);
-  border: 1px dashed var(--border-medium);
-  border-radius: 8px;
-  margin-top: 0.25rem;
-}
-
-.hint-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--accent-primary);
-  display: block;
-  margin-bottom: 0.3rem;
-}
-
-.hint-desc {
+  padding: 0.5rem 0.5rem;
   font-size: 0.78rem;
   color: var(--text-muted);
-  line-height: 1.45;
-  margin: 0;
+  line-height: 1.5;
+  margin-top: 0.25rem;
+  text-align: center;
 }
 
 .sidebar-tree-section {
@@ -282,7 +251,7 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  max-width: 500px;
+  max-width: 520px;
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -297,106 +266,83 @@
   }
 }
 
-.welcome-emblem {
-  width: 72px;
-  height: 72px;
-  border-radius: 20px;
-  background-color: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  box-shadow: var(--shadow-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-primary);
-  margin-bottom: 1.75rem;
-}
-
-.welcome-feather-icon {
-  transform: rotate(-10deg);
-}
-
 .welcome-title {
   font-family: var(--font-serif);
-  font-size: 2.25rem;
+  font-size: 2.5rem;
   font-weight: 600;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.025em;
   color: var(--text-primary);
-  margin-bottom: 0.85rem;
-  line-height: 1.25;
+  margin-bottom: 0.95rem;
+  line-height: 1.2;
 }
 
 .welcome-description {
-  font-size: 1rem;
+  font-size: 1.02rem;
   color: var(--text-secondary);
-  line-height: 1.65;
+  line-height: 1.7;
   margin-bottom: 2.25rem;
-  max-width: 440px;
+  max-width: 460px;
 }
 
 .welcome-actions {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
+  gap: 0.75rem;
+  width: 100%;
 }
 
-.btn-hero-create {
+.btn-hero-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
-  padding: 0.85rem 2rem;
+  width: 220px;
+  height: 42px;
+  padding: 0 1.25rem;
+  border-radius: 8px;
   font-family: var(--font-ui);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.88rem;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-hero-primary {
   color: var(--accent-text);
   background-color: var(--btn-bg);
   border: 1px solid var(--btn-border);
-  border-radius: 10px;
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  outline: none;
+  font-weight: 550;
+  box-shadow: var(--shadow-sm);
 }
 
-.btn-hero-create:hover {
+.btn-hero-primary:hover {
   background-color: var(--btn-bg-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.btn-hero-create:active {
+.btn-hero-primary:active {
   transform: translateY(0);
 }
 
-.welcome-secondary-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
 .btn-hero-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.15rem;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-medium);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-family: var(--font-ui);
-  font-size: 0.86rem;
+  color: var(--text-primary);
   font-weight: 500;
-  cursor: pointer;
   box-shadow: var(--shadow-sm);
-  transition: all 0.15s ease;
 }
 
 .btn-hero-secondary:hover {
   background-color: var(--bg-hover);
-  color: var(--text-primary);
   border-color: var(--border-medium);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-hero-secondary:active {
+  transform: translateY(0);
 }
 
 /* ==========================================================================
@@ -415,11 +361,11 @@
 
 /* Header */
 .editor-header {
-  height: 52px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
+  padding: 0 1.25rem;
   background-color: var(--bg-sidebar);
   border-bottom: 1px solid var(--border-subtle);
   user-select: none;
@@ -727,8 +673,8 @@
   padding: 0.3rem 0.45rem;
   border-radius: 9999px;
   box-shadow: var(--shadow-md);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .zen-pill-btn {
@@ -1356,7 +1302,7 @@
   width: 100%;
   max-width: var(--editor-max-width);
   min-height: 100%;
-  padding: 3.5rem 2.5rem 6rem 2.5rem;
+  padding: 3rem 2rem 5rem 2rem;
   display: flex;
   flex-direction: column;
   transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1384,9 +1330,9 @@
   font-family: var(--font-editor);
   font-size: var(--font-size-editor);
   text-align: var(--text-align-editor, left);
-  line-height: 1.85;
+  line-height: 1.82;
   font-weight: 400;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.008em;
   caret-color: var(--accent-primary);
   user-select: text;
   hyphens: auto;
@@ -1401,13 +1347,13 @@
 /* Headings with Editorial Serif styling scaling proportionally */
 .fountain-editor-content h1 {
   font-family: var(--font-serif);
-  font-size: 1.95em;
+  font-size: 1.85em;
   font-weight: 700;
   letter-spacing: -0.025em;
   line-height: 1.25;
   color: var(--text-primary);
-  margin-top: 2.25rem;
-  margin-bottom: 0.95rem;
+  margin-top: 2rem;
+  margin-bottom: 0.85rem;
 }
 
 .fountain-editor-content h1:first-child {
@@ -1487,13 +1433,13 @@
 /* Blockquotes */
 .fountain-editor-content blockquote,
 .fountain-blockquote {
-  border-left: 3px solid var(--accent-primary);
-  padding: 0.25rem 0 0.25rem 1.4rem;
+  border-left: 2.5px solid var(--accent-primary);
+  padding: 0.35rem 0 0.35rem 1.4rem;
   margin: 1.5rem 0;
   color: var(--text-secondary);
   font-style: italic;
   background-color: var(--bg-hover);
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 4px 4px 0;
 }
 
 .fountain-editor-content blockquote p {
@@ -1679,15 +1625,15 @@
 
 /* Editor Footer */
 .editor-footer {
-  height: 38px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.5rem;
+  padding: 0 1.25rem;
   background-color: var(--bg-sidebar);
   border-top: 1px solid var(--border-subtle);
   user-select: none;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   color: var(--text-muted);
   transition:
     opacity 0.3s ease,
@@ -1750,11 +1696,11 @@
 
 .modal-card {
   width: 100%;
-  max-width: 540px;
+  max-width: 520px;
   max-height: 90vh;
   background-color: var(--bg-card);
   border: 1px solid var(--border-medium);
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;

@@ -6,7 +6,6 @@ import {
   MonitorIcon,
   TypeIcon,
   CheckIcon,
-  SettingsIcon,
   TypewriterIcon,
   AlignLeftIcon,
   AlignJustifyIcon,
@@ -30,16 +29,16 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
   const themes = [
     {
       id: 'light',
-      name: 'Parchment',
-      label: 'Claro',
-      desc: 'Papel vitela y tinta sumi',
+      name: 'Linen',
+      label: 'Linen',
+      desc: 'Lino cálido y tinta profunda',
       icon: SunIcon
     },
     {
       id: 'dark',
       name: 'Obsidian',
-      label: 'Oscuro',
-      desc: 'Medianoche y acentos salvia',
+      label: 'Obsidian',
+      desc: 'Obsidiana y salvia luminosa',
       icon: MoonIcon
     },
     {
@@ -123,9 +122,6 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
       >
         <header className="modal-header">
           <div className="modal-title-group">
-            <div className="modal-avatar-badge">
-              <SettingsIcon size={18} className="modal-avatar-icon" />
-            </div>
             <div>
               <h2 id="modal-title" className="modal-title">
                 Preferencias

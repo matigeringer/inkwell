@@ -825,7 +825,6 @@ export default function Editor({
             <span className="doc-title-text" title={filePath || fileName}>
               {fileName}
             </span>
-            <span className="doc-meta-separator">•</span>
             <div className={`doc-status status-${saveStatus}`}>
               <span className="doc-status-dot" />
               <span className="doc-status-label">
@@ -978,10 +977,7 @@ export default function Editor({
             aria-label="Estadísticas de escritura"
           >
             <div className="zen-stats-header">
-              <div className="zen-stats-title-row">
-                <BarChartIcon size={16} />
-                <h3 className="zen-stats-title">Estadísticas del Manuscrito</h3>
-              </div>
+              <h3 className="zen-stats-title">Estadísticas del Manuscrito</h3>
               <button
                 className="btn-icon-subtle"
                 onClick={() => setShowStatsHud(false)}
@@ -1032,9 +1028,6 @@ export default function Editor({
           >
             <header className="modal-header">
               <div className="modal-title-group">
-                <div className="modal-avatar-badge">
-                  <KeyboardIcon size={18} />
-                </div>
                 <div>
                   <h2 id="shortcuts-title" className="modal-title">
                     Atajos de Teclado

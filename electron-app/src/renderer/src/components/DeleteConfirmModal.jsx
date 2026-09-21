@@ -31,9 +31,6 @@ export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose })
       >
         <header className="modal-header">
           <div className="modal-title-group">
-            <div className="modal-avatar-badge delete-avatar-badge">
-              <TrashIcon size={18} />
-            </div>
             <div>
               <h2 id="delete-modal-title" className="modal-title">
                 {title}
