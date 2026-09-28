@@ -1296,6 +1296,7 @@
   flex: 1;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
   overflow-y: auto;
   background-color: var(--bg-canvas);
   cursor: text;
@@ -1309,13 +1310,25 @@
   padding: 3rem 2rem 5rem 2rem;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
+  align-self: flex-start;
   transition: padding 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .editor-canvas.typewriter-mode-active,
 .zen-mode-active .editor-canvas.typewriter-mode-active {
-  padding-top: 50vh !important;
-  padding-bottom: 50vh !important;
+  padding-top: var(--typewriter-pad-top, 50vh) !important;
+  padding-bottom: var(--typewriter-pad-bottom, 55vh) !important;
+}
+
+.editor-canvas.typewriter-pos-center {
+  --typewriter-pad-top: 50vh;
+  --typewriter-pad-bottom: 55vh;
+}
+
+.editor-canvas.typewriter-pos-eye {
+  --typewriter-pad-top: 38vh;
+  --typewriter-pad-bottom: 65vh;
 }
 
 .tiptap-wrapper {
@@ -2341,6 +2354,83 @@
 
 .pref-switch-modern.checked .pref-switch-thumb-modern {
   transform: translateX(20px);
+}
+
+.typewriter-suboptions {
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.typewriter-suboptions-label {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.typewriter-behavior-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.65rem;
+}
+
+.typewriter-behavior-btn {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.75rem 0.85rem;
+  background-color: var(--bg-surface);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.16s ease;
+  color: var(--text-primary);
+}
+
+.typewriter-behavior-btn:hover {
+  border-color: var(--border-medium);
+  background-color: var(--bg-hover);
+}
+
+.typewriter-behavior-btn.is-selected {
+  border-color: var(--accent-primary);
+  background-color: var(--accent-primary-subtle);
+  box-shadow: 0 0 0 1px var(--accent-primary);
+}
+
+.typewriter-behavior-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.typewriter-behavior-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.typewriter-behavior-desc {
+  font-size: 0.71rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.pref-pill-badge-subtle {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  background-color: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 8px;
 }
 
 .align-grid-modern {

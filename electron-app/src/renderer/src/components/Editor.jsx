@@ -59,76 +59,222 @@ export default function Editor({
   const toastTimeoutRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const typewriterModeRef = useRef(Boolean(preferences?.typewriterMode))
+  const typewriterPositionRef = useRef(preferences?.typewriterPosition || 'center')
+  const typewriterBehaviorRef = useRef(preferences?.typewriterBehavior || 'deadzone')
   const isUserManualScrollingRef = useRef(false)
-  const manualScrollTimerRef = useRef(null)
+  const scrollAnimationRef = useRef({ rafId: null })
+  const lastAnchoredLineYRef = useRef(null)
+  const isMouseDownRef = useRef(false)
   const [, setTick] = useState(0) // Forzar re-render en cambios para estadísticas
 
-  // Sincronizar ref de modo máquina de escribir
+  // Sincronizar refs de modo máquina de escribir
   useEffect(() => {
     typewriterModeRef.current = Boolean(preferences?.typewriterMode)
-  }, [preferences?.typewriterMode])
-
-  // Centrado vertical continuo estilo Typewriter (emulación de rodillo fijo)
-  const centerCursor = useCallback((targetEditor, smooth = false, force = false) => {
-    if (!scrollContainerRef.current) return
-    if (!targetEditor?.view || !targetEditor?.state) return
-    if (isUserManualScrollingRef.current && !force) return
-
-    requestAnimationFrame(() => {
-      try {
-        if (isUserManualScrollingRef.current && !force) return
-        const { selection } = targetEditor.state
-        if (!selection) return
-
-        // Usar la posición exacta del caret activo (head), incluso en párrafos largos con soft wraps
-        const caretPos = selection.head ?? selection.from
-        const coords = targetEditor.view.coordsAtPos(caretPos)
-        if (!coords) return
-
-        const container = scrollContainerRef.current
-        if (!container) return
-
-        const containerRect = container.getBoundingClientRect()
-        const targetY = containerRect.top + containerRect.height / 2
-        const cursorY = (coords.top + coords.bottom) / 2
-        const delta = cursorY - targetY
-
-        if (Math.abs(delta) > 1.5) {
-          if (smooth) {
-            container.scrollBy({ top: delta, behavior: 'smooth' })
-          } else {
-            container.scrollTop += delta
-          }
-        }
-      } catch {
-        // Silenciar errores de cálculo en transiciones
+    typewriterPositionRef.current = preferences?.typewriterPosition || 'center'
+    typewriterBehaviorRef.current = preferences?.typewriterBehavior || 'deadzone'
+    if (!preferences?.typewriterMode) {
+      if (scrollAnimationRef.current.rafId) {
+        cancelAnimationFrame(scrollAnimationRef.current.rafId)
+        scrollAnimationRef.current.rafId = null
       }
-    })
+      isUserManualScrollingRef.current = false
+      lastAnchoredLineYRef.current = null
+    }
+  }, [
+    preferences?.typewriterMode,
+    preferences?.typewriterPosition,
+    preferences?.typewriterBehavior
+  ])
+
+  // Rastrear liberación global del ratón para finalizar estados de selección o arrastre
+  useEffect(() => {
+    const handleMouseUp = () => {
+      isMouseDownRef.current = false
+    }
+    window.addEventListener('mouseup', handleMouseUp)
+    return () => window.removeEventListener('mouseup', handleMouseUp)
   }, [])
 
-  // Permitir desplazamiento manual libre con rueda/trackpad sin pelear con el usuario
+  // Cancelar animación de desplazamiento en curso
+  const cancelScrollAnimation = useCallback(() => {
+    if (scrollAnimationRef.current.rafId) {
+      cancelAnimationFrame(scrollAnimationRef.current.rafId)
+      scrollAnimationRef.current.rafId = null
+    }
+  }, [])
+
+  // Motor de micro-desplazamiento con interpolación suave (easing rápido easeOutCubic de 80-130ms)
+  const smoothScrollTo = useCallback(
+    (targetScroll, duration = 110) => {
+      const container = scrollContainerRef.current
+      if (!container) return
+
+      cancelScrollAnimation()
+
+      const maxScroll = Math.max(0, container.scrollHeight - container.clientHeight)
+      const clampedTarget = Math.max(0, Math.min(targetScroll, maxScroll))
+      const startScroll = container.scrollTop
+      const distance = clampedTarget - startScroll
+
+      if (Math.abs(distance) < 1) {
+        container.scrollTop = clampedTarget
+        return
+      }
+
+      const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3)
+      const startTime = performance.now()
+
+      const step = (currentTime) => {
+        const elapsed = currentTime - startTime
+        const progress = Math.min(elapsed / duration, 1)
+        const eased = easeOutCubic(progress)
+
+        container.scrollTop = startScroll + distance * eased
+
+        if (progress < 1) {
+          scrollAnimationRef.current.rafId = requestAnimationFrame(step)
+        } else {
+          container.scrollTop = clampedTarget
+          scrollAnimationRef.current.rafId = null
+        }
+      }
+
+      scrollAnimationRef.current.rafId = requestAnimationFrame(step)
+    },
+    [cancelScrollAnimation]
+  )
+
+  // Centrado vertical ergonómico estilo Typewriter (50% medio o 38% línea de ojos)
+  const centerCursor = useCallback(
+    (targetEditor, options = {}) => {
+      const {
+        reason = 'type', // 'type' | 'nav' | 'click' | 'force'
+        duration = 110,
+        force = false
+      } = options
+
+      const container = scrollContainerRef.current
+      if (!container) return
+      if (!targetEditor?.view || !targetEditor?.state) return
+      if (!typewriterModeRef.current) return
+
+      // Si el usuario desacopló manualmente (rueda, scrollbar), respetar inspección hasta que escriba o edite
+      if (isUserManualScrollingRef.current && !force) return
+
+      const { selection } = targetEditor.state
+      if (!selection) return
+
+      // Selección de texto en bloque: mientras se selecciona texto o se arrastra el ratón, pausar el desplazamiento
+      if (!selection.empty || isMouseDownRef.current) {
+        return
+      }
+
+      requestAnimationFrame(() => {
+        try {
+          if (!scrollContainerRef.current || !targetEditor?.view) return
+          if (isUserManualScrollingRef.current && !force) return
+          const currentSel = targetEditor.state.selection
+          if (!currentSel || !currentSel.empty || isMouseDownRef.current) return
+
+          const caretPos = currentSel.head ?? currentSel.from
+          const coords = targetEditor.view.coordsAtPos(caretPos)
+          if (!coords) return
+
+          const containerRect = container.getBoundingClientRect()
+          // Ratio de ancla vertical: 50% centrado exacto o 38% tercio superior / línea de ojos
+          const currentPosition = typewriterPositionRef.current
+          const TARGET_RATIO = currentPosition === 'eye' ? 0.38 : 0.5
+          const targetY = containerRect.top + containerRect.height * TARGET_RATIO
+          const cursorY = (coords.top + coords.bottom) / 2
+          const lineHeight = Math.max(16, coords.bottom - coords.top)
+          const lineCenterInDoc = cursorY - containerRect.top + container.scrollTop
+
+          const isSamePhysicalLine =
+            lastAnchoredLineYRef.current !== null &&
+            Math.abs(lineCenterInDoc - lastAnchoredLineYRef.current) < lineHeight * 0.45
+
+          const delta = cursorY - targetY
+
+          // 1. Escritura continua en la misma línea: mantener la pantalla 100% fija (sin ningún temblor ni salto)
+          if (reason === 'type') {
+            if (isSamePhysicalLine) {
+              return
+            }
+            // Si el cursor saltó a un nuevo renglón (Enter, word-wrap hacia adelante o backspace línea anterior), centrarlo suavemente
+            lastAnchoredLineYRef.current = lineCenterInDoc
+            const targetScroll = container.scrollTop + delta
+            smoothScrollTo(targetScroll, duration)
+            return
+          }
+
+          const currentBehavior = typewriterBehaviorRef.current
+
+          // 2. Navegación con flechas en Zona de Tolerancia (Deadzone)
+          if (reason === 'nav' && currentBehavior === 'deadzone') {
+            const deadzoneTolerance = Math.max(lineHeight * 2, containerRect.height * 0.14)
+            const deadzoneTop = targetY - deadzoneTolerance
+            const deadzoneBottom = targetY + deadzoneTolerance
+
+            // Si el cursor está dentro de la zona de tolerancia, permitir mover libremente sin mover la pantalla
+            if (cursorY >= deadzoneTop && cursorY <= deadzoneBottom) {
+              lastAnchoredLineYRef.current = lineCenterInDoc
+              return
+            }
+
+            // Si salió de la zona, acompañarlo suavemente
+            let targetScroll = container.scrollTop
+            if (cursorY < deadzoneTop) {
+              targetScroll += cursorY - deadzoneTop
+            } else if (cursorY > deadzoneBottom) {
+              targetScroll += cursorY - deadzoneBottom
+            }
+
+            lastAnchoredLineYRef.current = lineCenterInDoc
+            smoothScrollTo(targetScroll, duration)
+            return
+          }
+
+          // 3. Clics ('click'), navegación estricta ('nav' strict) o re-centrado forzado ('force'):
+          lastAnchoredLineYRef.current = lineCenterInDoc
+          const targetScroll = container.scrollTop + delta
+          smoothScrollTo(targetScroll, duration)
+        } catch {
+          // Silenciar errores durante transiciones o renders rápidos
+        }
+      })
+    },
+    [smoothScrollTo]
+  )
+
+  // Coexistencia con scroll manual: desacople limpio con rueda o arrastre directo de la barra de scroll
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
 
     const handleWheel = () => {
       if (!typewriterModeRef.current) return
+      cancelScrollAnimation()
       isUserManualScrollingRef.current = true
-      if (manualScrollTimerRef.current) {
-        clearTimeout(manualScrollTimerRef.current)
+    }
+
+    const handleMouseDown = (e) => {
+      if (!typewriterModeRef.current) return
+      // Detectar si el clic es sobre la barra de desplazamiento vertical en el borde derecho
+      if (e.clientX >= container.getBoundingClientRect().left + container.clientWidth) {
+        cancelScrollAnimation()
+        isUserManualScrollingRef.current = true
       }
-      // Reanudar detección tras 3s de inactividad de scroll
-      manualScrollTimerRef.current = setTimeout(() => {
-        isUserManualScrollingRef.current = false
-      }, 3000)
     }
 
     container.addEventListener('wheel', handleWheel, { passive: true })
+    container.addEventListener('mousedown', handleMouseDown)
+
     return () => {
       container.removeEventListener('wheel', handleWheel)
-      if (manualScrollTimerRef.current) clearTimeout(manualScrollTimerRef.current)
+      container.removeEventListener('mousedown', handleMouseDown)
+      cancelScrollAnimation()
     }
-  }, [])
+  }, [cancelScrollAnimation])
 
   const editor = useEditor({
     extensions: [
@@ -203,61 +349,84 @@ export default function Editor({
       },
       handleDOMEvents: {
         keydown: (_view, event) => {
-          const wasManual = isUserManualScrollingRef.current
-          isUserManualScrollingRef.current = false
-          if (manualScrollTimerRef.current) clearTimeout(manualScrollTimerRef.current)
+          if (!typewriterModeRef.current || !editor) return false
 
-          if (typewriterModeRef.current && editor) {
-            const isNavKey =
-              event.key === 'ArrowUp' ||
-              event.key === 'ArrowDown' ||
-              event.key === 'PageUp' ||
-              event.key === 'PageDown' ||
+          const isShift = event.shiftKey
+          const isCtrlOrMeta = event.ctrlKey || event.metaKey
+
+          // Selección en bloque: si el usuario está expandiendo selección con Shift o seleccionando todo (Ctrl+A), pausar typewriter
+          if (
+            isShift &&
+            (event.key.startsWith('Arrow') ||
               event.key === 'Home' ||
-              event.key === 'End'
+              event.key === 'End' ||
+              event.key === 'PageUp' ||
+              event.key === 'PageDown')
+          ) {
+            return false
+          }
+          if (isCtrlOrMeta && (event.key === 'a' || event.key === 'A')) {
+            return false
+          }
 
-            if (wasManual) {
-              setTimeout(() => {
-                centerCursor(editor, true, true)
-              }, 15)
-            } else if (isNavKey) {
-              setTimeout(() => {
-                centerCursor(editor, true, false)
-              }, 10)
+          if (
+            !isCtrlOrMeta ||
+            event.key === 'v' ||
+            event.key === 'V' ||
+            event.key === 'x' ||
+            event.key === 'X'
+          ) {
+            // Tecla de escritura/edición: reacoplar inmediatamente si el usuario había hecho scroll manual
+            if (isUserManualScrollingRef.current) {
+              isUserManualScrollingRef.current = false
             }
           }
+
           return false
         },
         mousedown: () => {
-          const wasManual = isUserManualScrollingRef.current
-          isUserManualScrollingRef.current = false
-          if (manualScrollTimerRef.current) clearTimeout(manualScrollTimerRef.current)
-
+          isMouseDownRef.current = true
+          return false
+        },
+        mouseup: () => {
+          isMouseDownRef.current = false
           if (typewriterModeRef.current && editor) {
             setTimeout(() => {
-              centerCursor(editor, wasManual, true)
+              if (editor.state.selection?.empty) {
+                // Reacoplar al hacer clic para posicionar el cursor y escribir
+                isUserManualScrollingRef.current = false
+                centerCursor(editor, { reason: 'click', duration: 160, force: true })
+              }
             }, 30)
           }
           return false
         }
       }
     },
-    onSelectionUpdate: ({ editor: ed }) => {
+    onSelectionUpdate: ({ editor: ed, transaction }) => {
       if (typewriterModeRef.current) {
-        centerCursor(ed, false)
+        if (!ed.state.selection?.empty || isMouseDownRef.current) {
+          return
+        }
+        // Si la transacción modificó el documento (escritura, enter, borrado), onUpdate se encarga
+        if (transaction?.docChanged) {
+          return
+        }
+        centerCursor(ed, { reason: 'nav', duration: 110, force: false })
       }
     },
     onUpdate: ({ editor: ed }) => {
       setSaveStatus('unsaved')
       setTick((t) => t + 1)
       if (typewriterModeRef.current) {
-        // Bloqueo vertical inmediato al escribir o dar saltos de línea (Enter)
-        centerCursor(ed, false, true)
+        // Reacople automático y desplazamiento suave en la línea activa al escribir o dar saltos de línea (Enter / word-wrap)
+        isUserManualScrollingRef.current = false
+        centerCursor(ed, { reason: 'type', duration: 110, force: true })
       }
     },
     onFocus: ({ editor: ed }) => {
       if (typewriterModeRef.current) {
-        centerCursor(ed, true, true)
+        centerCursor(ed, { reason: 'force', duration: 120, force: true })
       }
     }
   })
@@ -266,18 +435,24 @@ export default function Editor({
   useEffect(() => {
     if (preferences?.typewriterMode && editor) {
       const timer = setTimeout(() => {
-        centerCursor(editor, true, true)
+        centerCursor(editor, { reason: 'force', duration: 130, force: true })
       }, 80)
       return () => clearTimeout(timer)
     }
     return undefined
-  }, [preferences?.typewriterMode, editor, centerCursor])
+  }, [
+    preferences?.typewriterMode,
+    preferences?.typewriterPosition,
+    preferences?.typewriterBehavior,
+    editor,
+    centerCursor
+  ])
 
   // Re-centrar en cambios de tamaño de ventana si Typewriter está activo
   useEffect(() => {
     const handleResize = () => {
       if (typewriterModeRef.current && editor) {
-        centerCursor(editor, true, true)
+        centerCursor(editor, { reason: 'force', duration: 100, force: true })
       }
     }
     window.addEventListener('resize', handleResize)
@@ -551,11 +726,23 @@ export default function Editor({
       `Modo Máquina de Escribir: ${nextState ? 'Activado (Línea centrada)' : 'Desactivado'}`
     )
     if (nextState) {
+      isUserManualScrollingRef.current = false
       setTimeout(() => {
-        centerCursor(editor, true)
+        centerCursor(editor, { reason: 'force', duration: 130, force: true })
       }, 60)
+    } else {
+      cancelScrollAnimation()
+      isUserManualScrollingRef.current = false
+      lastAnchoredLineYRef.current = null
     }
-  }, [preferences?.typewriterMode, onUpdatePreferences, showToast, centerCursor, editor])
+  }, [
+    preferences?.typewriterMode,
+    onUpdatePreferences,
+    showToast,
+    centerCursor,
+    editor,
+    cancelScrollAnimation
+  ])
 
   // Alternar Alineación de Texto (Izquierda -> Justificado -> Centrado)
   const cycleTextAlign = useCallback(() => {
@@ -1240,7 +1427,7 @@ export default function Editor({
         {/* Lienzo de escritura WYSIWYG centralizado */}
         <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
           <div
-            className={`editor-canvas ${preferences?.typewriterMode ? 'typewriter-mode-active' : ''}`}
+            className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
             onClick={handleCanvasClick}
           >
             <EditorContent editor={editor} className="tiptap-wrapper" />

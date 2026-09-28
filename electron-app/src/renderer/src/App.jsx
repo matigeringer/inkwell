@@ -48,7 +48,9 @@ function App() {
           fontFamily: parsed.fontFamily || 'serif',
           fontSize: parsed.fontSize || '1.40rem',
           textAlign: parsed.textAlign || 'left',
-          typewriterMode: Boolean(parsed.typewriterMode)
+          typewriterMode: Boolean(parsed.typewriterMode),
+          typewriterPosition: parsed.typewriterPosition === 'eye' ? 'eye' : 'center',
+          typewriterBehavior: parsed.typewriterBehavior === 'strict' ? 'strict' : 'deadzone'
         }
       }
     } catch {
@@ -60,7 +62,9 @@ function App() {
       fontFamily: 'serif', // 'serif' | 'sans' | 'mono'
       fontSize: '1.40rem',
       textAlign: 'left', // 'left' | 'justify' | 'center'
-      typewriterMode: false // boolean: centrado vertical continuo
+      typewriterMode: false, // boolean: centrado vertical continuo
+      typewriterPosition: 'center', // 'center' (50% medio) | 'eye' (38% tercio superior / línea de ojos)
+      typewriterBehavior: 'deadzone' // 'deadzone' | 'strict'
     }
   })
 

@@ -148,6 +148,8 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
   const currentFontSize = preferences.fontSize || '1.40rem'
   const currentTextAlign = preferences.textAlign || 'left'
   const currentTypewriter = Boolean(preferences.typewriterMode)
+  const currentTypewriterPosition = preferences.typewriterPosition || 'center'
+  const currentTypewriterBehavior = preferences.typewriterBehavior || 'deadzone'
   const currentFontFamily =
     preferences.fontFamily === 'sans'
       ? 'var(--font-ui)'
@@ -476,6 +478,80 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                     <div className="pref-switch-thumb-modern" />
                   </div>
                 </div>
+
+                {currentTypewriter && (
+                  <div className="typewriter-suboptions">
+                    <span className="typewriter-suboptions-label">
+                      Posición del ancla vertical:
+                    </span>
+                    <div className="typewriter-behavior-grid">
+                      <button
+                        type="button"
+                        className={`typewriter-behavior-btn ${currentTypewriterPosition === 'center' ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ typewriterPosition: 'center' })}
+                      >
+                        <div className="typewriter-behavior-header">
+                          <span className="typewriter-behavior-title">Centrado exacto (50%)</span>
+                          <span className="pref-pill-badge-subtle">Estándar</span>
+                        </div>
+                        <span className="typewriter-behavior-desc">
+                          Fija la línea activa en la mitad vertical. Ofrece equilibrio simétrico
+                          entre texto escrito y espacio despejado.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`typewriter-behavior-btn ${currentTypewriterPosition === 'eye' ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ typewriterPosition: 'eye' })}
+                      >
+                        <div className="typewriter-behavior-header">
+                          <span className="typewriter-behavior-title">Línea de ojos (38%)</span>
+                          <span className="pref-pill-badge-subtle">Ergonómico</span>
+                        </div>
+                        <span className="typewriter-behavior-desc">
+                          Tercio superior. Ubica el renglón a la altura natural de la vista en
+                          monitor, dejando más espacio inferior visible.
+                        </span>
+                      </button>
+                    </div>
+
+                    <span className="typewriter-suboptions-label" style={{ marginTop: '0.4rem' }}>
+                      Navegación con flechas (Arriba / Abajo):
+                    </span>
+                    <div className="typewriter-behavior-grid">
+                      <button
+                        type="button"
+                        className={`typewriter-behavior-btn ${currentTypewriterBehavior === 'deadzone' ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ typewriterBehavior: 'deadzone' })}
+                      >
+                        <div className="typewriter-behavior-header">
+                          <span className="typewriter-behavior-title">
+                            Zona de tolerancia (Deadzone)
+                          </span>
+                          <span className="pref-pill-badge-subtle">Recomendado</span>
+                        </div>
+                        <span className="typewriter-behavior-desc">
+                          Permite mover el cursor unas pocas líneas libremente para correcciones; se
+                          re-centra suavemente al escribir.
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={`typewriter-behavior-btn ${currentTypewriterBehavior === 'strict' ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ typewriterBehavior: 'strict' })}
+                      >
+                        <div className="typewriter-behavior-header">
+                          <span className="typewriter-behavior-title">Modo estricto</span>
+                        </div>
+                        <span className="typewriter-behavior-desc">
+                          Re-centra la pantalla de forma continua con cada pulsación de flecha.
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </section>
 
               <section className="pref-section">
