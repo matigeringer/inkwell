@@ -243,9 +243,9 @@
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   background-color: var(--bg-canvas);
-  padding: 3rem clamp(2.5rem, 9vw, 9rem);
+  padding: 3rem 2rem;
   position: relative;
   overflow-y: auto;
 }
@@ -256,7 +256,8 @@
   align-items: stretch;
   text-align: left;
   width: 100%;
-  max-width: 520px;
+  max-width: 540px;
+  margin: auto;
   animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
