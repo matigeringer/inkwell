@@ -690,10 +690,9 @@ export default function Editor({
         : preferences?.mode || 'light'
     const nextMode = currentEffectiveMode === 'dark' ? 'light' : 'dark'
     onUpdatePreferences({ mode: nextMode })
-    const themeName = preferences?.theme === 'sepia' ? 'Sepia' : 'Puro'
     const modeName = nextMode === 'dark' ? 'Oscuro' : 'Claro'
-    showToast(`${themeName}: Modo ${modeName}`)
-  }, [preferences?.theme, preferences?.mode, onUpdatePreferences, showToast])
+    showToast(`Modo ${modeName}`)
+  }, [preferences?.mode, onUpdatePreferences, showToast])
 
   // Alternar Familia Tipográfica (Serif -> Sans -> Mono)
   const cycleFontFamily = useCallback(() => {
@@ -704,10 +703,10 @@ export default function Editor({
 
     if (currentFont === 'serif') {
       nextFont = 'sans'
-      fontName = 'Plus Jakarta (Sans)'
+      fontName = 'Schibsted Grotesk (Sans)'
     } else if (currentFont === 'sans') {
       nextFont = 'mono'
-      fontName = 'JetBrains (Mono)'
+      fontName = 'IBM Plex (Mono)'
     } else {
       nextFont = 'serif'
       fontName = 'Newsreader (Serif)'

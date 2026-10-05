@@ -1,56 +1,24 @@
-:root,
-[data-theme='light'],
-[data-theme='puro-light'] {
-  /* Paleta Puro Claro (Inspiración iA Minimal: Blanco puro, gris nítido, azul eléctrico) */
-  --bg-canvas: #ffffff;
-  --bg-surface: #ffffff;
-  --bg-sidebar: #f6f6f8;
-  --bg-sidebar-hover: rgba(0, 0, 0, 0.04);
-  --bg-hover: rgba(0, 0, 0, 0.035);
-  --bg-active: rgba(0, 0, 0, 0.07);
-  --bg-card: #ffffff;
-  --bg-input: #f4f4f6;
-  --bg-overlay: rgba(15, 23, 42, 0.35);
+/* ==========================================================================
+   Tokens compartidos
+   ========================================================================== */
 
-  --border-subtle: rgba(0, 0, 0, 0.06);
-  --border-medium: rgba(0, 0, 0, 0.12);
-  --border-focus: #007aff;
-
-  --text-primary: #121316;
-  --text-secondary: #52545c;
-  --text-muted: #8b8d97;
-  --text-faint: #c8cbd2;
-
-  --accent-primary: #007aff;
-  --accent-primary-hover: #0062cc;
-  --accent-primary-subtle: rgba(0, 122, 255, 0.09);
-  --accent-text: #ffffff;
-
-  --accent-secondary: #e65100;
-  --accent-secondary-subtle: rgba(230, 81, 0, 0.1);
-
-  --btn-bg: #121316;
-  --btn-text: #ffffff;
-  --btn-bg-hover: #26282e;
-  --btn-border: #121316;
-
-  --btn-secondary-bg: #f4f4f6;
-  --btn-secondary-border: rgba(0, 0, 0, 0.08);
-  --btn-secondary-text: #222328;
-  --btn-secondary-hover: #eaebee;
-
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.02);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.09), 0 2px 8px rgba(0, 0, 0, 0.03);
-
-  /* Familias tipográficas */
-  --font-ui: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
-  --font-mono: 'JetBrains Mono', Menlo, Monaco, Consolas, monospace;
+:root {
+  /* Familias tipográficas (empaquetadas localmente, funcionan sin conexión) */
+  --font-ui: 'Schibsted Grotesk Variable', 'Schibsted Grotesk', 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Newsreader Variable', 'Newsreader', Georgia, 'Times New Roman', serif;
+  --font-mono: 'IBM Plex Mono', 'Courier New', Courier, monospace;
+  --font-label: var(--font-mono);
   --font-editor: var(--font-serif);
   --font-size-editor: 1.4rem;
   --text-align-editor: left;
   --editor-max-width: 800px;
+
+  /* Geometría: esquinas casi rectas, como papel cortado */
+  --radius: 2px;
+  --radius-sm: 1px;
+
+  /* Etiquetas en versalitas espaciadas */
+  --label-tracking: 0.14em;
 
   /* Compatibilidad con variables legacy */
   --bg-primary: var(--bg-canvas);
@@ -58,148 +26,136 @@
   --font-sans: var(--font-ui);
 }
 
+/* ==========================================================================
+   PURO · Claro — "Prueba de imprenta"
+   Papel de galera, tinta carbón, lápiz bermellón del corrector
+   y azul no‑reproducible para marcas y selección.
+   ========================================================================== */
+
+:root,
+[data-theme='light'],
+[data-theme='puro-light'] {
+  --bg-canvas: #efeee8;
+  --bg-surface: #f7f6f1;
+  --bg-sidebar: #e4e3db;
+  --bg-sidebar-hover: rgba(28, 29, 26, 0.05);
+  --bg-hover: rgba(28, 29, 26, 0.045);
+  --bg-active: rgba(28, 29, 26, 0.08);
+  --bg-card: #f7f6f1;
+  --bg-input: #e7e6de;
+  --bg-overlay: rgba(28, 29, 26, 0.42);
+
+  --border-subtle: #d6d5cc;
+  --border-medium: #b9b8ae;
+  --border-focus: #c2381b;
+  --rule: #cfcec5;
+  --rule-strong: #1c1d1a;
+
+  --text-primary: #1c1d1a;
+  --text-secondary: #4a4b45;
+  --text-muted: #6f7068;
+  --text-faint: #b3b2a8;
+
+  --accent-primary: #c2381b;
+  --accent-primary-hover: #9e2b12;
+  --accent-primary-subtle: rgba(194, 56, 27, 0.08);
+  --accent-text: #f7f6f1;
+
+  --accent-secondary: #3e7fa6;
+  --accent-secondary-subtle: rgba(62, 127, 166, 0.12);
+
+  --selection: #cfe3ee;
+  --caret: #c2381b;
+  --mark-success: #4f6b3a;
+  --mark-danger: #b3261e;
+  --mark-danger-subtle: rgba(179, 38, 30, 0.1);
+
+  /* Ficha de escritor: línea de cabecera roja y renglones azules */
+  --card-headline: #c2381b;
+  --card-ruling: rgba(62, 127, 166, 0.13);
+
+  --btn-bg: #1c1d1a;
+  --btn-text: #efeee8;
+  --btn-bg-hover: #c2381b;
+  --btn-border: #1c1d1a;
+
+  --btn-secondary-bg: transparent;
+  --btn-secondary-border: #b9b8ae;
+  --btn-secondary-text: #1c1d1a;
+  --btn-secondary-hover: rgba(28, 29, 26, 0.05);
+
+  --shadow-sm: none;
+  --shadow-md: 3px 3px 0 rgba(28, 29, 26, 0.12);
+  --shadow-lg: 5px 5px 0 rgba(28, 29, 26, 0.16);
+
+  --grain-opacity: 0.05;
+}
+
+/* ==========================================================================
+   PURO · Oscuro — "Linotipia de noche"
+   Plancha de plomo entintada, papel de diario, bermellón avivado.
+   ========================================================================== */
+
 [data-theme='dark'],
 [data-theme='puro-dark'] {
-  /* Paleta Puro Oscuro (Grafito: Carbón suave y descansado, acento cian) */
-  --bg-canvas: #1c1c1e;
-  --bg-surface: #242426;
-  --bg-sidebar: #161618;
-  --bg-sidebar-hover: rgba(255, 255, 255, 0.05);
-  --bg-hover: rgba(255, 255, 255, 0.045);
-  --bg-active: rgba(255, 255, 255, 0.085);
-  --bg-card: #242426;
-  --bg-input: #161618;
-  --bg-overlay: rgba(0, 0, 0, 0.65);
+  --bg-canvas: #161814;
+  --bg-surface: #1e211c;
+  --bg-sidebar: #111310;
+  --bg-sidebar-hover: rgba(230, 227, 214, 0.05);
+  --bg-hover: rgba(230, 227, 214, 0.045);
+  --bg-active: rgba(230, 227, 214, 0.08);
+  --bg-card: #1e211c;
+  --bg-input: #111310;
+  --bg-overlay: rgba(8, 9, 7, 0.7);
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-medium: rgba(255, 255, 255, 0.14);
-  --border-focus: #38bdf8;
+  --border-subtle: #2c2f28;
+  --border-medium: #43473d;
+  --border-focus: #ee6342;
+  --rule: #2c2f28;
+  --rule-strong: #e6e3d6;
 
-  --text-primary: #ededed;
-  --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
-  --text-faint: #44444a;
+  --text-primary: #e6e3d6;
+  --text-secondary: #a9a797;
+  --text-muted: #828374;
+  --text-faint: #464940;
 
-  --accent-primary: #38bdf8;
-  --accent-primary-hover: #7dd3fc;
-  --accent-primary-subtle: rgba(56, 189, 248, 0.14);
-  --accent-text: #09090b;
+  --accent-primary: #ee6342;
+  --accent-primary-hover: #ff8162;
+  --accent-primary-subtle: rgba(238, 99, 66, 0.12);
+  --accent-text: #161814;
 
-  --accent-secondary: #f97316;
-  --accent-secondary-subtle: rgba(249, 115, 22, 0.15);
+  --accent-secondary: #7fb4d3;
+  --accent-secondary-subtle: rgba(127, 180, 211, 0.13);
 
-  --btn-bg: #ededed;
-  --btn-text: #1c1c1e;
-  --btn-bg-hover: #ffffff;
-  --btn-border: #ededed;
+  --selection: rgba(127, 180, 211, 0.24);
+  --caret: #ee6342;
+  --mark-success: #9bb57e;
+  --mark-danger: #f0715f;
+  --mark-danger-subtle: rgba(240, 113, 95, 0.13);
 
-  --btn-secondary-bg: rgba(255, 255, 255, 0.06);
-  --btn-secondary-border: rgba(255, 255, 255, 0.1);
-  --btn-secondary-text: #e4e4e7;
-  --btn-secondary-hover: rgba(255, 255, 255, 0.1);
+  --card-headline: #ee6342;
+  --card-ruling: rgba(127, 180, 211, 0.07);
 
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.65);
+  --btn-bg: #e6e3d6;
+  --btn-text: #161814;
+  --btn-bg-hover: #ee6342;
+  --btn-border: #e6e3d6;
 
-  --bg-primary: var(--bg-canvas);
-  --border-color: var(--border-subtle);
+  --btn-secondary-bg: transparent;
+  --btn-secondary-border: #43473d;
+  --btn-secondary-text: #e6e3d6;
+  --btn-secondary-hover: rgba(230, 227, 214, 0.06);
+
+  --shadow-sm: none;
+  --shadow-md: 3px 3px 0 rgba(0, 0, 0, 0.45);
+  --shadow-lg: 5px 5px 0 rgba(0, 0, 0, 0.55);
+
+  --grain-opacity: 0.07;
 }
 
-[data-theme='sepia'],
-[data-theme='sepia-light'] {
-  /* Paleta Sepia Claro (Editorial Cálido: Lino suave, espresso y terracota) */
-  --bg-canvas: #faf7f2;
-  --bg-surface: #ffffff;
-  --bg-sidebar: #f1ebd8;
-  --bg-sidebar-hover: rgba(45, 38, 30, 0.05);
-  --bg-hover: rgba(45, 38, 30, 0.04);
-  --bg-active: rgba(45, 38, 30, 0.08);
-  --bg-card: #fdfbf7;
-  --bg-input: #eee8d8;
-  --bg-overlay: rgba(30, 24, 18, 0.45);
-
-  --border-subtle: rgba(60, 48, 32, 0.08);
-  --border-medium: rgba(60, 48, 32, 0.15);
-  --border-focus: #b45309;
-
-  --text-primary: #27231f;
-  --text-secondary: #5e564d;
-  --text-muted: #8d8479;
-  --text-faint: #c9c1b4;
-
-  --accent-primary: #b45309;
-  --accent-primary-hover: #92400e;
-  --accent-primary-subtle: rgba(180, 83, 9, 0.1);
-  --accent-text: #ffffff;
-
-  --accent-secondary: #c2410c;
-  --accent-secondary-subtle: rgba(194, 65, 12, 0.12);
-
-  --btn-bg: #27231f;
-  --btn-text: #fbf8f2;
-  --btn-bg-hover: #3d3731;
-  --btn-border: #27231f;
-
-  --btn-secondary-bg: rgba(60, 48, 32, 0.05);
-  --btn-secondary-border: rgba(60, 48, 32, 0.12);
-  --btn-secondary-text: #3d3731;
-  --btn-secondary-hover: rgba(60, 48, 32, 0.09);
-
-  --shadow-sm: 0 1px 3px rgba(35, 25, 15, 0.04);
-  --shadow-md: 0 4px 14px rgba(35, 25, 15, 0.06);
-  --shadow-lg: 0 16px 36px rgba(35, 25, 15, 0.09);
-
-  --bg-primary: var(--bg-canvas);
-  --border-color: var(--border-subtle);
-}
-
-[data-theme='sepia-dark'] {
-  /* Paleta Sepia Oscuro (Espresso Nocturno: Café tostado cálido, pergamino cremoso y cobre) */
-  --bg-canvas: #1b1613;
-  --bg-surface: #241f1a;
-  --bg-sidebar: #16120f;
-  --bg-sidebar-hover: rgba(245, 230, 210, 0.05);
-  --bg-hover: rgba(245, 230, 210, 0.045);
-  --bg-active: rgba(245, 230, 210, 0.085);
-  --bg-card: #241f1a;
-  --bg-input: #16120f;
-  --bg-overlay: rgba(15, 10, 8, 0.7);
-
-  --border-subtle: rgba(245, 230, 210, 0.08);
-  --border-medium: rgba(245, 230, 210, 0.15);
-  --border-focus: #e07a38;
-
-  --text-primary: #f2ebe1;
-  --text-secondary: #bba998;
-  --text-muted: #857667;
-  --text-faint: #4e443a;
-
-  --accent-primary: #e07a38;
-  --accent-primary-hover: #f08c4a;
-  --accent-primary-subtle: rgba(224, 122, 56, 0.15);
-  --accent-text: #1b1613;
-
-  --accent-secondary: #d97706;
-  --accent-secondary-subtle: rgba(217, 119, 6, 0.14);
-
-  --btn-bg: #f2ebe1;
-  --btn-text: #1b1613;
-  --btn-bg-hover: #ffffff;
-  --btn-border: #f2ebe1;
-
-  --btn-secondary-bg: rgba(245, 230, 210, 0.06);
-  --btn-secondary-border: rgba(245, 230, 210, 0.1);
-  --btn-secondary-text: #ebdccb;
-  --btn-secondary-hover: rgba(245, 230, 210, 0.1);
-
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.5);
-  --shadow-lg: 0 16px 36px rgba(0, 0, 0, 0.7);
-
-  --bg-primary: var(--bg-canvas);
-  --border-color: var(--border-subtle);
-}
+/* ==========================================================================
+   Reset y base
+   ========================================================================== */
 
 *,
 *::before,
@@ -217,7 +173,6 @@ body {
   background-color: var(--bg-canvas);
   color: var(--text-primary);
   font-family: var(--font-ui);
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   user-select: none;
@@ -226,7 +181,35 @@ body {
     color 0.35s ease;
 }
 
+::selection {
+  background-color: var(--selection);
+  color: var(--text-primary);
+}
+
+/* Foco visible: trazo sólido de corrector, sin halos difusos */
+:focus-visible {
+  outline: 1.5px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
 #root {
   height: 100%;
   width: 100%;
+}
+
+/* Grano de papel sutil sobre toda la interfaz */
+#root::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1000;
+  opacity: var(--grain-opacity, 0.05);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.4 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: multiply;
+}
+
+[data-theme='dark'] #root::after,
+[data-theme$='-dark'] #root::after {
+  mix-blend-mode: screen;
 }

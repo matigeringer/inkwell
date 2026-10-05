@@ -8,8 +8,7 @@ import {
   MoonIcon,
   SettingsIcon,
   FolderIcon,
-  FileTextIcon,
-  FeatherIcon
+  FileTextIcon
 } from './components/Icons'
 
 function App() {
@@ -18,32 +17,28 @@ function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [openedFolder, setOpenedFolder] = useState(null)
 
+  const todayLabel = new Intl.DateTimeFormat('es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(new Date())
+
   // Preferencias con persistencia en localStorage
   const [preferences, setPreferences] = useState(() => {
     try {
       const saved = localStorage.getItem('fountain_preferences')
       if (saved) {
         const parsed = JSON.parse(saved)
-        // Migración limpia si viene de versión anterior
-        let theme = parsed.theme || 'puro'
         let mode = parsed.mode || 'light'
 
-        if (parsed.theme === 'sepia') {
-          theme = 'sepia'
-          mode = parsed.mode || 'light'
-        } else if (parsed.theme === 'dark') {
-          theme = 'puro'
+        if (parsed.theme === 'dark') {
           mode = 'dark'
         } else if (parsed.theme === 'light') {
-          theme = 'puro'
           mode = 'light'
-        } else if (parsed.theme === 'system') {
-          theme = 'puro'
-          mode = 'system'
         }
 
         return {
-          theme: theme === 'sepia' ? 'sepia' : 'puro',
+          theme: 'puro',
           mode: ['light', 'dark', 'system'].includes(mode) ? mode : 'light',
           fontFamily: parsed.fontFamily || 'serif',
           fontSize: parsed.fontSize || '1.40rem',
@@ -57,7 +52,7 @@ function App() {
       // Ignorar error de parsing
     }
     return {
-      theme: 'puro', // 'puro' | 'sepia'
+      theme: 'puro',
       mode: 'light', // 'light' | 'dark' | 'system'
       fontFamily: 'serif', // 'serif' | 'sans' | 'mono'
       fontSize: '1.40rem',
@@ -323,6 +318,9 @@ function App() {
           </div>
 
           {/* Explorador de archivos si hay carpeta abierta en la pantalla principal */}
+          <div className="sidebar-section-label">
+            <span className="label-caps">Manuscritos</span>
+          </div>
           {openedFolder ? (
             <div className="sidebar-tree-section">
               <FileTree
@@ -357,7 +355,7 @@ function App() {
               className="btn-quick-theme"
               onClick={handleQuickThemeToggle}
               type="button"
-              title={`Modo ${isEffectiveDark ? 'Oscuro' : 'Claro'} (${preferences.theme === 'sepia' ? 'Sepia' : 'Puro'}${preferences.mode === 'system' ? ' - Sistema' : ''}). Clic para alternar.`}
+              title={`Modo ${isEffectiveDark ? 'Oscuro' : 'Claro'}${preferences.mode === 'system' ? ' (Sistema)' : ''}. Clic para alternar.`}
               aria-label="Cambiar modo de apariencia"
             >
               {isEffectiveDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
@@ -366,14 +364,20 @@ function App() {
         </div>
       </aside>
 
-      {/* Contenido principal (Lienzo de Bienvenida) */}
+      {/* Contenido principal (Portadilla de bienvenida) */}
       <main className="main-content">
         <div className="welcome-hero">
           <div className="welcome-brand">
-            <FeatherIcon size={30} className="welcome-emblem-icon" />
-            <p className="welcome-subtitle">Comienza un nuevo manuscrito</p>
+            <div className="welcome-date">
+              <span className="label-caps">{todayLabel}</span>
+            </div>
+            <h2 className="welcome-heading">
+              La página está <em>en blanco</em>.
+            </h2>
+            <p className="welcome-subtitle">Comienza un nuevo manuscrito o retoma uno existente.</p>
           </div>
 
+          <span className="label-caps welcome-index-label">Índice</span>
           <div className="welcome-actions">
             <button
               className="welcome-action-card welcome-action-primary"
@@ -381,11 +385,13 @@ function App() {
               type="button"
               title="Crear nuevo documento (Ctrl+N)"
             >
-              <div className="action-card-left">
-                <PlusIcon size={16} />
+              <span className="action-index-num">I.</span>
+              <span className="action-card-left">
+                <PlusIcon size={15} />
                 <span>Nuevo documento</span>
-              </div>
-              <kbd className="action-kbd">Ctrl+N</kbd>
+              </span>
+              <span className="action-leader" aria-hidden="true" />
+              <kbd className="action-kbd">Ctrl N</kbd>
             </button>
 
             <button
@@ -394,11 +400,13 @@ function App() {
               type="button"
               title="Abrir archivo Markdown existente (Ctrl+O)"
             >
-              <div className="action-card-left">
-                <FileTextIcon size={16} />
+              <span className="action-index-num">II.</span>
+              <span className="action-card-left">
+                <FileTextIcon size={15} />
                 <span>Abrir archivo</span>
-              </div>
-              <kbd className="action-kbd">Ctrl+O</kbd>
+              </span>
+              <span className="action-leader" aria-hidden="true" />
+              <kbd className="action-kbd">Ctrl O</kbd>
             </button>
 
             <button
@@ -407,13 +415,17 @@ function App() {
               type="button"
               title="Abrir carpeta de trabajo (Ctrl+Shift+O)"
             >
-              <div className="action-card-left">
-                <FolderIcon size={16} />
+              <span className="action-index-num">III.</span>
+              <span className="action-card-left">
+                <FolderIcon size={15} />
                 <span>Abrir carpeta</span>
-              </div>
-              <kbd className="action-kbd">Ctrl+Shift+O</kbd>
+              </span>
+              <span className="action-leader" aria-hidden="true" />
+              <kbd className="action-kbd">Ctrl ⇧ O</kbd>
             </button>
           </div>
+
+          <p className="welcome-colophon">Fountain — cuaderno de manuscritos</p>
         </div>
       </main>
 

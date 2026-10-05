@@ -36,54 +36,36 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
     { id: 'writing', label: 'Escritura', icon: FeatherIcon }
   ]
 
-  const themes = [
-    {
-      id: 'puro',
-      name: 'Puro',
-      desc: 'Minimalismo contemporáneo en blanco y grafito',
-      light: {
-        bg: '#ffffff',
-        sidebar: '#f6f6f8',
-        text: '#121316',
-        accent: '#007aff'
-      },
-      dark: {
-        bg: '#1c1c1e',
-        sidebar: '#161618',
-        text: '#ededed',
-        accent: '#38bdf8'
-      }
+  const themeSpecimen = {
+    id: 'puro',
+    name: 'Puro',
+    subtitle: 'Prueba de imprenta',
+    desc: 'Papel de galera en gris cálido, tinta carbón, lápiz bermellón de corrector y trazo azul no-reproducible.',
+    light: {
+      bg: '#efeee8',
+      sidebar: '#e4e3db',
+      text: '#1c1d1a',
+      accent: '#c2381b'
     },
-    {
-      id: 'sepia',
-      name: 'Sepia',
-      desc: 'Calidez editorial en tonos lino y espresso',
-      light: {
-        bg: '#faf7f2',
-        sidebar: '#f1ebd8',
-        text: '#27231f',
-        accent: '#b45309'
-      },
-      dark: {
-        bg: '#1b1613',
-        sidebar: '#16120f',
-        text: '#f2ebe1',
-        accent: '#e07a38'
-      }
+    dark: {
+      bg: '#161814',
+      sidebar: '#111310',
+      text: '#e6e3d6',
+      accent: '#ee6342'
     }
-  ]
+  }
 
   const modes = [
     {
       id: 'light',
       name: 'Claro',
-      desc: 'Lienzo iluminado',
+      desc: 'Papel de galera iluminado',
       icon: SunIcon
     },
     {
       id: 'dark',
       name: 'Oscuro',
-      desc: 'Lienzo atenuado',
+      desc: 'Linotipia nocturna',
       icon: MoonIcon
     },
     {
@@ -104,14 +86,14 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
     },
     {
       id: 'sans',
-      name: 'Plus Jakarta Sans',
+      name: 'Schibsted Grotesk',
       fontClass: 'preview-font-sans',
       example:
         'El pensamiento claro precede a la escritura fluida y directa. Las palabras exactas encuentran su ritmo natural sobre un lienzo silencioso.'
     },
     {
       id: 'mono',
-      name: 'JetBrains Mono',
+      name: 'IBM Plex Mono',
       fontClass: 'preview-font-mono',
       example:
         '01. Hipótesis inicial y estructura técnica del borrador: ritmo constante y precisión en cada línea.'
@@ -205,143 +187,16 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
         </header>
 
         <div className="modal-body modal-body-wide">
-          {/* PESTAÑA: APARIENCIA & TEMAS */}
+          {/* PESTAÑA: APARIENCIA */}
           {activeTab === 'appearance' && (
             <div className="pref-tab-panel">
-              {/* Sección 1: Paleta de Color */}
+              {/* Sección 1: Modo de Iluminación */}
               <section className="pref-section">
                 <div className="section-heading">
-                  <h3 className="section-title">Paleta de Color</h3>
+                  <h3 className="section-title">Modo de Iluminación</h3>
                   <p className="section-desc">
-                    Selecciona el estilo visual del lienzo y la interfaz
+                    Selecciona la iluminación para el lienzo y la interfaz
                   </p>
-                </div>
-
-                <div className="theme-grid-palettes">
-                  {themes.map((t) => {
-                    const isSelected = (preferences.theme || 'puro') === t.id
-                    const currentMode = preferences.mode || 'light'
-
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        className={`theme-card-preview ${isSelected ? 'is-selected' : ''}`}
-                        onClick={() => onUpdatePreferences({ theme: t.id })}
-                      >
-                        {/* Mini maqueta visual que se adapta al modo seleccionado */}
-                        <div className="theme-mini-mockup">
-                          {currentMode === 'system' ? (
-                            <div className="mini-mockup-frame mini-mockup-split">
-                              {/* Mitad izquierda: Claro */}
-                              <div
-                                className="mini-mockup-half"
-                                style={{ backgroundColor: t.light.bg }}
-                              >
-                                <div
-                                  className="mini-mockup-sidebar"
-                                  style={{ backgroundColor: t.light.sidebar }}
-                                >
-                                  <span
-                                    className="mini-mockup-dot"
-                                    style={{ backgroundColor: t.light.accent }}
-                                  />
-                                </div>
-                                <div className="mini-mockup-content">
-                                  <span
-                                    className="mini-line line-primary"
-                                    style={{ backgroundColor: t.light.text }}
-                                  />
-                                  <span
-                                    className="mini-line line-secondary"
-                                    style={{ backgroundColor: t.light.accent }}
-                                  />
-                                </div>
-                              </div>
-                              {/* Mitad derecha: Oscuro */}
-                              <div
-                                className="mini-mockup-half"
-                                style={{
-                                  backgroundColor: t.dark.bg,
-                                  borderLeft: '1px solid var(--border-subtle)'
-                                }}
-                              >
-                                <div
-                                  className="mini-mockup-sidebar"
-                                  style={{ backgroundColor: t.dark.sidebar }}
-                                >
-                                  <span
-                                    className="mini-mockup-dot"
-                                    style={{ backgroundColor: t.dark.accent }}
-                                  />
-                                </div>
-                                <div className="mini-mockup-content">
-                                  <span
-                                    className="mini-line line-primary"
-                                    style={{ backgroundColor: t.dark.text }}
-                                  />
-                                  <span
-                                    className="mini-line line-secondary"
-                                    style={{ backgroundColor: t.dark.accent }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            (() => {
-                              const palette = currentMode === 'dark' ? t.dark : t.light
-                              return (
-                                <div
-                                  className="mini-mockup-frame"
-                                  style={{ backgroundColor: palette.bg }}
-                                >
-                                  <div
-                                    className="mini-mockup-sidebar"
-                                    style={{ backgroundColor: palette.sidebar }}
-                                  >
-                                    <span
-                                      className="mini-mockup-dot"
-                                      style={{ backgroundColor: palette.accent }}
-                                    />
-                                  </div>
-                                  <div className="mini-mockup-content">
-                                    <span
-                                      className="mini-line line-primary"
-                                      style={{ backgroundColor: palette.text }}
-                                    />
-                                    <span
-                                      className="mini-line line-secondary"
-                                      style={{ backgroundColor: palette.accent }}
-                                    />
-                                    <span
-                                      className="mini-line line-subtle"
-                                      style={{ backgroundColor: palette.text }}
-                                    />
-                                  </div>
-                                </div>
-                              )
-                            })()
-                          )}
-                        </div>
-
-                        <div className="theme-card-details">
-                          <div className="theme-card-name-row">
-                            <span className="theme-card-name">{t.name}</span>
-                            {isSelected && <CheckIcon size={14} className="theme-check" />}
-                          </div>
-                          <span className="theme-card-desc">{t.desc}</span>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </section>
-
-              {/* Sección 2: Modo de Apariencia */}
-              <section className="pref-section">
-                <div className="section-heading">
-                  <h3 className="section-title">Modo de Apariencia</h3>
-                  <p className="section-desc">Selecciona la iluminación para la paleta elegida</p>
                 </div>
 
                 <div className="mode-selector-grid">
@@ -368,6 +223,118 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                       </button>
                     )
                   })}
+                </div>
+              </section>
+
+              {/* Sección 2: Muestra de Imprenta */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">Paleta Editorial</h3>
+                  <p className="section-desc">Materiales y proporciones del taller tipográfico</p>
+                </div>
+
+                <div className="theme-specimen-box">
+                  <div className="theme-mini-mockup">
+                    {preferences.mode === 'system' ? (
+                      <div className="mini-mockup-frame mini-mockup-split">
+                        <div
+                          className="mini-mockup-half"
+                          style={{ backgroundColor: themeSpecimen.light.bg }}
+                        >
+                          <div
+                            className="mini-mockup-sidebar"
+                            style={{ backgroundColor: themeSpecimen.light.sidebar }}
+                          >
+                            <span
+                              className="mini-mockup-dot"
+                              style={{ backgroundColor: themeSpecimen.light.accent }}
+                            />
+                          </div>
+                          <div className="mini-mockup-content">
+                            <span
+                              className="mini-line line-primary"
+                              style={{ backgroundColor: themeSpecimen.light.text }}
+                            />
+                            <span
+                              className="mini-line line-secondary"
+                              style={{ backgroundColor: themeSpecimen.light.accent }}
+                            />
+                          </div>
+                        </div>
+                        <div
+                          className="mini-mockup-half"
+                          style={{
+                            backgroundColor: themeSpecimen.dark.bg,
+                            borderLeft: '1px solid var(--border-subtle)'
+                          }}
+                        >
+                          <div
+                            className="mini-mockup-sidebar"
+                            style={{ backgroundColor: themeSpecimen.dark.sidebar }}
+                          >
+                            <span
+                              className="mini-mockup-dot"
+                              style={{ backgroundColor: themeSpecimen.dark.accent }}
+                            />
+                          </div>
+                          <div className="mini-mockup-content">
+                            <span
+                              className="mini-line line-primary"
+                              style={{ backgroundColor: themeSpecimen.dark.text }}
+                            />
+                            <span
+                              className="mini-line line-secondary"
+                              style={{ backgroundColor: themeSpecimen.dark.accent }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      (() => {
+                        const palette =
+                          preferences.mode === 'dark' ? themeSpecimen.dark : themeSpecimen.light
+                        return (
+                          <div
+                            className="mini-mockup-frame"
+                            style={{ backgroundColor: palette.bg }}
+                          >
+                            <div
+                              className="mini-mockup-sidebar"
+                              style={{ backgroundColor: palette.sidebar }}
+                            >
+                              <span
+                                className="mini-mockup-dot"
+                                style={{ backgroundColor: palette.accent }}
+                              />
+                            </div>
+                            <div className="mini-mockup-content">
+                              <span
+                                className="mini-line line-primary"
+                                style={{ backgroundColor: palette.text }}
+                              />
+                              <span
+                                className="mini-line line-secondary"
+                                style={{ backgroundColor: palette.accent }}
+                              />
+                              <span
+                                className="mini-line line-subtle"
+                                style={{ backgroundColor: palette.text }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })()
+                    )}
+                  </div>
+
+                  <div className="theme-card-details">
+                    <div className="theme-card-name-row">
+                      <span className="theme-card-name">
+                        {themeSpecimen.name} — {themeSpecimen.subtitle}
+                      </span>
+                    </div>
+                    <span className="theme-card-desc">{themeSpecimen.desc}</span>
+                  </div>
                 </div>
               </section>
             </div>
