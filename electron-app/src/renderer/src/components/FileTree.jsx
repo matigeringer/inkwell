@@ -12,7 +12,8 @@ import {
   RefreshIcon,
   FolderCloseIcon,
   CheckIcon,
-  CloseIcon
+  CloseIcon,
+  FilePdfIcon
 } from './Icons'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { getTranslation } from '../i18n'
@@ -36,9 +37,37 @@ export default function FileTree({
   const [renamingName, setRenamingName] = useState('')
   const [deletingItem, setDeletingItem] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [contextMenu, setContextMenu] = useState(null) // { x, y, item } | null
 
   const createInputRef = useRef(null)
   const renameInputRef = useRef(null)
+
+  // Cerrar menú contextual al hacer clic fuera, scroll o Escape
+  useEffect(() => {
+    if (!contextMenu) return
+
+    const handleGlobalClick = (e) => {
+      if (!e.target.closest('.tree-context-menu')) {
+        setContextMenu(null)
+      }
+    }
+
+    const handleGlobalKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setContextMenu(null)
+      }
+    }
+
+    window.addEventListener('mousedown', handleGlobalClick)
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    window.addEventListener('scroll', handleGlobalClick, true)
+
+    return () => {
+      window.removeEventListener('mousedown', handleGlobalClick)
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+      window.removeEventListener('scroll', handleGlobalClick, true)
+    }
+  }, [contextMenu])
 
   // Enfocar input al iniciar creación
   useEffect(() => {
@@ -201,6 +230,64 @@ export default function FileTree({
     }
   }
 
+  // Exportar archivo individual a PDF desde el explorador
+  const handleExportPdf = async (item) => {
+    if (!window.api?.exportPdf || !item?.path) return
+    try {
+      showToast?.(
+        t.fileTree.exportingPdf ||
+          (isEn ? 'Generating reading PDF...' : 'Generando archivo de lectura en PDF...')
+      )
+      const res = await window.api.exportPdf({
+        filePath: item.path,
+        fileName: item.name
+      })
+
+      if (res?.canceled) {
+        return
+      }
+
+      if (res?.success) {
+        showToast?.(
+          t.fileTree.toastPdfExported?.(res.fileName) ||
+            (isEn ? `PDF exported: ${res.fileName}` : `PDF exportado: ${res.fileName}`)
+        )
+      } else {
+        showToast?.(
+          res?.error ||
+            t.fileTree.toastErrorExportPdf ||
+            (isEn ? 'Error exporting file to PDF' : 'Error al exportar archivo a PDF'),
+          'error'
+        )
+      }
+    } catch (err) {
+      showToast?.(err.message || (isEn ? 'Error exporting PDF' : 'Error al exportar PDF'), 'error')
+    }
+  }
+
+  // Abrir menú contextual nativo/flotante posicionado
+  const handleContextMenu = (e, item) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    const menuWidth = 210
+    const menuHeight = item.isDirectory ? 180 : 210
+    const viewportWidth = window.innerWidth
+    const viewportHeight = window.innerHeight
+
+    let x = e.clientX
+    let y = e.clientY
+
+    if (x + menuWidth > viewportWidth) {
+      x = Math.max(10, viewportWidth - menuWidth - 10)
+    }
+    if (y + menuHeight > viewportHeight) {
+      y = Math.max(10, viewportHeight - menuHeight - 10)
+    }
+
+    setContextMenu({ x, y, item })
+  }
+
   // Renderizador recursivo de elementos del árbol
   const renderTreeItems = (items, depth = 0) => {
     return (
@@ -251,6 +338,7 @@ export default function FileTree({
                   <div
                     className="tree-item tree-folder-item"
                     onClick={() => toggleFolder(item.path)}
+                    onContextMenu={(e) => handleContextMenu(e, item)}
                     title={item.path}
                   >
                     <span className="tree-folder-caret">
@@ -412,6 +500,7 @@ export default function FileTree({
                 <div
                   className={`tree-item tree-file-item ${isActive ? 'is-active' : ''}`}
                   onClick={() => onSelectFile && onSelectFile(item.path)}
+                  onContextMenu={(e) => handleContextMenu(e, item)}
                   title={item.path}
                 >
                   <div className="tree-item-icon">
@@ -421,6 +510,20 @@ export default function FileTree({
                   <span className="tree-item-name">{item.name}</span>
 
                   <div className="tree-item-actions" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      type="button"
+                      className="btn-tree-action"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleExportPdf(item)
+                      }}
+                      title={t.fileTree.exportPdf || (isEn ? 'Export to PDF' : 'Exportar a PDF')}
+                      aria-label={
+                        t.fileTree.exportPdf || (isEn ? 'Export to PDF' : 'Exportar a PDF')
+                      }
+                    >
+                      <FilePdfIcon size={13} />
+                    </button>
                     <button
                       type="button"
                       className="btn-tree-action"
@@ -583,6 +686,175 @@ export default function FileTree({
         onClose={() => setDeletingItem(null)}
         language={language}
       />
+
+      {/* Menú contextual flotante para archivos y carpetas */}
+      {contextMenu && (
+        <div
+          className="tree-context-menu"
+          style={{ top: `${contextMenu.y}px`, left: `${contextMenu.x}px` }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {!contextMenu.item.isDirectory ? (
+            <>
+              <button
+                type="button"
+                className="tree-context-menu-item context-menu-primary"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleExportPdf(item)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FilePdfIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.exportPdf}</span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  onSelectFile?.(item.path)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FileTextIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.openFile}</span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={(e) => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleStartRename(item, e)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <PencilIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.rename}</span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  window.api?.showInFolder?.(item.path)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FolderOpenIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.showInFolder}</span>
+              </button>
+
+              <div className="tree-context-menu-divider" />
+
+              <button
+                type="button"
+                className="tree-context-menu-item context-menu-danger"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  setDeletingItem(item)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <TrashIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.delete}</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={(e) => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleStartCreate(item.path, 'file', e)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FilePlusIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.newFile}</span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={(e) => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleStartCreate(item.path, 'folder', e)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FolderPlusIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.newFolder}</span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={(e) => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleStartRename(item, e)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <PencilIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.rename}</span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  window.api?.showInFolder?.(item.path)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FolderOpenIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.showInFolder}</span>
+              </button>
+
+              <div className="tree-context-menu-divider" />
+
+              <button
+                type="button"
+                className="tree-context-menu-item context-menu-danger"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  setDeletingItem(item)
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <TrashIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">{t.fileTree.delete}</span>
+              </button>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

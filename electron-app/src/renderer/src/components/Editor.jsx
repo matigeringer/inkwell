@@ -19,7 +19,8 @@ import {
   TypewriterIcon,
   AlignLeftIcon,
   AlignJustifyIcon,
-  AlignCenterIcon
+  AlignCenterIcon,
+  ExportPdfIcon
 } from './Icons'
 import FileTree from './FileTree'
 import { getTranslation } from '../i18n'
@@ -600,6 +601,57 @@ export default function Editor({
     }
   }, [getMarkdownContent, fileName, filePath, onRefreshFolderTree, showToast, currentLang])
 
+  // Exportar documento activo a PDF con diseño editorial de lectura
+  const handleExportPdf = useCallback(async () => {
+    if (!window.api?.exportPdf) return
+
+    try {
+      showToast(
+        t.editor.exportingPdf ||
+          (currentLang === 'en'
+            ? 'Generating reading PDF...'
+            : 'Generando archivo de lectura en PDF...')
+      )
+      const markdownContent = getMarkdownContent()
+      const htmlContent = editor ? editor.getHTML() : null
+
+      const res = await window.api.exportPdf({
+        filePath,
+        fileName,
+        content: markdownContent,
+        htmlContent
+      })
+
+      if (res?.canceled) {
+        return
+      }
+
+      if (res?.success) {
+        showToast(
+          t.editor.toastPdfExported?.(res.fileName) ||
+            (currentLang === 'en'
+              ? `PDF exported: ${res.fileName}`
+              : `PDF exportado: ${res.fileName}`)
+        )
+      } else {
+        showToast(
+          res?.error ||
+            t.editor.toastPdfError ||
+            (currentLang === 'en' ? 'Error exporting PDF' : 'Error al exportar PDF'),
+          'error'
+        )
+      }
+    } catch (err) {
+      showToast(
+        err.message ||
+          (currentLang === 'en'
+            ? 'Unexpected error exporting PDF'
+            : 'Error inesperado al exportar PDF'),
+        'error'
+      )
+    }
+  }, [filePath, fileName, editor, getMarkdownContent, showToast, currentLang, t])
+
   // Cambiar de documento de forma fluida desde el explorador
   const handleSwitchDoc = useCallback(
     async (targetFilePath) => {
@@ -925,6 +977,16 @@ export default function Editor({
         return
       }
 
+      // 7. Ctrl+Shift+E o Ctrl+P: Exportar a PDF
+      if (
+        (isCtrlOrMeta && e.shiftKey && (e.key === 'e' || e.key === 'E')) ||
+        (isCtrlOrMeta && !e.shiftKey && (e.key === 'p' || e.key === 'P'))
+      ) {
+        e.preventDefault()
+        handleExportPdf()
+        return
+      }
+
       // 7. Ctrl+O: Abrir archivo
       if (isCtrlOrMeta && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {
         e.preventDefault()
@@ -1021,6 +1083,7 @@ export default function Editor({
     toggleZenMode,
     handleSave,
     handleSaveAs,
+    handleExportPdf,
     handleOpenFileDirectly,
     onOpenFolder,
     cycleTheme,
@@ -1138,6 +1201,16 @@ export default function Editor({
           )}
 
           <div className="header-divider" />
+
+          <button
+            className="btn-sober-secondary"
+            onClick={handleExportPdf}
+            title={t.editor.exportPdfTitle}
+            aria-label={t.editor.exportPdf}
+          >
+            <ExportPdfIcon size={15} />
+            <span>{t.editor.exportPdf}</span>
+          </button>
 
           <button
             className="btn-sober-secondary"
@@ -1316,6 +1389,14 @@ export default function Editor({
                     <span className="shortcut-desc">{t.shortcuts.keys.saveCopy}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">{t.shortcuts.keys.exportPdf}</span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>
+                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
+                      <kbd>Ctrl</kbd>+<kbd>P</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">

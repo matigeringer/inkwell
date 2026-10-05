@@ -6,6 +6,7 @@ const api = {
   // Archivos
   saveFile: (data) => ipcRenderer.invoke('file:save', data),
   saveFileAs: (data) => ipcRenderer.invoke('file:save-as', data),
+  exportPdf: (data) => ipcRenderer.invoke('file:export-pdf', data),
   openFileDialog: () => ipcRenderer.invoke('file:open-dialog'),
   readFile: (filePath) => ipcRenderer.invoke('file:read', filePath),
   createFile: (data) => ipcRenderer.invoke('file:create', data),

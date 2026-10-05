@@ -3,6 +3,7 @@ import { join, basename, extname } from 'path'
 import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { exportDocumentToPdf } from './pdfExporter'
 
 // Idioma activo de la aplicación ('es' | 'en') y soporte de corrección ortográfica
 let currentAppLanguage = 'es'
@@ -485,6 +486,11 @@ app.whenReady().then(() => {
         error: error.message
       }
     }
+  })
+
+  // Exportar documento de lectura a PDF
+  ipcMain.handle('file:export-pdf', async (event, data) => {
+    return exportDocumentToPdf(event, data, currentAppLanguage)
   })
 
   // Renombrar y Eliminar (comunes para archivos y carpetas)

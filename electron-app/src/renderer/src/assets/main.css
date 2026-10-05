@@ -2776,3 +2776,100 @@
     transform: rotate(360deg);
   }
 }
+
+/* ==========================================================================
+   Context Menu (Explorador de Archivos / Manuscritos)
+   ========================================================================== */
+
+.tree-context-menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 200px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  padding: 0.35rem 0;
+  display: flex;
+  flex-direction: column;
+  animation: contextMenuFadeIn 0.1s ease-out;
+  user-select: none;
+}
+
+@keyframes contextMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tree-context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  padding: 0.5rem 0.85rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.tree-context-menu-item:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.tree-context-menu-item.context-menu-primary {
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.tree-context-menu-item.context-menu-primary:hover {
+  background-color: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+.tree-context-menu-item.context-menu-danger {
+  color: var(--mark-danger);
+}
+
+.tree-context-menu-item.context-menu-danger:hover {
+  background-color: var(--mark-danger-subtle);
+  color: var(--mark-danger);
+}
+
+.tree-context-menu-divider {
+  height: 1px;
+  background-color: var(--rule);
+  margin: 0.3rem 0;
+}
+
+.tree-context-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.tree-context-menu-item:hover .tree-context-menu-icon {
+  opacity: 1;
+}
+
+.tree-context-menu-label {
+  flex: 1;
+  white-space: nowrap;
+}
