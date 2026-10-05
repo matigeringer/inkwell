@@ -1,7 +1,10 @@
 import { useEffect } from 'react'
 import { CloseIcon, TrashIcon } from './Icons'
+import { getTranslation } from '../i18n'
 
-export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose }) {
+export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose, language = 'es' }) {
+  const t = getTranslation(language)
+
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -15,10 +18,10 @@ export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose })
   if (!isOpen || !item) return null
 
   const isDir = item.isDirectory
-  const title = isDir ? 'Eliminar carpeta' : 'Eliminar archivo'
+  const title = isDir ? t.deleteModal.titleFolder : t.deleteModal.titleFile
   const description = isDir
-    ? `¿Estás seguro de que deseas eliminar la carpeta "${item.name}" y todo su contenido?`
-    : `¿Estás seguro de que deseas eliminar el archivo "${item.name}"?`
+    ? t.deleteModal.descFolder(item.name)
+    : t.deleteModal.descFile(item.name)
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -35,15 +38,15 @@ export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose })
               <h2 id="delete-modal-title" className="modal-title">
                 {title}
               </h2>
-              <p className="modal-subtitle">Se enviará a la papelera de reciclaje</p>
+              <p className="modal-subtitle">{t.deleteModal.subtitle}</p>
             </div>
           </div>
 
           <button
             className="btn-icon-subtle"
             onClick={onClose}
-            aria-label="Cerrar modal"
-            title="Cerrar (Esc)"
+            aria-label={t.common.close}
+            title={`${t.common.close} (Esc)`}
           >
             <CloseIcon size={18} />
           </button>
@@ -60,7 +63,7 @@ export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose })
 
         <footer className="modal-footer delete-modal-footer">
           <button type="button" className="btn-sober-secondary" onClick={onClose}>
-            Cancelar
+            {t.common.cancel}
           </button>
           <button
             type="button"
@@ -71,7 +74,7 @@ export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose })
             }}
           >
             <TrashIcon size={15} />
-            <span>Eliminar</span>
+            <span>{t.common.delete}</span>
           </button>
         </footer>
       </div>

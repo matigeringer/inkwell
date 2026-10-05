@@ -28,7 +28,12 @@ const api = {
     const subscription = (_event, isFullscreen) => callback(isFullscreen)
     ipcRenderer.on('window:fullscreen-changed', subscription)
     return () => ipcRenderer.removeListener('window:fullscreen-changed', subscription)
-  }
+  },
+
+  // Corrector Ortográfico e Idioma
+  setSpellCheckerConfig: (config) => ipcRenderer.invoke('spellcheck:set-config', config),
+  getSpellCheckerConfig: () => ipcRenderer.invoke('spellcheck:get-config'),
+  setAppLanguage: (lang) => ipcRenderer.invoke('app:set-language', lang)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

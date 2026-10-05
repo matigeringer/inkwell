@@ -11,11 +11,14 @@ import {
   AlignLeftIcon,
   AlignJustifyIcon,
   AlignCenterIcon,
-  FeatherIcon
+  FeatherIcon,
+  LanguagesIcon,
+  SpellCheckIcon
 } from './Icons'
+import { getTranslation } from '../i18n'
 
 export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePreferences }) {
-  const [activeTab, setActiveTab] = useState('appearance') // 'appearance' | 'typography' | 'writing'
+  const [activeTab, setActiveTab] = useState('appearance') // 'appearance' | 'typography' | 'writing' | 'language'
 
   // Manejar tecla Escape para cerrar
   useEffect(() => {
@@ -30,17 +33,21 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
 
   if (!isOpen) return null
 
+  const currentLang = preferences.language || 'es'
+  const t = getTranslation(currentLang)
+
   const tabs = [
-    { id: 'appearance', label: 'Apariencia', icon: PaletteIcon },
-    { id: 'typography', label: 'Tipografía', icon: TypeIcon },
-    { id: 'writing', label: 'Escritura', icon: FeatherIcon }
+    { id: 'appearance', label: t.preferences.tabs.appearance, icon: PaletteIcon },
+    { id: 'typography', label: t.preferences.tabs.typography, icon: TypeIcon },
+    { id: 'writing', label: t.preferences.tabs.writing, icon: FeatherIcon },
+    { id: 'language', label: t.preferences.tabs.language, icon: LanguagesIcon }
   ]
 
   const themeSpecimen = {
     id: 'puro',
-    name: 'Puro',
-    subtitle: 'Prueba de imprenta',
-    desc: 'Papel de galera en gris cálido, tinta carbón, lápiz bermellón de corrector y trazo azul no-reproducible.',
+    name: t.preferences.appearance.paletteName,
+    subtitle: t.preferences.appearance.paletteSubtitle,
+    desc: t.preferences.appearance.paletteDetail,
     light: {
       bg: '#efeee8',
       sidebar: '#e4e3db',
@@ -58,20 +65,20 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
   const modes = [
     {
       id: 'light',
-      name: 'Claro',
-      desc: 'Papel de galera iluminado',
+      name: t.preferences.appearance.lightName,
+      desc: t.preferences.appearance.lightDesc,
       icon: SunIcon
     },
     {
       id: 'dark',
-      name: 'Oscuro',
-      desc: 'Linotipia nocturna',
+      name: t.preferences.appearance.darkName,
+      desc: t.preferences.appearance.darkDesc,
       icon: MoonIcon
     },
     {
       id: 'system',
-      name: 'Sistema',
-      desc: 'Sincronizado con el SO',
+      name: t.preferences.appearance.systemName,
+      desc: t.preferences.appearance.systemDesc,
       icon: MonitorIcon
     }
   ]
@@ -81,49 +88,65 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
       id: 'serif',
       name: 'Newsreader',
       fontClass: 'preview-font-serif',
-      example:
-        'En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor.'
+      example: t.preferences.typography.exampleSerif
     },
     {
       id: 'sans',
       name: 'Schibsted Grotesk',
       fontClass: 'preview-font-sans',
-      example:
-        'El pensamiento claro precede a la escritura fluida y directa. Las palabras exactas encuentran su ritmo natural sobre un lienzo silencioso.'
+      example: t.preferences.typography.exampleSans
     },
     {
       id: 'mono',
       name: 'IBM Plex Mono',
       fontClass: 'preview-font-mono',
-      example:
-        '01. Hipótesis inicial y estructura técnica del borrador: ritmo constante y precisión en cada línea.'
+      example: t.preferences.typography.exampleMono
     }
   ]
 
   const fontSizes = [
-    { id: '1.10rem', label: 'Compacto', note: '1.10rem' },
-    { id: '1.40rem', label: 'Estándar', note: '1.40rem' },
-    { id: '1.80rem', label: 'Amplio', note: '1.80rem' }
+    { id: '1.10rem', label: t.preferences.typography.compact, note: '1.10rem' },
+    { id: '1.40rem', label: t.preferences.typography.standard, note: '1.40rem' },
+    { id: '1.80rem', label: t.preferences.typography.large, note: '1.80rem' }
   ]
 
   const alignments = [
     {
       id: 'left',
-      name: 'Izquierda',
-      desc: 'Alineación natural',
+      name: t.preferences.writing.alignLeftName,
+      desc: t.preferences.writing.alignLeftDesc,
       icon: AlignLeftIcon
     },
     {
       id: 'justify',
-      name: 'Justificado',
-      desc: 'Márgenes limpios estilo libro',
+      name: t.preferences.writing.alignJustifyName,
+      desc: t.preferences.writing.alignJustifyDesc,
       icon: AlignJustifyIcon
     },
     {
       id: 'center',
-      name: 'Centrado',
-      desc: 'Lírico y dramaturgia',
+      name: t.preferences.writing.alignCenterName,
+      desc: t.preferences.writing.alignCenterDesc,
       icon: AlignCenterIcon
+    }
+  ]
+
+  const languagesList = [
+    {
+      id: 'es',
+      name: t.preferences.language.spanishName,
+      region: t.preferences.language.spanishRegion,
+      desc: t.preferences.language.spanishDesc,
+      tag: 'ES',
+      dictCode: 'es-ES'
+    },
+    {
+      id: 'en',
+      name: t.preferences.language.englishName,
+      region: t.preferences.language.englishRegion,
+      desc: t.preferences.language.englishDesc,
+      tag: 'EN',
+      dictCode: 'en-US'
     }
   ]
 
@@ -132,6 +155,7 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
   const currentTypewriter = Boolean(preferences.typewriterMode)
   const currentTypewriterPosition = preferences.typewriterPosition || 'center'
   const currentTypewriterBehavior = preferences.typewriterBehavior || 'deadzone'
+  const currentSpellcheck = preferences.spellcheckEnabled !== false
   const currentFontFamily =
     preferences.fontFamily === 'sans'
       ? 'var(--font-ui)'
@@ -152,15 +176,15 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
           <div className="modal-header-title-bar">
             <div>
               <h2 id="modal-title" className="modal-title">
-                Preferencias
+                {t.preferences.title}
               </h2>
-              <p className="modal-subtitle">Configuración del entorno de escritura</p>
+              <p className="modal-subtitle">{t.preferences.subtitle}</p>
             </div>
             <button
               className="btn-icon-subtle"
               onClick={onClose}
-              aria-label="Cerrar modal"
-              title="Cerrar (Esc)"
+              aria-label={t.common.close}
+              title={`${t.common.close} (Esc)`}
             >
               <CloseIcon size={18} />
             </button>
@@ -193,10 +217,8 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
               {/* Sección 1: Modo de Iluminación */}
               <section className="pref-section">
                 <div className="section-heading">
-                  <h3 className="section-title">Modo de Iluminación</h3>
-                  <p className="section-desc">
-                    Selecciona la iluminación para el lienzo y la interfaz
-                  </p>
+                  <h3 className="section-title">{t.preferences.appearance.modeTitle}</h3>
+                  <p className="section-desc">{t.preferences.appearance.modeDesc}</p>
                 </div>
 
                 <div className="mode-selector-grid">
@@ -229,8 +251,8 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
               {/* Sección 2: Muestra de Imprenta */}
               <section className="pref-section">
                 <div className="section-heading">
-                  <h3 className="section-title">Paleta Editorial</h3>
-                  <p className="section-desc">Materiales y proporciones del taller tipográfico</p>
+                  <h3 className="section-title">{t.preferences.appearance.paletteTitle}</h3>
+                  <p className="section-desc">{t.preferences.appearance.paletteDesc}</p>
                 </div>
 
                 <div className="theme-specimen-box">
@@ -345,8 +367,8 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
             <div className="pref-tab-panel">
               <section className="pref-section">
                 <div className="section-heading">
-                  <h3 className="section-title">Familia Tipográfica</h3>
-                  <p className="section-desc">Diseño de letra para el editor principal</p>
+                  <h3 className="section-title">{t.preferences.typography.fontFamilyTitle}</h3>
+                  <p className="section-desc">{t.preferences.typography.fontFamilyDesc}</p>
                 </div>
 
                 <div className="font-grid-specimens">
@@ -369,7 +391,7 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
 
               <section className="pref-section">
                 <div className="section-heading">
-                  <h3 className="section-title">Tamaño de Fuente</h3>
+                  <h3 className="section-title">{t.preferences.typography.fontSizeTitle}</h3>
                 </div>
 
                 <div className="size-selector-pills">
@@ -391,7 +413,7 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
 
                 {/* Muestra interactiva de ejemplo */}
                 <div className="live-preview-surface">
-                  <span className="live-preview-tag">Ejemplo</span>
+                  <span className="live-preview-tag">{t.common.preview}</span>
                   <p
                     className="live-preview-content"
                     style={{
@@ -413,8 +435,8 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
             <div className="pref-tab-panel">
               <section className="pref-section">
                 <div className="section-heading">
-                  <h3 className="section-title">Modo Rodillo (Typewriter)</h3>
-                  <p className="section-desc">Enfoque continuo de concentración vertical</p>
+                  <h3 className="section-title">{t.preferences.writing.typewriterTitle}</h3>
+                  <p className="section-desc">{t.preferences.writing.typewriterDesc}</p>
                 </div>
 
                 <div
@@ -432,12 +454,17 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                   <div className="typewriter-clean-info">
                     <div className="typewriter-clean-header">
                       <TypewriterIcon size={18} />
-                      <span className="typewriter-clean-title">Typewriter Scrolling</span>
-                      {currentTypewriter && <span className="pref-pill-badge">Activo</span>}
+                      <span className="typewriter-clean-title">
+                        {t.preferences.writing.typewriterCardTitle}
+                      </span>
+                      {currentTypewriter && (
+                        <span className="pref-pill-badge">{t.common.active}</span>
+                      )}
                     </div>
                     <p className="typewriter-clean-desc">
-                      Mantiene la línea donde escribes fija en el centro vertical de la pantalla.
-                      Atajo rápido: <kbd className="pref-kbd">Ctrl+Shift+Y</kbd>
+                      {t.preferences.writing.typewriterCardDesc}{' '}
+                      {t.preferences.writing.typewriterShortcutHint}{' '}
+                      <kbd className="pref-kbd">Ctrl+Shift+Y</kbd>
                     </p>
                   </div>
 
@@ -449,7 +476,7 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                 {currentTypewriter && (
                   <div className="typewriter-suboptions">
                     <span className="typewriter-suboptions-label">
-                      Posición del ancla vertical:
+                      {t.preferences.writing.anchorTitle}
                     </span>
                     <div className="typewriter-behavior-grid">
                       <button
@@ -458,12 +485,13 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                         onClick={() => onUpdatePreferences({ typewriterPosition: 'center' })}
                       >
                         <div className="typewriter-behavior-header">
-                          <span className="typewriter-behavior-title">Centrado exacto (50%)</span>
-                          <span className="pref-pill-badge-subtle">Estándar</span>
+                          <span className="typewriter-behavior-title">
+                            {t.preferences.writing.anchorCenterTitle}
+                          </span>
+                          <span className="pref-pill-badge-subtle">{t.common.standard}</span>
                         </div>
                         <span className="typewriter-behavior-desc">
-                          Fija la línea activa en la mitad vertical. Ofrece equilibrio simétrico
-                          entre texto escrito y espacio despejado.
+                          {t.preferences.writing.anchorCenterDesc}
                         </span>
                       </button>
 
@@ -473,18 +501,21 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                         onClick={() => onUpdatePreferences({ typewriterPosition: 'eye' })}
                       >
                         <div className="typewriter-behavior-header">
-                          <span className="typewriter-behavior-title">Línea de ojos (38%)</span>
-                          <span className="pref-pill-badge-subtle">Ergonómico</span>
+                          <span className="typewriter-behavior-title">
+                            {t.preferences.writing.anchorEyeTitle}
+                          </span>
+                          <span className="pref-pill-badge-subtle">
+                            {currentLang === 'en' ? 'Ergonomic' : 'Ergonómico'}
+                          </span>
                         </div>
                         <span className="typewriter-behavior-desc">
-                          Tercio superior. Ubica el renglón a la altura natural de la vista en
-                          monitor, dejando más espacio inferior visible.
+                          {t.preferences.writing.anchorEyeDesc}
                         </span>
                       </button>
                     </div>
 
                     <span className="typewriter-suboptions-label" style={{ marginTop: '0.4rem' }}>
-                      Navegación con flechas (Arriba / Abajo):
+                      {t.preferences.writing.navTitle}
                     </span>
                     <div className="typewriter-behavior-grid">
                       <button
@@ -494,13 +525,12 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                       >
                         <div className="typewriter-behavior-header">
                           <span className="typewriter-behavior-title">
-                            Zona de tolerancia (Deadzone)
+                            {t.preferences.writing.navDeadzoneTitle}
                           </span>
-                          <span className="pref-pill-badge-subtle">Recomendado</span>
+                          <span className="pref-pill-badge-subtle">{t.common.recommended}</span>
                         </div>
                         <span className="typewriter-behavior-desc">
-                          Permite mover el cursor unas pocas líneas libremente para correcciones; se
-                          re-centra suavemente al escribir.
+                          {t.preferences.writing.navDeadzoneDesc}
                         </span>
                       </button>
 
@@ -510,10 +540,12 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                         onClick={() => onUpdatePreferences({ typewriterBehavior: 'strict' })}
                       >
                         <div className="typewriter-behavior-header">
-                          <span className="typewriter-behavior-title">Modo estricto</span>
+                          <span className="typewriter-behavior-title">
+                            {t.preferences.writing.navStrictTitle}
+                          </span>
                         </div>
                         <span className="typewriter-behavior-desc">
-                          Re-centra la pantalla de forma continua con cada pulsación de flecha.
+                          {t.preferences.writing.navStrictDesc}
                         </span>
                       </button>
                     </div>
@@ -523,8 +555,8 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
 
               <section className="pref-section">
                 <div className="section-heading">
-                  <h3 className="section-title">Alineación del Párrafo</h3>
-                  <p className="section-desc">Disposición del cuerpo de texto en el lienzo</p>
+                  <h3 className="section-title">{t.preferences.writing.alignTitle}</h3>
+                  <p className="section-desc">{t.preferences.writing.alignDesc}</p>
                 </div>
 
                 <div className="align-grid-modern">
@@ -551,11 +583,135 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
               </section>
             </div>
           )}
+
+          {/* PESTAÑA: IDIOMA & CORRECTOR ORTOGRÁFICO */}
+          {activeTab === 'language' && (
+            <div className="pref-tab-panel">
+              {/* Sección 1: Selección de Idioma */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">{t.preferences.language.sectionTitle}</h3>
+                  <p className="section-desc">{t.preferences.language.sectionDesc}</p>
+                </div>
+
+                <div className="mode-selector-grid">
+                  {languagesList.map((langItem) => {
+                    const isSelected = currentLang === langItem.id
+                    return (
+                      <button
+                        key={langItem.id}
+                        type="button"
+                        className={`mode-card-btn ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ language: langItem.id })}
+                      >
+                        <div
+                          className="mode-card-icon"
+                          style={{ fontWeight: 700, fontSize: '0.85rem', letterSpacing: '0.05em' }}
+                        >
+                          {langItem.tag}
+                        </div>
+                        <div className="mode-card-info">
+                          <div className="mode-card-name-row">
+                            <span className="mode-card-name">{langItem.name}</span>
+                            {isSelected && <CheckIcon size={14} className="theme-check" />}
+                          </div>
+                          <span className="mode-card-desc" style={{ marginBottom: '0.2rem' }}>
+                            {langItem.region}
+                          </span>
+                          <span style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                            {langItem.desc}
+                          </span>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              {/* Sección 2: Configuración del Corrector Ortográfico */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">{t.preferences.language.spellSectionTitle}</h3>
+                  <p className="section-desc">{t.preferences.language.spellSectionDesc}</p>
+                </div>
+
+                {/* Switch de activación del corrector */}
+                <div
+                  className={`typewriter-clean-card ${currentSpellcheck ? 'is-active' : ''}`}
+                  onClick={() => onUpdatePreferences({ spellcheckEnabled: !currentSpellcheck })}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onUpdatePreferences({ spellcheckEnabled: !currentSpellcheck })
+                    }
+                  }}
+                >
+                  <div className="typewriter-clean-info">
+                    <div className="typewriter-clean-header">
+                      <SpellCheckIcon size={18} />
+                      <span className="typewriter-clean-title">
+                        {t.preferences.language.spellToggleTitle}
+                      </span>
+                      {currentSpellcheck ? (
+                        <span className="pref-pill-badge">{t.common.active}</span>
+                      ) : (
+                        <span className="pref-pill-badge-subtle">{t.common.disabled}</span>
+                      )}
+                    </div>
+                    <p className="typewriter-clean-desc">
+                      {t.preferences.language.spellToggleDesc}
+                    </p>
+                  </div>
+
+                  <div className={`pref-switch-modern ${currentSpellcheck ? 'checked' : ''}`}>
+                    <div className="pref-switch-thumb-modern" />
+                  </div>
+                </div>
+
+                {/* Tarjeta de información del diccionario activo */}
+                <div className="theme-specimen-box" style={{ marginTop: '0.5rem' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}
+                    >
+                      {t.preferences.language.activeDictionary}
+                    </span>
+                    <span
+                      className="pref-pill-badge"
+                      style={{ textTransform: 'none', fontWeight: 600 }}
+                    >
+                      {currentLang === 'en'
+                        ? t.preferences.language.dictionaryEnglish
+                        : t.preferences.language.dictionarySpanish}
+                    </span>
+                  </div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: '0.86rem',
+                      color: 'var(--text-secondary)',
+                      lineHeight: 1.5
+                    }}
+                  >
+                    {t.preferences.language.rightClickHint}
+                  </p>
+                </div>
+              </section>
+            </div>
+          )}
         </div>
 
         <footer className="modal-footer-wide">
           <button className="btn-modal-close" onClick={onClose}>
-            Listo
+            {t.common.done}
           </button>
         </footer>
       </div>

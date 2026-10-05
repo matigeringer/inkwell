@@ -15,6 +15,7 @@ import {
   CloseIcon
 } from './Icons'
 import DeleteConfirmModal from './DeleteConfirmModal'
+import { getTranslation } from '../i18n'
 
 export default function FileTree({
   openedFolder,
@@ -22,8 +23,12 @@ export default function FileTree({
   onSelectFile,
   onRefreshTree,
   onCloseFolder,
-  showToast
+  showToast,
+  language = 'es'
 }) {
+  const t = getTranslation(language)
+  const isEn = language === 'en'
+
   const [expandedFolders, setExpandedFolders] = useState(() => new Set([openedFolder?.path]))
   const [creatingIn, setCreatingIn] = useState(null) // { parentPath, type: 'file' | 'folder' } | null
   const [creatingName, setCreatingName] = useState('')
@@ -97,13 +102,13 @@ export default function FileTree({
           fileName: name
         })
         if (res.success) {
-          showToast?.(`Archivo creado: ${res.fileName}`)
+          showToast?.(t.fileTree.toastFileCreated(res.fileName))
           await onRefreshTree()
           if (onSelectFile && res.filePath) {
             onSelectFile(res.filePath)
           }
         } else {
-          showToast?.(res.error || 'Error al crear archivo', 'error')
+          showToast?.(res.error || t.fileTree.toastErrorCreateFile, 'error')
         }
       } else {
         const res = await window.api.createFolder({
@@ -111,16 +116,16 @@ export default function FileTree({
           folderName: name
         })
         if (res.success) {
-          showToast?.(`Carpeta creada: ${res.folderName}`)
+          showToast?.(t.fileTree.toastFolderCreated(res.folderName))
           // Auto-expandir la nueva carpeta
           setExpandedFolders((prev) => new Set(prev).add(res.folderPath))
           await onRefreshTree()
         } else {
-          showToast?.(res.error || 'Error al crear carpeta', 'error')
+          showToast?.(res.error || t.fileTree.toastErrorCreateFolder, 'error')
         }
       }
     } catch (err) {
-      showToast?.(err.message || 'Error inesperado', 'error')
+      showToast?.(err.message || t.common.error, 'error')
     } finally {
       handleCancelCreate()
     }
@@ -153,17 +158,17 @@ export default function FileTree({
       })
 
       if (res.success) {
-        showToast?.(`Renombrado a: ${res.newName}`)
+        showToast?.(t.fileTree.toastRenamed(res.newName))
         await onRefreshTree()
         // Si el archivo renombrado es el activo, actualizar selección
         if (activeFilePath === renamingItem.path && onSelectFile) {
           onSelectFile(res.newPath)
         }
       } else {
-        showToast?.(res.error || 'Error al renombrar', 'error')
+        showToast?.(res.error || t.fileTree.toastErrorRename, 'error')
       }
     } catch (err) {
-      showToast?.(err.message || 'Error inesperado', 'error')
+      showToast?.(err.message || t.common.error, 'error')
     } finally {
       handleCancelRename()
     }
@@ -173,13 +178,13 @@ export default function FileTree({
     try {
       const res = await window.api.deleteItem(item.path)
       if (res.success) {
-        showToast?.(`Eliminado: ${item.name}`)
+        showToast?.(t.fileTree.toastDeleted(item.name))
         await onRefreshTree()
       } else {
-        showToast?.(res.error || 'Error al eliminar', 'error')
+        showToast?.(res.error || t.fileTree.toastErrorDelete, 'error')
       }
     } catch (err) {
-      showToast?.(err.message || 'Error inesperado', 'error')
+      showToast?.(err.message || t.common.error, 'error')
     }
   }
 
@@ -188,7 +193,7 @@ export default function FileTree({
     setIsRefreshing(true)
     try {
       await onRefreshTree()
-      showToast?.('Árbol actualizado')
+      showToast?.(isEn ? 'File tree refreshed' : 'Árbol actualizado')
     } catch {
       // Ignorar error
     } finally {
@@ -198,14 +203,12 @@ export default function FileTree({
 
   // Renderizador recursivo de elementos del árbol
   const renderTreeItems = (items, depth = 0) => {
-    if (!items || items.length === 0) return null
-
     return (
-      <div className="tree-group" style={{ '--tree-depth': depth }}>
+      <div className="tree-level" style={{ '--depth': depth }}>
         {items.map((item) => {
           const isDir = item.isDirectory
           const isExpanded = expandedFolders.has(item.path)
-          const isActive = !isDir && activeFilePath === item.path
+          const isActive = activeFilePath === item.path
           const isItemRenaming = renamingItem?.path === item.path
           const isCreatingInside = creatingIn?.parentPath === item.path
 
@@ -214,7 +217,7 @@ export default function FileTree({
               <div key={item.path} className="tree-node tree-folder-node">
                 {isItemRenaming ? (
                   <div className="tree-inline-form" onClick={(e) => e.stopPropagation()}>
-                    <FolderIcon size={16} className="tree-icon" />
+                    <FolderIcon size={15} className="tree-icon" />
                     <input
                       ref={renameInputRef}
                       type="text"
@@ -231,7 +234,7 @@ export default function FileTree({
                       type="button"
                       className="btn-tree-inline"
                       onClick={handleConfirmRename}
-                      title="Guardar"
+                      title={t.common.save}
                     >
                       <CheckIcon size={13} />
                     </button>
@@ -239,47 +242,38 @@ export default function FileTree({
                       type="button"
                       className="btn-tree-inline"
                       onClick={handleCancelRename}
-                      title="Cancelar"
+                      title={t.common.cancel}
                     >
                       <CloseIcon size={13} />
                     </button>
                   </div>
                 ) : (
                   <div
-                    className={`tree-item tree-folder-item ${isExpanded ? 'is-expanded' : ''}`}
+                    className="tree-item tree-folder-item"
                     onClick={() => toggleFolder(item.path)}
                     title={item.path}
                   >
-                    <button
-                      type="button"
-                      className="tree-chevron-btn"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        toggleFolder(item.path)
-                      }}
-                      aria-label={isExpanded ? 'Plegar carpeta' : 'Desplegar carpeta'}
-                    >
-                      {isExpanded ? <ChevronDownIcon size={14} /> : <ChevronRightIcon size={14} />}
-                    </button>
+                    <span className="tree-folder-caret">
+                      {isExpanded ? <ChevronDownIcon size={12} /> : <ChevronRightIcon size={12} />}
+                    </span>
 
                     <div className="tree-item-icon">
                       {isExpanded ? (
-                        <FolderOpenIcon size={16} className="folder-icon is-open" />
+                        <FolderOpenIcon size={15} className="folder-icon folder-icon-open" />
                       ) : (
-                        <FolderIcon size={16} className="folder-icon" />
+                        <FolderIcon size={15} className="folder-icon" />
                       )}
                     </div>
 
                     <span className="tree-item-name">{item.name}</span>
 
-                    {/* Acciones flotantes de la carpeta */}
                     <div className="tree-item-actions" onClick={(e) => e.stopPropagation()}>
                       <button
                         type="button"
                         className="btn-tree-action"
                         onClick={(e) => handleStartCreate(item.path, 'file', e)}
-                        title="Nuevo archivo en esta carpeta"
-                        aria-label="Nuevo archivo"
+                        title={isEn ? 'New file in this folder' : 'Nuevo archivo en esta carpeta'}
+                        aria-label={t.fileTree.newFile}
                       >
                         <FilePlusIcon size={13} />
                       </button>
@@ -287,8 +281,10 @@ export default function FileTree({
                         type="button"
                         className="btn-tree-action"
                         onClick={(e) => handleStartCreate(item.path, 'folder', e)}
-                        title="Nueva subcarpeta en esta carpeta"
-                        aria-label="Nueva subcarpeta"
+                        title={
+                          isEn ? 'New subfolder in this folder' : 'Nueva subcarpeta en esta carpeta'
+                        }
+                        aria-label={t.fileTree.newFolder}
                       >
                         <FolderPlusIcon size={13} />
                       </button>
@@ -296,8 +292,8 @@ export default function FileTree({
                         type="button"
                         className="btn-tree-action"
                         onClick={(e) => handleStartRename(item, e)}
-                        title="Renombrar carpeta"
-                        aria-label="Renombrar"
+                        title={isEn ? 'Rename folder' : 'Renombrar carpeta'}
+                        aria-label={t.fileTree.rename}
                       >
                         <PencilIcon size={13} />
                       </button>
@@ -308,8 +304,8 @@ export default function FileTree({
                           e.stopPropagation()
                           setDeletingItem(item)
                         }}
-                        title="Eliminar carpeta"
-                        aria-label="Eliminar"
+                        title={isEn ? 'Delete folder' : 'Eliminar carpeta'}
+                        aria-label={t.fileTree.delete}
                       >
                         <TrashIcon size={13} />
                       </button>
@@ -332,7 +328,11 @@ export default function FileTree({
                           ref={createInputRef}
                           type="text"
                           className="tree-inline-input"
-                          placeholder={creatingIn.type === 'file' ? 'nota.md' : 'nombre-carpeta'}
+                          placeholder={
+                            creatingIn.type === 'file'
+                              ? t.fileTree.filePlaceholder
+                              : t.fileTree.folderPlaceholder
+                          }
                           value={creatingName}
                           onChange={(e) => setCreatingName(e.target.value)}
                           onKeyDown={(e) => {
@@ -345,7 +345,7 @@ export default function FileTree({
                           type="button"
                           className="btn-tree-inline"
                           onClick={handleConfirmCreate}
-                          title="Crear"
+                          title={isEn ? 'Create' : 'Crear'}
                         >
                           <CheckIcon size={13} />
                         </button>
@@ -353,7 +353,7 @@ export default function FileTree({
                           type="button"
                           className="btn-tree-inline"
                           onClick={handleCancelCreate}
-                          title="Cancelar"
+                          title={t.common.cancel}
                         >
                           <CloseIcon size={13} />
                         </button>
@@ -364,7 +364,7 @@ export default function FileTree({
                       ? renderTreeItems(item.children, depth + 1)
                       : !isCreatingInside && (
                           <div className="tree-empty-folder">
-                            <span>Carpeta vacía</span>
+                            <span>{isEn ? 'Empty folder' : 'Carpeta vacía'}</span>
                           </div>
                         )}
                   </div>
@@ -395,7 +395,7 @@ export default function FileTree({
                     type="button"
                     className="btn-tree-inline"
                     onClick={handleConfirmRename}
-                    title="Guardar"
+                    title={t.common.save}
                   >
                     <CheckIcon size={13} />
                   </button>
@@ -403,7 +403,7 @@ export default function FileTree({
                     type="button"
                     className="btn-tree-inline"
                     onClick={handleCancelRename}
-                    title="Cancelar"
+                    title={t.common.cancel}
                   >
                     <CloseIcon size={13} />
                   </button>
@@ -425,8 +425,8 @@ export default function FileTree({
                       type="button"
                       className="btn-tree-action"
                       onClick={(e) => handleStartRename(item, e)}
-                      title="Renombrar archivo"
-                      aria-label="Renombrar"
+                      title={isEn ? 'Rename file' : 'Renombrar archivo'}
+                      aria-label={t.fileTree.rename}
                     >
                       <PencilIcon size={13} />
                     </button>
@@ -437,8 +437,8 @@ export default function FileTree({
                         e.stopPropagation()
                         setDeletingItem(item)
                       }}
-                      title="Eliminar archivo"
-                      aria-label="Eliminar"
+                      title={isEn ? 'Delete file' : 'Eliminar archivo'}
+                      aria-label={t.fileTree.delete}
                     >
                       <TrashIcon size={13} />
                     </button>
@@ -470,8 +470,8 @@ export default function FileTree({
             type="button"
             className="btn-tree-header-icon"
             onClick={(e) => handleStartCreate(openedFolder.path, 'file', e)}
-            title="Nuevo archivo en raíz"
-            aria-label="Nuevo archivo"
+            title={isEn ? 'New file in root' : 'Nuevo archivo en raíz'}
+            aria-label={t.fileTree.newFile}
           >
             <FilePlusIcon size={14} />
           </button>
@@ -479,8 +479,8 @@ export default function FileTree({
             type="button"
             className="btn-tree-header-icon"
             onClick={(e) => handleStartCreate(openedFolder.path, 'folder', e)}
-            title="Nueva subcarpeta en raíz"
-            aria-label="Nueva subcarpeta"
+            title={isEn ? 'New subfolder in root' : 'Nueva subcarpeta en raíz'}
+            aria-label={t.fileTree.newFolder}
           >
             <FolderPlusIcon size={14} />
           </button>
@@ -488,8 +488,8 @@ export default function FileTree({
             type="button"
             className={`btn-tree-header-icon ${isRefreshing ? 'animate-spin' : ''}`}
             onClick={handleManualRefresh}
-            title="Actualizar explorador"
-            aria-label="Actualizar"
+            title={t.fileTree.refresh}
+            aria-label={t.fileTree.refresh}
           >
             <RefreshIcon size={14} />
           </button>
@@ -497,8 +497,8 @@ export default function FileTree({
             type="button"
             className="btn-tree-header-icon btn-action-danger"
             onClick={onCloseFolder}
-            title="Cerrar carpeta de trabajo"
-            aria-label="Cerrar carpeta"
+            title={t.fileTree.closeFolder}
+            aria-label={t.fileTree.closeFolder}
           >
             <FolderCloseIcon size={14} />
           </button>
@@ -519,7 +519,11 @@ export default function FileTree({
               ref={createInputRef}
               type="text"
               className="tree-inline-input"
-              placeholder={creatingIn.type === 'file' ? 'nuevo-documento.md' : 'nueva-carpeta'}
+              placeholder={
+                creatingIn.type === 'file'
+                  ? t.fileTree.filePlaceholder
+                  : t.fileTree.folderPlaceholder
+              }
               value={creatingName}
               onChange={(e) => setCreatingName(e.target.value)}
               onKeyDown={(e) => {
@@ -532,7 +536,7 @@ export default function FileTree({
               type="button"
               className="btn-tree-inline"
               onClick={handleConfirmCreate}
-              title="Crear"
+              title={isEn ? 'Create' : 'Crear'}
             >
               <CheckIcon size={13} />
             </button>
@@ -540,7 +544,7 @@ export default function FileTree({
               type="button"
               className="btn-tree-inline"
               onClick={handleCancelCreate}
-              title="Cancelar"
+              title={t.common.cancel}
             >
               <CloseIcon size={13} />
             </button>
@@ -551,14 +555,18 @@ export default function FileTree({
           ? renderTreeItems(openedFolder.tree, 0)
           : !isCreatingInRoot && (
               <div className="tree-empty-state">
-                <p className="tree-empty-text">No hay archivos Markdown en esta carpeta.</p>
+                <p className="tree-empty-text">
+                  {isEn
+                    ? 'No Markdown files found in this folder.'
+                    : 'No hay archivos Markdown en esta carpeta.'}
+                </p>
                 <button
                   type="button"
                   className="btn-tree-empty-action"
                   onClick={(e) => handleStartCreate(openedFolder.path, 'file', e)}
                 >
                   <FilePlusIcon size={14} />
-                  <span>Crear primer archivo</span>
+                  <span>{isEn ? 'Create first file' : 'Crear primer archivo'}</span>
                 </button>
               </div>
             )}
@@ -570,6 +578,7 @@ export default function FileTree({
         item={deletingItem}
         onConfirm={handleConfirmDelete}
         onClose={() => setDeletingItem(null)}
+        language={language}
       />
     </div>
   )

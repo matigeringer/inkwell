@@ -10,18 +10,13 @@ import {
   FolderIcon,
   FileTextIcon
 } from './components/Icons'
+import { getTranslation } from './i18n'
 
 function App() {
   const [view, setView] = useState('home') // 'home' | 'editor'
   const [activeDoc, setActiveDoc] = useState(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [openedFolder, setOpenedFolder] = useState(null)
-
-  const todayLabel = new Intl.DateTimeFormat('es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  }).format(new Date())
 
   // Preferencias con persistencia en localStorage
   const [preferences, setPreferences] = useState(() => {
@@ -45,7 +40,9 @@ function App() {
           textAlign: parsed.textAlign || 'left',
           typewriterMode: Boolean(parsed.typewriterMode),
           typewriterPosition: parsed.typewriterPosition === 'eye' ? 'eye' : 'center',
-          typewriterBehavior: parsed.typewriterBehavior === 'strict' ? 'strict' : 'deadzone'
+          typewriterBehavior: parsed.typewriterBehavior === 'strict' ? 'strict' : 'deadzone',
+          language: parsed.language === 'en' ? 'en' : 'es',
+          spellcheckEnabled: parsed.spellcheckEnabled !== false
         }
       }
     } catch {
@@ -59,9 +56,20 @@ function App() {
       textAlign: 'left', // 'left' | 'justify' | 'center'
       typewriterMode: false, // boolean: centrado vertical continuo
       typewriterPosition: 'center', // 'center' (50% medio) | 'eye' (38% tercio superior / línea de ojos)
-      typewriterBehavior: 'deadzone' // 'deadzone' | 'strict'
+      typewriterBehavior: 'deadzone', // 'deadzone' | 'strict'
+      language: 'es', // 'es' | 'en'
+      spellcheckEnabled: true // boolean: corrector ortográfico activo
     }
   })
+
+  const currentLang = preferences.language || 'es'
+  const t = getTranslation(currentLang)
+
+  const todayLabel = new Intl.DateTimeFormat(currentLang === 'en' ? 'en-US' : 'es-ES', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(new Date())
 
   // Recuperar última carpeta de trabajo guardada al inicio
   useEffect(() => {
@@ -86,7 +94,7 @@ function App() {
     }
   }, [])
 
-  // Sincronizar tema, modo y variables CSS en el DOM
+  // Sincronizar tema, modo, idioma, corrector y variables CSS en el DOM
   useEffect(() => {
     try {
       localStorage.setItem('fountain_preferences', JSON.stringify(preferences))
@@ -95,6 +103,21 @@ function App() {
     }
 
     const root = document.documentElement
+
+    // Sincronizar atributo de idioma en HTML
+    root.setAttribute('lang', preferences.language || 'es')
+
+    // Sincronizar configuración con el proceso principal de Electron (SpellChecker y Diálogos)
+    if (window.api?.setSpellCheckerConfig) {
+      window.api
+        .setSpellCheckerConfig({
+          language: preferences.language || 'es',
+          enabled: preferences.spellcheckEnabled !== false
+        })
+        .catch((err) => {
+          console.error('Error al sincronizar spellcheck con Electron:', err)
+        })
+    }
 
     // 1. Aplicar Tema y Modo efectivo al DOM
     const applyThemeAndMode = (theme, mode) => {
@@ -147,18 +170,27 @@ function App() {
     })
   }
 
-  const handleCreate = () => {
+  // Alternar idioma rápido (ES <-> EN)
+  const handleQuickLanguageToggle = () => {
+    setPreferences((prev) => {
+      const nextLang = prev.language === 'en' ? 'es' : 'en'
+      return { ...prev, language: nextLang }
+    })
+  }
+
+  const handleCreate = useCallback(() => {
+    const defaultDocName = preferences.language === 'en' ? 'document.md' : 'documento.md'
     setActiveDoc({
       id: Date.now().toString(),
-      fileName: 'documento.md',
+      fileName: defaultDocName,
       filePath: null,
       content: ''
     })
     setView('editor')
-  }
+  }, [preferences.language])
 
   // Abrir carpeta de trabajo
-  const handleOpenFolder = async () => {
+  const handleOpenFolder = useCallback(async () => {
     if (!window.api?.openFolder) return
     try {
       const res = await window.api.openFolder()
@@ -173,7 +205,7 @@ function App() {
     } catch (err) {
       console.error('Error al abrir carpeta:', err)
     }
-  }
+  }, [])
 
   // Actualizar árbol de archivos
   const handleRefreshFolderTree = async () => {
@@ -199,7 +231,7 @@ function App() {
   }
 
   // Abrir archivo individual directamente
-  const handleOpenFile = async () => {
+  const handleOpenFile = useCallback(async () => {
     if (!window.api?.openFileDialog) return
     try {
       const res = await window.api.openFileDialog()
@@ -215,7 +247,7 @@ function App() {
     } catch (err) {
       console.error('Error al abrir archivo:', err)
     }
-  }
+  }, [])
 
   // Seleccionar archivo desde el árbol
   const handleSelectFile = useCallback(async (filePath) => {
@@ -269,7 +301,7 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view])
+  }, [view, handleCreate, handleOpenFile, handleOpenFolder])
 
   // Calcular modo efectivo para la interfaz
   const isSystemDark =
@@ -312,14 +344,14 @@ function App() {
         <div className="sidebar-top">
           <div className="brand-section">
             <div className="brand-header">
-              <h1 className="app-title">Fountain</h1>
+              <h1 className="app-title">{t.common.appName}</h1>
             </div>
             <hr className="brand-rule" />
           </div>
 
           {/* Explorador de archivos si hay carpeta abierta en la pantalla principal */}
           <div className="sidebar-section-label">
-            <span className="label-caps">Manuscritos</span>
+            <span className="label-caps">{t.sidebar.manuscripts}</span>
           </div>
           {openedFolder ? (
             <div className="sidebar-tree-section">
@@ -329,34 +361,44 @@ function App() {
                 onSelectFile={handleSelectFile}
                 onRefreshTree={handleRefreshFolderTree}
                 onCloseFolder={handleCloseFolder}
+                language={preferences.language}
               />
             </div>
           ) : (
-            <p className="sidebar-workspace-hint">
-              Abre una carpeta para organizar tus manuscritos.
-            </p>
+            <p className="sidebar-workspace-hint">{t.sidebar.workspaceHint}</p>
           )}
         </div>
 
-        {/* Pie de la barra lateral con preferencias y acceso a temas */}
+        {/* Pie de la barra lateral con preferencias, selector de idioma y tema */}
         <div className="sidebar-footer">
           <div className="sidebar-settings-bar">
             <button
               className="sidebar-settings-btn"
               onClick={() => setIsProfileOpen(true)}
               type="button"
-              title="Abrir preferencias de escritura y tema"
+              title={t.sidebar.preferencesTitle}
             >
               <SettingsIcon size={16} />
-              <span>Preferencias</span>
+              <span>{t.sidebar.preferences}</span>
+            </button>
+
+            <button
+              className="btn-quick-theme"
+              onClick={handleQuickLanguageToggle}
+              type="button"
+              title={t.sidebar.switchLanguageTitle}
+              aria-label="Switch language"
+              style={{ fontWeight: 700, fontSize: '0.75rem', letterSpacing: '0.06em' }}
+            >
+              {currentLang.toUpperCase()}
             </button>
 
             <button
               className="btn-quick-theme"
               onClick={handleQuickThemeToggle}
               type="button"
-              title={`Modo ${isEffectiveDark ? 'Oscuro' : 'Claro'}${preferences.mode === 'system' ? ' (Sistema)' : ''}. Clic para alternar.`}
-              aria-label="Cambiar modo de apariencia"
+              title={t.sidebar.themeToggleTitle(isEffectiveDark, preferences.mode === 'system')}
+              aria-label={t.sidebar.themeToggleAria}
             >
               {isEffectiveDark ? <SunIcon size={16} /> : <MoonIcon size={16} />}
             </button>
@@ -372,60 +414,60 @@ function App() {
               <span className="label-caps">{todayLabel}</span>
             </div>
             <h2 className="welcome-heading">
-              La página está <em>en blanco</em>.
+              {t.home.welcomeTitle} <em>{t.home.welcomeTitleEmphasis}</em>.
             </h2>
-            <p className="welcome-subtitle">Comienza un nuevo manuscrito o retoma uno existente.</p>
+            <p className="welcome-subtitle">{t.home.welcomeSubtitle}</p>
           </div>
 
-          <span className="label-caps welcome-index-label">Índice</span>
+          <span className="label-caps welcome-index-label">{t.home.contents}</span>
           <div className="welcome-actions">
             <button
               className="welcome-action-card welcome-action-primary"
               onClick={handleCreate}
               type="button"
-              title="Crear nuevo documento (Ctrl+N)"
+              title={t.home.newDocTitle}
             >
               <span className="action-index-num">I.</span>
               <span className="action-card-left">
                 <PlusIcon size={15} />
-                <span>Nuevo documento</span>
+                <span>{t.home.newDocument}</span>
               </span>
               <span className="action-leader" aria-hidden="true" />
-              <kbd className="action-kbd">Ctrl N</kbd>
+              <kbd className="action-kbd">{t.home.newDocShortcut}</kbd>
             </button>
 
             <button
               className="welcome-action-card"
               onClick={handleOpenFile}
               type="button"
-              title="Abrir archivo Markdown existente (Ctrl+O)"
+              title={t.home.openFileTitle}
             >
               <span className="action-index-num">II.</span>
               <span className="action-card-left">
                 <FileTextIcon size={15} />
-                <span>Abrir archivo</span>
+                <span>{t.home.openFile}</span>
               </span>
               <span className="action-leader" aria-hidden="true" />
-              <kbd className="action-kbd">Ctrl O</kbd>
+              <kbd className="action-kbd">{t.home.openFileShortcut}</kbd>
             </button>
 
             <button
               className="welcome-action-card"
               onClick={handleOpenFolder}
               type="button"
-              title="Abrir carpeta de trabajo (Ctrl+Shift+O)"
+              title={t.home.openFolderTitle}
             >
               <span className="action-index-num">III.</span>
               <span className="action-card-left">
                 <FolderIcon size={15} />
-                <span>Abrir carpeta</span>
+                <span>{t.home.openFolder}</span>
               </span>
               <span className="action-leader" aria-hidden="true" />
-              <kbd className="action-kbd">Ctrl ⇧ O</kbd>
+              <kbd className="action-kbd">{t.home.openFolderShortcut}</kbd>
             </button>
           </div>
 
-          <p className="welcome-colophon">Fountain — cuaderno de manuscritos</p>
+          <p className="welcome-colophon">{t.home.colophon}</p>
         </div>
       </main>
 

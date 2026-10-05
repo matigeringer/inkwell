@@ -1,8 +1,20 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Menu, MenuItem, session } from 'electron'
 import { join, basename, extname } from 'path'
 import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+
+// Idioma activo de la aplicación ('es' | 'en') y soporte de corrección ortográfica
+let currentAppLanguage = 'es'
+
+function applySpellCheckerLanguages(lang) {
+  try {
+    const spellLangs = lang === 'en' ? ['en-US', 'en'] : ['es-ES', 'es']
+    session.defaultSession.setSpellCheckerLanguages(spellLangs)
+  } catch (err) {
+    console.error('Error al configurar idiomas de corrección ortográfica:', err)
+  }
+}
 
 // Desactivar sandbox para entornos Linux con particiones montadas con nosuid
 app.commandLine.appendSwitch('no-sandbox')
@@ -80,12 +92,98 @@ function createWindow() {
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: false,
+      spellcheck: true
     }
   })
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+  })
+
+  // Menú contextual nativo con corrección ortográfica y portapapeles
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    const menu = new Menu()
+    const isEn = currentAppLanguage === 'en'
+
+    // Si hay una palabra mal escrita detectada por el corrector ortográfico
+    if (params.misspelledWord) {
+      if (params.dictionarySuggestions && params.dictionarySuggestions.length > 0) {
+        for (const suggestion of params.dictionarySuggestions) {
+          menu.append(
+            new MenuItem({
+              label: suggestion,
+              click: () => mainWindow.webContents.replaceMisspelling(suggestion)
+            })
+          )
+        }
+      } else {
+        menu.append(
+          new MenuItem({
+            label: isEn ? 'No spelling suggestions' : 'Sin sugerencias ortográficas',
+            enabled: false
+          })
+        )
+      }
+
+      menu.append(new MenuItem({ type: 'separator' }))
+      menu.append(
+        new MenuItem({
+          label: isEn
+            ? `Add "${params.misspelledWord}" to dictionary`
+            : `Agregar "${params.misspelledWord}" al diccionario`,
+          click: () =>
+            mainWindow.webContents.session.addWordToSpellCheckerDictionary(params.misspelledWord)
+        })
+      )
+      menu.append(new MenuItem({ type: 'separator' }))
+    }
+
+    if (params.isEditable) {
+      menu.append(new MenuItem({ role: 'undo', label: isEn ? 'Undo' : 'Deshacer' }))
+      menu.append(new MenuItem({ role: 'redo', label: isEn ? 'Redo' : 'Rehacer' }))
+      menu.append(new MenuItem({ type: 'separator' }))
+      menu.append(
+        new MenuItem({
+          role: 'cut',
+          label: isEn ? 'Cut' : 'Cortar',
+          enabled: Boolean(params.editFlags?.canCut)
+        })
+      )
+      menu.append(
+        new MenuItem({
+          role: 'copy',
+          label: isEn ? 'Copy' : 'Copiar',
+          enabled: Boolean(params.editFlags?.canCopy)
+        })
+      )
+      menu.append(
+        new MenuItem({
+          role: 'paste',
+          label: isEn ? 'Paste' : 'Pegar',
+          enabled: Boolean(params.editFlags?.canPaste)
+        })
+      )
+      menu.append(new MenuItem({ type: 'separator' }))
+      menu.append(
+        new MenuItem({
+          role: 'selectAll',
+          label: isEn ? 'Select All' : 'Seleccionar todo'
+        })
+      )
+    } else if (params.selectionText && params.selectionText.trim().length > 0) {
+      menu.append(new MenuItem({ role: 'copy', label: isEn ? 'Copy' : 'Copiar' }))
+      menu.append(
+        new MenuItem({
+          role: 'selectAll',
+          label: isEn ? 'Select All' : 'Seleccionar todo'
+        })
+      )
+    }
+
+    if (menu.items.length > 0) {
+      menu.popup({ window: mainWindow })
+    }
   })
 
   // Sincronizar estado de pantalla completa con el renderer
@@ -125,15 +223,58 @@ app.whenReady().then(() => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  // IPC test
-  ipcMain.on('ping', () => console.log('pong'))
+  // Inicializar corrector ortográfico con el idioma activo
+  applySpellCheckerLanguages(currentAppLanguage)
+
+  // Manejadores IPC para Corrector Ortográfico e Idioma
+  ipcMain.handle('spellcheck:set-config', async (_event, { language, enabled } = {}) => {
+    try {
+      if (language) {
+        currentAppLanguage = language === 'en' ? 'en' : 'es'
+        applySpellCheckerLanguages(currentAppLanguage)
+      }
+      if (typeof enabled === 'boolean') {
+        session.defaultSession.setSpellCheckerEnabled(enabled)
+      }
+      return {
+        success: true,
+        currentAppLanguage,
+        languages: session.defaultSession.getSpellCheckerLanguages(),
+        enabled: session.defaultSession.isSpellCheckerEnabled()
+      }
+    } catch (error) {
+      console.error('Error al configurar corrector ortográfico:', error)
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('spellcheck:get-config', async () => {
+    try {
+      return {
+        success: true,
+        currentAppLanguage,
+        languages: session.defaultSession.getSpellCheckerLanguages(),
+        available: session.defaultSession.getAvailableSpellCheckerLanguages(),
+        enabled: session.defaultSession.isSpellCheckerEnabled()
+      }
+    } catch (error) {
+      return { success: false, error: error.message }
+    }
+  })
+
+  ipcMain.handle('app:set-language', async (_event, lang) => {
+    currentAppLanguage = lang === 'en' ? 'en' : 'es'
+    applySpellCheckerLanguages(currentAppLanguage)
+    return { success: true, currentAppLanguage }
+  })
 
   // Manejadores IPC para Carpetas y Espacios de Trabajo
   ipcMain.handle('folder:open', async (event) => {
     try {
       const win = BrowserWindow.fromWebContents(event.sender)
+      const isEn = currentAppLanguage === 'en'
       const result = await dialog.showOpenDialog(win, {
-        title: 'Abrir carpeta de trabajo',
+        title: isEn ? 'Open workspace folder' : 'Abrir carpeta de trabajo',
         properties: ['openDirectory', 'createDirectory']
       })
 
@@ -195,15 +336,18 @@ app.whenReady().then(() => {
   ipcMain.handle('file:open-dialog', async (event) => {
     try {
       const win = BrowserWindow.fromWebContents(event.sender)
+      const isEn = currentAppLanguage === 'en'
       const result = await dialog.showOpenDialog(win, {
-        title: 'Abrir documento Markdown',
+        title: isEn ? 'Open Markdown document' : 'Abrir documento Markdown',
         properties: ['openFile'],
         filters: [
           {
-            name: 'Documentos Markdown (*.md, *.markdown, *.txt)',
+            name: isEn
+              ? 'Markdown Documents (*.md, *.markdown, *.txt)'
+              : 'Documentos Markdown (*.md, *.markdown, *.txt)',
             extensions: ['md', 'markdown', 'mdown', 'mkd', 'txt']
           },
-          { name: 'Todos los archivos (*.*)', extensions: ['*'] }
+          { name: isEn ? 'All files (*.*)' : 'Todos los archivos (*.*)', extensions: ['*'] }
         ]
       })
 
@@ -278,12 +422,14 @@ app.whenReady().then(() => {
       let targetPath = filePath
       if (!targetPath) {
         const win = BrowserWindow.fromWebContents(event.sender)
+        const isEn = currentAppLanguage === 'en'
+        const defaultDocName = defaultName || (isEn ? 'document.md' : 'documento.md')
         const result = await dialog.showSaveDialog(win, {
-          title: 'Guardar documento Markdown',
-          defaultPath: defaultName || 'documento.md',
+          title: isEn ? 'Save Markdown document' : 'Guardar documento Markdown',
+          defaultPath: defaultDocName,
           filters: [
-            { name: 'Markdown (*.md)', extensions: ['md', 'markdown'] },
-            { name: 'Todos los archivos (*.*)', extensions: ['*'] }
+            { name: isEn ? 'Markdown (*.md)' : 'Markdown (*.md)', extensions: ['md', 'markdown'] },
+            { name: isEn ? 'All files (*.*)' : 'Todos los archivos (*.*)', extensions: ['*'] }
           ]
         })
 
@@ -311,12 +457,14 @@ app.whenReady().then(() => {
   ipcMain.handle('file:save-as', async (event, { content, defaultName } = {}) => {
     try {
       const win = BrowserWindow.fromWebContents(event.sender)
+      const isEn = currentAppLanguage === 'en'
+      const defaultDocName = defaultName || (isEn ? 'document.md' : 'documento.md')
       const result = await dialog.showSaveDialog(win, {
-        title: 'Guardar documento Markdown como...',
-        defaultPath: defaultName || 'documento.md',
+        title: isEn ? 'Save Markdown document as...' : 'Guardar documento Markdown como...',
+        defaultPath: defaultDocName,
         filters: [
-          { name: 'Markdown (*.md)', extensions: ['md', 'markdown'] },
-          { name: 'Todos los archivos (*.*)', extensions: ['*'] }
+          { name: isEn ? 'Markdown (*.md)' : 'Markdown (*.md)', extensions: ['md', 'markdown'] },
+          { name: isEn ? 'All files (*.*)' : 'Todos los archivos (*.*)', extensions: ['*'] }
         ]
       })
 

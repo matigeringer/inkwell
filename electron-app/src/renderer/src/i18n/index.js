@@ -1,0 +1,510 @@
+export const translations = {
+  es: {
+    common: {
+      appName: 'Fountain',
+      appSubtitle: 'cuaderno de manuscritos',
+      cancel: 'Cancelar',
+      save: 'Guardar',
+      delete: 'Eliminar',
+      done: 'Listo',
+      close: 'Cerrar',
+      understood: 'Entendido',
+      error: 'Error',
+      active: 'Activo',
+      disabled: 'Desactivado',
+      standard: 'Estándar',
+      recommended: 'Recomendado',
+      preview: 'Ejemplo'
+    },
+    home: {
+      welcomeTitle: 'La página está',
+      welcomeTitleEmphasis: 'en blanco',
+      welcomeSubtitle: 'Comienza un nuevo manuscrito o retoma uno existente.',
+      contents: 'Índice',
+      newDocument: 'Nuevo documento',
+      openFile: 'Abrir archivo',
+      openFolder: 'Abrir carpeta',
+      colophon: 'Fountain — cuaderno de manuscritos',
+      newDocShortcut: 'Ctrl N',
+      openFileShortcut: 'Ctrl O',
+      openFolderShortcut: 'Ctrl ⇧ O',
+      newDocTitle: 'Crear nuevo documento (Ctrl+N)',
+      openFileTitle: 'Abrir archivo Markdown existente (Ctrl+O)',
+      openFolderTitle: 'Abrir carpeta de trabajo (Ctrl+Shift+O)'
+    },
+    sidebar: {
+      manuscripts: 'Manuscritos',
+      workspaceHint: 'Abre una carpeta para organizar tus manuscritos.',
+      preferences: 'Preferencias',
+      preferencesTitle: 'Abrir preferencias de escritura y tema',
+      themeToggleTitle: (isDark, isSystem) =>
+        `Modo ${isDark ? 'Oscuro' : 'Claro'}${isSystem ? ' (Sistema)' : ''}. Clic para alternar.`,
+      themeToggleAria: 'Cambiar modo de apariencia',
+      switchLanguageTitle: 'Cambiar idioma / Switch language'
+    },
+    fileTree: {
+      newFile: 'Nuevo archivo',
+      newFolder: 'Nueva carpeta',
+      rename: 'Renombrar',
+      delete: 'Eliminar',
+      refresh: 'Actualizar explorador',
+      closeFolder: 'Cerrar carpeta',
+      showInFolder: 'Mostrar en la carpeta del sistema',
+      filePlaceholder: 'nombre-archivo.md',
+      folderPlaceholder: 'nombre-carpeta',
+      toastFileCreated: (name) => `Archivo creado: ${name}`,
+      toastFolderCreated: (name) => `Carpeta creada: ${name}`,
+      toastRenamed: (name) => `Renombrado a: ${name}`,
+      toastDeleted: (name) => `Eliminado: ${name}`,
+      toastErrorCreateFile: 'Error al crear archivo',
+      toastErrorCreateFolder: 'Error al crear carpeta',
+      toastErrorRename: 'Error al renombrar elemento',
+      toastErrorDelete: 'Error al eliminar elemento'
+    },
+    deleteModal: {
+      titleFolder: 'Eliminar carpeta',
+      titleFile: 'Eliminar archivo',
+      subtitle: 'Se enviará a la papelera de reciclaje',
+      descFolder: (name) =>
+        `¿Estás seguro de que deseas eliminar la carpeta "${name}" y todo su contenido?`,
+      descFile: (name) => `¿Estás seguro de que deseas eliminar el archivo "${name}"?`
+    },
+    editor: {
+      homeBtn: 'Inicio',
+      homeBtnTitle: 'Volver a la portada (Ctrl+Esc)',
+      toggleSidebar: 'Alternar explorador de archivos',
+      hideSidebar: 'Ocultar explorador de archivos (Ctrl+\\ o Ctrl+B)',
+      showSidebar: 'Mostrar explorador de archivos (Ctrl+\\ o Ctrl+B)',
+      statusSaved: 'Guardado',
+      statusUnsaved: 'Sin guardar',
+      statusSaving: 'Guardando...',
+      statusError: 'Error',
+      typewriterActive: 'Activo (Línea centrada)',
+      typewriterDisabled: 'Desactivado',
+      typewriterTitle: (active) =>
+        `Modo Máquina de Escribir (Ctrl+Shift+Y) - ${active ? 'Activo (Línea centrada)' : 'Desactivado'}`,
+      typewriterAria: 'Alternar modo máquina de escribir',
+      alignTitle: (align) =>
+        `Alineación de texto (Ctrl+Shift+J): ${align === 'justify' ? 'Justificado' : align === 'center' ? 'Centrado' : 'Izquierda'}`,
+      alignAria: 'Alternar alineación del texto',
+      alignJustify: 'Justificado',
+      alignCenter: 'Centrado',
+      alignLeft: 'Izquierda',
+      zenModeTitle: 'Modo Zen a Pantalla Completa (F11 o Ctrl+Shift+F)',
+      zenModeAria: 'Modo concentración',
+      preferencesTitle: 'Preferencias de lectura, tipografía e idioma',
+      preferencesAria: 'Preferencias',
+      saveAsTitle: 'Guardar como una nueva copia (Ctrl+Shift+S)',
+      saveAs: 'Guardar como',
+      saveTitle: 'Guardar archivo (Ctrl+S)',
+      save: 'Guardar',
+      zenExit: 'Salir',
+      zenExitTitle: 'Salir de Modo Zen (Esc o F11)',
+      statsBtnTitle: 'Ver estadísticas (Ctrl+Shift+C)',
+      statsBtnAria: 'Ver estadísticas',
+      shortcutsBtnTitle: 'Guía de atajos de teclado (F1 o Ctrl+/)',
+      shortcutsBtnAria: 'Guía de atajos',
+      placeholder:
+        'Empezá a escribir tu manuscrito o usá Markdown (# Título, *cursiva*, **negrita**, > cita)...',
+      defaultDocName: 'documento.md',
+      toastSaved: 'Documento guardado con éxito',
+      toastZenEnabled: 'Modo Zen activado • F11 o Esc para salir',
+      toastZenDisabled: 'Modo Zen desactivado'
+    },
+    stats: {
+      title: 'Estadísticas del Manuscrito',
+      closeTitle: 'Cerrar (Esc)',
+      words: 'Palabras',
+      wordSingular: 'Palabra',
+      characters: 'Caracteres',
+      charactersNoSpaces: 'Caracteres (sin espacios)',
+      readingTime: 'Tiempo de lectura',
+      readingTimeSingle: 'Minuto de lectura',
+      readingTimePlural: 'Minutos de lectura',
+      paragraphs: 'Párrafos',
+      paragraphSingular: 'Párrafo'
+    },
+    shortcuts: {
+      title: 'Atajos de Teclado',
+      subtitle: 'Controla Fountain y el explorador sin usar el ratón',
+      closeTitle: 'Cerrar (Esc)',
+      sections: {
+        workspace: 'Archivos y Espacio de Trabajo',
+        zen: 'Modo Zen y Escritura',
+        typography: 'Tipografía y Apariencia',
+        formatting: 'Formato de Texto'
+      },
+      keys: {
+        or: 'o',
+        saveDoc: 'Guardar documento',
+        saveCopy: 'Guardar copia como...',
+        openMarkdown: 'Abrir archivo Markdown',
+        openWorkspace: 'Abrir carpeta de trabajo',
+        toggleSidebar: 'Alternar barra del explorador',
+        viewShortcuts: 'Ver esta ayuda de atajos',
+        toggleZen: 'Activar / Alternar Modo Zen',
+        toggleTypewriter: 'Alternar Modo Máquina de Escribir (Typewriter)',
+        exitZen: 'Salir del Modo Zen',
+        toggleStats: 'Mostrar / Ocultar estadísticas',
+        toggleTheme: 'Alternar Modo (Claro / Oscuro)',
+        toggleFont: 'Alternar Tipografía (Serif / Sans / Mono)',
+        toggleAlign: 'Alternar Alineación (Izquierda / Justificado / Centrado)',
+        increaseFontSize: 'Aumentar tamaño de texto',
+        decreaseFontSize: 'Reducir tamaño de texto',
+        resetFontSize: 'Restablecer tamaño estándar',
+        boldItalic: 'Negrita / Cursiva',
+        headings: 'Títulos (H1, H2, H3)',
+        headingsHint: '# , ## , ### al inicio',
+        quotes: 'Citas y Bloques',
+        quotesHint: '> al inicio'
+      }
+    },
+    preferences: {
+      title: 'Preferencias',
+      subtitle: 'Configuración del entorno de escritura',
+      tabs: {
+        appearance: 'Apariencia',
+        typography: 'Tipografía',
+        writing: 'Escritura',
+        language: 'Idioma'
+      },
+      appearance: {
+        modeTitle: 'Modo de Iluminación',
+        modeDesc: 'Selecciona la iluminación para el lienzo y la interfaz',
+        lightName: 'Claro',
+        lightDesc: 'Papel de galera iluminado',
+        darkName: 'Oscuro',
+        darkDesc: 'Linotipia nocturna',
+        systemName: 'Sistema',
+        systemDesc: 'Sincronizado con el SO',
+        paletteTitle: 'Paleta Editorial',
+        paletteDesc: 'Materiales y proporciones del taller tipográfico',
+        paletteName: 'Puro',
+        paletteSubtitle: 'Prueba de imprenta',
+        paletteDetail:
+          'Papel de galera en gris cálido, tinta carbón, lápiz bermellón de corrector y trazo azul no-reproducible.'
+      },
+      typography: {
+        fontFamilyTitle: 'Familia Tipográfica',
+        fontFamilyDesc: 'Diseño de letra para el editor principal',
+        fontSizeTitle: 'Tamaño de Fuente',
+        compact: 'Compacto',
+        standard: 'Estándar',
+        large: 'Amplio',
+        exampleSerif:
+          'En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor.',
+        exampleSans:
+          'El pensamiento claro precede a la escritura fluida y directa. Las palabras exactas encuentran su ritmo natural sobre un lienzo silencioso.',
+        exampleMono:
+          '01. Hipótesis inicial y estructura técnica del borrador: ritmo constante y precisión en cada línea.'
+      },
+      writing: {
+        typewriterTitle: 'Modo Rodillo (Typewriter)',
+        typewriterDesc: 'Enfoque continuo de concentración vertical',
+        typewriterCardTitle: 'Typewriter Scrolling',
+        typewriterCardDesc:
+          'Mantiene la línea donde escribes fija en el centro vertical de la pantalla.',
+        typewriterShortcutHint: 'Atajo rápido:',
+        anchorTitle: 'Posición del ancla vertical:',
+        anchorCenterTitle: 'Centrado exacto (50%)',
+        anchorCenterDesc:
+          'Fija la línea activa en la mitad vertical. Ofrece equilibrio simétrico entre texto escrito y espacio despejado.',
+        anchorEyeTitle: 'Línea de ojos (38%)',
+        anchorEyeDesc:
+          'Tercio superior. Ubica el renglón a la altura natural de la vista en monitor, dejando más espacio inferior visible.',
+        navTitle: 'Navegación con flechas (Arriba / Abajo):',
+        navDeadzoneTitle: 'Zona de tolerancia (Deadzone)',
+        navDeadzoneDesc:
+          'Permite mover el cursor unas pocas líneas libremente para correcciones; se re-centra suavemente al escribir.',
+        navStrictTitle: 'Modo estricto',
+        navStrictDesc: 'Re-centra la pantalla de forma continua con cada pulsación de flecha.',
+        alignTitle: 'Alineación del Párrafo',
+        alignDesc: 'Disposición del cuerpo de texto en el lienzo',
+        alignLeftName: 'Izquierda',
+        alignLeftDesc: 'Alineación natural',
+        alignJustifyName: 'Justificado',
+        alignJustifyDesc: 'Márgenes limpios estilo libro',
+        alignCenterName: 'Centrado',
+        alignCenterDesc: 'Lírico y dramaturgia'
+      },
+      language: {
+        sectionTitle: 'Idioma de la Aplicación',
+        sectionDesc: 'Selecciona el idioma de la interfaz y del corrector ortográfico integrado.',
+        spanishName: 'Español',
+        spanishRegion: 'Español (Castellano / América)',
+        spanishDesc: 'Interfaz en español y corrector ortográfico con diccionario español (es-ES).',
+        englishName: 'English',
+        englishRegion: 'English (US / International)',
+        englishDesc: 'Full English user interface and spell check dictionary (en-US).',
+        spellSectionTitle: 'Corrector Ortográfico',
+        spellSectionDesc:
+          'Revisa la ortografía en tiempo real según el idioma seleccionado. Al hacer clic derecho sobre una palabra marcada, puedes ver sugerencias de corrección o agregarla a tu diccionario.',
+        spellToggleTitle: 'Corrección ortográfica en tiempo real',
+        spellToggleDesc:
+          'Subraya en rojo las palabras dudosas o con faltas de ortografía en el editor.',
+        activeDictionary: 'Diccionario activo:',
+        dictionarySpanish: 'Español (es-ES)',
+        dictionaryEnglish: 'English (en-US)',
+        rightClickHint:
+          'Haz clic derecho sobre cualquier palabra marcada con una línea roja ondulada para ver sugerencias y corregirla al instante.'
+      }
+    }
+  },
+  en: {
+    common: {
+      appName: 'Fountain',
+      appSubtitle: 'manuscript notebook',
+      cancel: 'Cancel',
+      save: 'Save',
+      delete: 'Delete',
+      done: 'Done',
+      close: 'Close',
+      understood: 'Got it',
+      error: 'Error',
+      active: 'Active',
+      disabled: 'Disabled',
+      standard: 'Standard',
+      recommended: 'Recommended',
+      preview: 'Preview'
+    },
+    home: {
+      welcomeTitle: 'The page is',
+      welcomeTitleEmphasis: 'blank',
+      welcomeSubtitle: 'Start a new manuscript or resume an existing one.',
+      contents: 'Contents',
+      newDocument: 'New document',
+      openFile: 'Open file',
+      openFolder: 'Open folder',
+      colophon: 'Fountain — manuscript notebook',
+      newDocShortcut: 'Ctrl N',
+      openFileShortcut: 'Ctrl O',
+      openFolderShortcut: 'Ctrl ⇧ O',
+      newDocTitle: 'Create new document (Ctrl+N)',
+      openFileTitle: 'Open existing Markdown file (Ctrl+O)',
+      openFolderTitle: 'Open workspace folder (Ctrl+Shift+O)'
+    },
+    sidebar: {
+      manuscripts: 'Manuscripts',
+      workspaceHint: 'Open a folder to organize your manuscripts.',
+      preferences: 'Preferences',
+      preferencesTitle: 'Open writing and theme preferences',
+      themeToggleTitle: (isDark, isSystem) =>
+        `${isDark ? 'Dark' : 'Light'} Mode${isSystem ? ' (System)' : ''}. Click to toggle.`,
+      themeToggleAria: 'Toggle appearance mode',
+      switchLanguageTitle: 'Switch language / Cambiar idioma'
+    },
+    fileTree: {
+      newFile: 'New file',
+      newFolder: 'New folder',
+      rename: 'Rename',
+      delete: 'Delete',
+      refresh: 'Refresh tree',
+      closeFolder: 'Close folder',
+      showInFolder: 'Show in system file manager',
+      filePlaceholder: 'filename.md',
+      folderPlaceholder: 'folder-name',
+      toastFileCreated: (name) => `File created: ${name}`,
+      toastFolderCreated: (name) => `Folder created: ${name}`,
+      toastRenamed: (name) => `Renamed to: ${name}`,
+      toastDeleted: (name) => `Deleted: ${name}`,
+      toastErrorCreateFile: 'Error creating file',
+      toastErrorCreateFolder: 'Error creating folder',
+      toastErrorRename: 'Error renaming item',
+      toastErrorDelete: 'Error deleting item'
+    },
+    deleteModal: {
+      titleFolder: 'Delete folder',
+      titleFile: 'Delete file',
+      subtitle: 'Will be moved to trash',
+      descFolder: (name) =>
+        `Are you sure you want to delete the folder "${name}" and all of its contents?`,
+      descFile: (name) => `Are you sure you want to delete the file "${name}"?`
+    },
+    editor: {
+      homeBtn: 'Home',
+      homeBtnTitle: 'Back to home (Ctrl+Esc)',
+      toggleSidebar: 'Toggle file explorer',
+      hideSidebar: 'Hide file explorer (Ctrl+\\ or Ctrl+B)',
+      showSidebar: 'Show file explorer (Ctrl+\\ or Ctrl+B)',
+      statusSaved: 'Saved',
+      statusUnsaved: 'Unsaved',
+      statusSaving: 'Saving...',
+      statusError: 'Error',
+      typewriterActive: 'Active (Centered line)',
+      typewriterDisabled: 'Disabled',
+      typewriterTitle: (active) =>
+        `Typewriter Mode (Ctrl+Shift+Y) - ${active ? 'Active (Centered line)' : 'Disabled'}`,
+      typewriterAria: 'Toggle typewriter mode',
+      alignTitle: (align) =>
+        `Text alignment (Ctrl+Shift+J): ${align === 'justify' ? 'Justified' : align === 'center' ? 'Centered' : 'Left'}`,
+      alignAria: 'Toggle text alignment',
+      alignJustify: 'Justified',
+      alignCenter: 'Centered',
+      alignLeft: 'Left',
+      zenModeTitle: 'Zen Fullscreen Mode (F11 or Ctrl+Shift+F)',
+      zenModeAria: 'Focus mode',
+      preferencesTitle: 'Reading, typography & language preferences',
+      preferencesAria: 'Preferences',
+      saveAsTitle: 'Save copy as... (Ctrl+Shift+S)',
+      saveAs: 'Save as',
+      saveTitle: 'Save file (Ctrl+S)',
+      save: 'Save',
+      zenExit: 'Exit',
+      zenExitTitle: 'Exit Zen Mode (Esc or F11)',
+      statsBtnTitle: 'View statistics (Ctrl+Shift+C)',
+      statsBtnAria: 'View statistics',
+      shortcutsBtnTitle: 'Keyboard shortcuts guide (F1 or Ctrl+/)',
+      shortcutsBtnAria: 'Shortcuts guide',
+      placeholder:
+        'Start writing your manuscript or use Markdown (# Heading, *italic*, **bold**, > quote)...',
+      defaultDocName: 'document.md',
+      toastSaved: 'Document saved successfully',
+      toastZenEnabled: 'Zen mode enabled • Press F11 or Esc to exit',
+      toastZenDisabled: 'Zen mode disabled'
+    },
+    stats: {
+      title: 'Manuscript Statistics',
+      closeTitle: 'Close (Esc)',
+      words: 'Words',
+      wordSingular: 'Word',
+      characters: 'Characters',
+      charactersNoSpaces: 'Characters (no spaces)',
+      readingTime: 'Reading time',
+      readingTimeSingle: 'Minute read',
+      readingTimePlural: 'Minutes read',
+      paragraphs: 'Paragraphs',
+      paragraphSingular: 'Paragraph'
+    },
+    shortcuts: {
+      title: 'Keyboard Shortcuts',
+      subtitle: 'Navigate and control Fountain without touching the mouse',
+      closeTitle: 'Close (Esc)',
+      sections: {
+        workspace: 'Files & Workspace',
+        zen: 'Zen Mode & Writing',
+        typography: 'Typography & Appearance',
+        formatting: 'Text Formatting'
+      },
+      keys: {
+        or: 'or',
+        saveDoc: 'Save document',
+        saveCopy: 'Save copy as...',
+        openMarkdown: 'Open Markdown file',
+        openWorkspace: 'Open workspace folder',
+        toggleSidebar: 'Toggle explorer sidebar',
+        viewShortcuts: 'View this shortcuts guide',
+        toggleZen: 'Toggle Zen Mode',
+        toggleTypewriter: 'Toggle Typewriter Mode',
+        exitZen: 'Exit Zen Mode',
+        toggleStats: 'Show / Hide statistics',
+        toggleTheme: 'Toggle Theme (Light / Dark)',
+        toggleFont: 'Toggle Typography (Serif / Sans / Mono)',
+        toggleAlign: 'Toggle Alignment (Left / Justified / Centered)',
+        increaseFontSize: 'Increase font size',
+        decreaseFontSize: 'Decrease font size',
+        resetFontSize: 'Reset standard font size',
+        boldItalic: 'Bold / Italic',
+        headings: 'Headings (H1, H2, H3)',
+        headingsHint: '# , ## , ### at start',
+        quotes: 'Quotes & Blocks',
+        quotesHint: '> at start'
+      }
+    },
+    preferences: {
+      title: 'Preferences',
+      subtitle: 'Writing environment configuration',
+      tabs: {
+        appearance: 'Appearance',
+        typography: 'Typography',
+        writing: 'Writing',
+        language: 'Language'
+      },
+      appearance: {
+        modeTitle: 'Lighting Mode',
+        modeDesc: 'Select lighting for canvas and interface',
+        lightName: 'Light',
+        lightDesc: 'Illuminated galley proof',
+        darkName: 'Dark',
+        darkDesc: 'Nocturnal linotype',
+        systemName: 'System',
+        systemDesc: 'Synced with OS',
+        paletteTitle: 'Editorial Palette',
+        paletteDesc: 'Materials and proportions of the letterpress workshop',
+        paletteName: 'Pure',
+        paletteSubtitle: 'Press proof',
+        paletteDetail:
+          'Warm gray galley paper, carbon ink, corrector vermilion pencil, and non-repro blue stroke.'
+      },
+      typography: {
+        fontFamilyTitle: 'Typeface Family',
+        fontFamilyDesc: 'Letterform design for the main editor',
+        fontSizeTitle: 'Font Size',
+        compact: 'Compact',
+        standard: 'Standard',
+        large: 'Large',
+        exampleSerif:
+          'Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world.',
+        exampleSans:
+          'Clear thinking precedes fluid and direct writing. Precise words find their natural rhythm upon a silent canvas.',
+        exampleMono:
+          '01. Initial hypothesis and technical draft outline: constant rhythm and exact precision in every single line.'
+      },
+      writing: {
+        typewriterTitle: 'Typewriter Scrolling',
+        typewriterDesc: 'Continuous vertical concentration focus',
+        typewriterCardTitle: 'Typewriter Scrolling',
+        typewriterCardDesc:
+          'Keeps the active typing line locked in the vertical center of the screen.',
+        typewriterShortcutHint: 'Quick shortcut:',
+        anchorTitle: 'Vertical anchor position:',
+        anchorCenterTitle: 'Exact center (50%)',
+        anchorCenterDesc:
+          'Locks active line at the vertical midpoint. Provides symmetric balance between written prose and clear space.',
+        anchorEyeTitle: 'Eye level (38%)',
+        anchorEyeDesc:
+          'Upper third. Positions the line at natural eye height on display monitors, leaving more preview space below.',
+        navTitle: 'Arrow key navigation (Up / Down):',
+        navDeadzoneTitle: 'Tolerance zone (Deadzone)',
+        navDeadzoneDesc:
+          'Allows moving cursor a few lines freely for quick edits; smoothly re-centers upon typing.',
+        navStrictTitle: 'Strict mode',
+        navStrictDesc: 'Continuously recenters the view with every single arrow keystroke.',
+        alignTitle: 'Paragraph Alignment',
+        alignDesc: 'Body text layout on canvas',
+        alignLeftName: 'Left',
+        alignLeftDesc: 'Natural alignment',
+        alignJustifyName: 'Justified',
+        alignJustifyDesc: 'Clean book-style margins',
+        alignCenterName: 'Centered',
+        alignCenterDesc: 'Poetry and scriptwriting'
+      },
+      language: {
+        sectionTitle: 'Application Language',
+        sectionDesc: 'Choose the language for the user interface and built-in spell checker.',
+        spanishName: 'Español',
+        spanishRegion: 'Spanish (Castilian / Americas)',
+        spanishDesc: 'Spanish user interface with Spanish dictionary spell checking (es-ES).',
+        englishName: 'English',
+        englishRegion: 'English (US / International)',
+        englishDesc: 'Full English user interface and spell check dictionary (en-US).',
+        spellSectionTitle: 'Spell Checker',
+        spellSectionDesc:
+          'Real-time spell check tailored to your selected language. Right-click any underlined word to view spelling suggestions or add it to your personal dictionary.',
+        spellToggleTitle: 'Real-time spell checking',
+        spellToggleDesc: 'Underlines unrecognized words or misspellings in red within the editor.',
+        activeDictionary: 'Active dictionary:',
+        dictionarySpanish: 'Spanish (es-ES)',
+        dictionaryEnglish: 'English (en-US)',
+        rightClickHint:
+          'Right-click any word underlined in red to view instant suggestions and replace it.'
+      }
+    }
+  }
+}
+
+/**
+ * Helper para obtener traducciones con fallback a español
+ */
+export function getTranslation(lang = 'es') {
+  return translations[lang] || translations.es
+}

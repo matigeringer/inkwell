@@ -22,6 +22,7 @@ import {
   AlignCenterIcon
 } from './Icons'
 import FileTree from './FileTree'
+import { getTranslation } from '../i18n'
 
 const FONT_SIZES_SCALE = [
   '1.00rem',
@@ -45,8 +46,12 @@ export default function Editor({
   onCloseFolder,
   onOpenFolder
 }) {
+  const currentLang = preferences?.language || 'es'
+  const t = getTranslation(currentLang)
+  const defaultDocName = currentLang === 'en' ? 'document.md' : 'documento.md'
+
   const [filePath, setFilePath] = useState(initialDoc?.filePath || null)
-  const [fileName, setFileName] = useState(initialDoc?.fileName || 'documento.md')
+  const [fileName, setFileName] = useState(initialDoc?.fileName || defaultDocName)
   const [saveStatus, setSaveStatus] = useState('unsaved') // 'unsaved' | 'saving' | 'saved' | 'error'
   const [errorMessage, setErrorMessage] = useState('')
   const [isZenMode, setIsZenMode] = useState(false)
@@ -319,8 +324,7 @@ export default function Editor({
         transformCopiedText: true
       }),
       Placeholder.configure({
-        placeholder:
-          'Empezá a escribir tu manuscrito o usá Markdown (# Título, *cursiva*, **negrita**, > cita)...'
+        placeholder: () => t.editor.placeholder
       }),
       TaskList.configure({
         HTMLAttributes: {
@@ -345,7 +349,9 @@ export default function Editor({
     autofocus: 'end',
     editorProps: {
       attributes: {
-        class: 'fountain-editor-content'
+        class: 'fountain-editor-content',
+        spellcheck: preferences?.spellcheckEnabled !== false ? 'true' : 'false',
+        lang: currentLang === 'en' ? 'en' : 'es'
       },
       handleDOMEvents: {
         keydown: (_view, event) => {
@@ -459,6 +465,17 @@ export default function Editor({
     return () => window.removeEventListener('resize', handleResize)
   }, [editor, centerCursor])
 
+  // Sincronizar dinámicamente atributos de corrector ortográfico e idioma en el editor
+  useEffect(() => {
+    if (editor?.view?.dom) {
+      editor.view.dom.setAttribute(
+        'spellcheck',
+        preferences?.spellcheckEnabled !== false ? 'true' : 'false'
+      )
+      editor.view.dom.setAttribute('lang', preferences?.language === 'en' ? 'en' : 'es')
+    }
+  }, [editor, preferences?.spellcheckEnabled, preferences?.language])
+
   // Mostrar mensaje efímero discreto (Toast)
   const showToast = useCallback((message, type = 'info') => {
     if (toastTimeoutRef.current) {
@@ -506,21 +523,32 @@ export default function Editor({
         setFilePath(res.filePath)
         setFileName(res.fileName)
         setSaveStatus('saved')
-        showToast(`Guardado: ${res.fileName}`)
+        showToast(currentLang === 'en' ? `Saved: ${res.fileName}` : `Guardado: ${res.fileName}`)
         if (onRefreshFolderTree) {
           onRefreshFolderTree()
         }
       } else {
         setSaveStatus('error')
-        setErrorMessage(res.error || 'Error al guardar el archivo')
-        showToast(res.error || 'Error al guardar', 'error')
+        setErrorMessage(
+          res.error || (currentLang === 'en' ? 'Error saving file' : 'Error al guardar el archivo')
+        )
+        showToast(
+          res.error || (currentLang === 'en' ? 'Error saving' : 'Error al guardar'),
+          'error'
+        )
       }
     } catch (err) {
       setSaveStatus('error')
-      setErrorMessage(err.message || 'Error inesperado al guardar')
-      showToast('Error inesperado al guardar', 'error')
+      setErrorMessage(
+        err.message ||
+          (currentLang === 'en' ? 'Unexpected error while saving' : 'Error inesperado al guardar')
+      )
+      showToast(
+        currentLang === 'en' ? 'Unexpected error while saving' : 'Error inesperado al guardar',
+        'error'
+      )
     }
-  }, [getMarkdownContent, filePath, fileName, onRefreshFolderTree, showToast])
+  }, [getMarkdownContent, filePath, fileName, onRefreshFolderTree, showToast, currentLang])
 
   // Guardar como (siempre abre diálogo nativo)
   const handleSaveAs = useCallback(async () => {
@@ -546,21 +574,31 @@ export default function Editor({
         setFilePath(res.filePath)
         setFileName(res.fileName)
         setSaveStatus('saved')
-        showToast(`Guardado como: ${res.fileName}`)
+        showToast(
+          currentLang === 'en' ? `Saved as: ${res.fileName}` : `Guardado como: ${res.fileName}`
+        )
         if (onRefreshFolderTree) {
           onRefreshFolderTree()
         }
       } else {
         setSaveStatus('error')
-        setErrorMessage(res.error || 'Error al guardar el archivo')
-        showToast(res.error || 'Error al guardar', 'error')
+        setErrorMessage(
+          res.error || (currentLang === 'en' ? 'Error saving file' : 'Error al guardar el archivo')
+        )
+        showToast(
+          res.error || (currentLang === 'en' ? 'Error saving' : 'Error al guardar'),
+          'error'
+        )
       }
     } catch (err) {
       setSaveStatus('error')
-      setErrorMessage(err.message || 'Error inesperado al guardar')
-      showToast('Error al guardar copia', 'error')
+      setErrorMessage(
+        err.message ||
+          (currentLang === 'en' ? 'Unexpected error while saving' : 'Error inesperado al guardar')
+      )
+      showToast(currentLang === 'en' ? 'Error saving copy' : 'Error al guardar copia', 'error')
     }
-  }, [getMarkdownContent, fileName, filePath, onRefreshFolderTree, showToast])
+  }, [getMarkdownContent, fileName, filePath, onRefreshFolderTree, showToast, currentLang])
 
   // Cambiar de documento de forma fluida desde el explorador
   const handleSwitchDoc = useCallback(
@@ -591,15 +629,21 @@ export default function Editor({
           if (editor) {
             editor.commands.setContent(res.content || '', false)
           }
-          showToast(`Abierto: ${res.fileName}`)
+          showToast(currentLang === 'en' ? `Opened: ${res.fileName}` : `Abierto: ${res.fileName}`)
         } else {
-          showToast(res.error || 'Error al abrir archivo', 'error')
+          showToast(
+            res.error || (currentLang === 'en' ? 'Error opening file' : 'Error al abrir archivo'),
+            'error'
+          )
         }
       } catch (err) {
-        showToast(err.message || 'Error al leer archivo', 'error')
+        showToast(
+          err.message || (currentLang === 'en' ? 'Error reading file' : 'Error al leer archivo'),
+          'error'
+        )
       }
     },
-    [filePath, fileName, saveStatus, editor, getMarkdownContent, showToast]
+    [filePath, fileName, saveStatus, editor, getMarkdownContent, showToast, currentLang]
   )
 
   // Abrir archivo individual directamente con diálogo
@@ -614,12 +658,15 @@ export default function Editor({
         if (editor) {
           editor.commands.setContent(res.content || '', false)
         }
-        showToast(`Abierto: ${res.fileName}`)
+        showToast(currentLang === 'en' ? `Opened: ${res.fileName}` : `Abierto: ${res.fileName}`)
       }
     } catch (err) {
-      showToast(err.message || 'Error al abrir archivo', 'error')
+      showToast(
+        err.message || (currentLang === 'en' ? 'Error opening file' : 'Error al abrir archivo'),
+        'error'
+      )
     }
-  }, [editor, showToast])
+  }, [editor, showToast, currentLang])
 
   // Sincronizar y alternar Modo Zen con Pantalla Completa
   const toggleZenMode = useCallback(
@@ -641,14 +688,14 @@ export default function Editor({
       }
 
       if (nextState) {
-        showToast('Modo Zen activado • F11 o Esc para salir')
+        showToast(t.editor.toastZenEnabled)
       } else {
-        showToast('Modo Zen desactivado')
+        showToast(t.editor.toastZenDisabled)
         setShowStatsHud(false)
         setIsShortcutsModalOpen(false)
       }
     },
-    [isZenMode, showToast]
+    [isZenMode, showToast, t]
   )
 
   // Escuchar cambios externos de pantalla completa (gestos del SO o tecla F11 nativa)
@@ -690,9 +737,16 @@ export default function Editor({
         : preferences?.mode || 'light'
     const nextMode = currentEffectiveMode === 'dark' ? 'light' : 'dark'
     onUpdatePreferences({ mode: nextMode })
-    const modeName = nextMode === 'dark' ? 'Oscuro' : 'Claro'
-    showToast(`Modo ${modeName}`)
-  }, [preferences?.mode, onUpdatePreferences, showToast])
+    const modeName =
+      nextMode === 'dark'
+        ? currentLang === 'en'
+          ? 'Dark'
+          : 'Oscuro'
+        : currentLang === 'en'
+          ? 'Light'
+          : 'Claro'
+    showToast(currentLang === 'en' ? `${modeName} Mode` : `Modo ${modeName}`)
+  }, [preferences?.mode, onUpdatePreferences, showToast, currentLang])
 
   // Alternar Familia Tipográfica (Serif -> Sans -> Mono)
   const cycleFontFamily = useCallback(() => {
@@ -713,8 +767,8 @@ export default function Editor({
     }
 
     onUpdatePreferences({ fontFamily: nextFont })
-    showToast(`Tipografía: ${fontName}`)
-  }, [preferences?.fontFamily, onUpdatePreferences, showToast])
+    showToast(currentLang === 'en' ? `Typeface: ${fontName}` : `Tipografía: ${fontName}`)
+  }, [preferences?.fontFamily, onUpdatePreferences, showToast, currentLang])
 
   // Alternar Modo Máquina de Escribir (Typewriter Scrolling)
   const toggleTypewriterMode = useCallback(() => {
@@ -722,7 +776,9 @@ export default function Editor({
     const nextState = !preferences?.typewriterMode
     onUpdatePreferences({ typewriterMode: nextState })
     showToast(
-      `Modo Máquina de Escribir: ${nextState ? 'Activado (Línea centrada)' : 'Desactivado'}`
+      currentLang === 'en'
+        ? `Typewriter Mode: ${nextState ? 'Active (Centered line)' : 'Disabled'}`
+        : `Modo Máquina de Escribir: ${nextState ? 'Activado (Línea centrada)' : 'Desactivado'}`
     )
     if (nextState) {
       isUserManualScrollingRef.current = false
@@ -740,7 +796,8 @@ export default function Editor({
     showToast,
     centerCursor,
     editor,
-    cancelScrollAnimation
+    cancelScrollAnimation,
+    currentLang
   ])
 
   // Alternar Alineación de Texto (Izquierda -> Justificado -> Centrado)
@@ -748,22 +805,25 @@ export default function Editor({
     if (!onUpdatePreferences) return
     const current = preferences?.textAlign || 'left'
     let next = 'left'
-    let label = 'Alineación: Izquierda'
+    let label = currentLang === 'en' ? 'Alignment: Left' : 'Alineación: Izquierda'
 
     if (current === 'left') {
       next = 'justify'
-      label = 'Alineación: Justificado (Editorial)'
+      label =
+        currentLang === 'en'
+          ? 'Alignment: Justified (Editorial)'
+          : 'Alineación: Justificado (Editorial)'
     } else if (current === 'justify') {
       next = 'center'
-      label = 'Alineación: Centrado'
+      label = currentLang === 'en' ? 'Alignment: Centered' : 'Alineación: Centrado'
     } else {
       next = 'left'
-      label = 'Alineación: Izquierda'
+      label = currentLang === 'en' ? 'Alignment: Left' : 'Alineación: Izquierda'
     }
 
     onUpdatePreferences({ textAlign: next })
     showToast(label)
-  }, [preferences?.textAlign, onUpdatePreferences, showToast])
+  }, [preferences?.textAlign, onUpdatePreferences, showToast, currentLang])
 
   // Ajustar tamaño de fuente (+ / - / Reset)
   const adjustFontSize = useCallback(
@@ -781,16 +841,16 @@ export default function Editor({
       }
 
       onUpdatePreferences({ fontSize: nextSize })
-      showToast(`Tamaño de fuente: ${nextSize}`)
+      showToast(currentLang === 'en' ? `Font size: ${nextSize}` : `Tamaño de fuente: ${nextSize}`)
     },
-    [preferences?.fontSize, onUpdatePreferences, showToast]
+    [preferences?.fontSize, onUpdatePreferences, showToast, currentLang]
   )
 
   const resetFontSize = useCallback(() => {
     if (!onUpdatePreferences) return
     onUpdatePreferences({ fontSize: '1.40rem' })
-    showToast('Tamaño estándar (1.40rem)')
-  }, [onUpdatePreferences, showToast])
+    showToast(currentLang === 'en' ? 'Standard size (1.40rem)' : 'Tamaño estándar (1.40rem)')
+  }, [onUpdatePreferences, showToast, currentLang])
 
   // Controlar visibilidad del toolbar flotante al mover el ratón en Modo Zen
   const handleMouseMove = useCallback(() => {
@@ -996,23 +1056,19 @@ export default function Editor({
           <button
             className="btn-header-back"
             onClick={onBack}
-            title="Volver a la pantalla de inicio"
-            aria-label="Volver a inicio"
+            title={t.editor.homeBtnTitle}
+            aria-label={t.editor.homeBtn}
           >
             <ArrowLeftIcon size={17} />
-            <span>Inicio</span>
+            <span>{t.editor.homeBtn}</span>
           </button>
 
           {openedFolder && (
             <button
               className={`btn-icon-sober ${isSidebarOpen ? 'active' : ''}`}
               onClick={() => setIsSidebarOpen((prev) => !prev)}
-              title={
-                isSidebarOpen
-                  ? 'Ocultar explorador de archivos (Ctrl+\\ o Ctrl+B)'
-                  : 'Mostrar explorador de archivos (Ctrl+\\ o Ctrl+B)'
-              }
-              aria-label="Alternar explorador de archivos"
+              title={isSidebarOpen ? t.editor.hideSidebar : t.editor.showSidebar}
+              aria-label={t.editor.toggleSidebar}
             >
               <SidebarIcon size={16} />
             </button>
@@ -1025,10 +1081,10 @@ export default function Editor({
             <div className={`doc-status status-${saveStatus}`}>
               <span className="doc-status-dot" />
               <span className="doc-status-label">
-                {saveStatus === 'saved' && 'Guardado'}
-                {saveStatus === 'unsaved' && 'Sin guardar'}
-                {saveStatus === 'saving' && 'Guardando...'}
-                {saveStatus === 'error' && 'Error'}
+                {saveStatus === 'saved' && t.editor.statusSaved}
+                {saveStatus === 'unsaved' && t.editor.statusUnsaved}
+                {saveStatus === 'saving' && t.editor.statusSaving}
+                {saveStatus === 'error' && t.editor.statusError}
               </span>
             </div>
           </div>
@@ -1040,8 +1096,8 @@ export default function Editor({
           <button
             className={`btn-icon-sober ${preferences?.typewriterMode ? 'active' : ''}`}
             onClick={toggleTypewriterMode}
-            title={`Modo Máquina de Escribir (Ctrl+Shift+Y) - ${preferences?.typewriterMode ? 'Activo (Línea centrada)' : 'Desactivado'}`}
-            aria-label="Alternar modo máquina de escribir"
+            title={t.editor.typewriterTitle(preferences?.typewriterMode)}
+            aria-label={t.editor.typewriterAria}
           >
             <TypewriterIcon size={16} />
           </button>
@@ -1049,8 +1105,8 @@ export default function Editor({
           <button
             className={`btn-icon-sober ${preferences?.textAlign === 'justify' ? 'active' : ''}`}
             onClick={cycleTextAlign}
-            title={`Alineación de texto (Ctrl+Shift+J): ${preferences?.textAlign === 'justify' ? 'Justificado' : preferences?.textAlign === 'center' ? 'Centrado' : 'Izquierda'}`}
-            aria-label="Alternar alineación del texto"
+            title={t.editor.alignTitle(preferences?.textAlign)}
+            aria-label={t.editor.alignAria}
           >
             {preferences?.textAlign === 'justify' ? (
               <AlignJustifyIcon size={16} />
@@ -1064,8 +1120,8 @@ export default function Editor({
           <button
             className={`btn-icon-sober ${isZenMode ? 'active' : ''}`}
             onClick={() => toggleZenMode()}
-            title="Modo Zen a Pantalla Completa (F11 o Ctrl+Shift+F)"
-            aria-label="Modo concentración"
+            title={t.editor.zenModeTitle}
+            aria-label={t.editor.zenModeAria}
           >
             <ZenFocusIcon size={16} />
           </button>
@@ -1074,8 +1130,8 @@ export default function Editor({
             <button
               className="btn-icon-sober"
               onClick={onOpenProfile}
-              title="Preferencias de lectura y tipografía"
-              aria-label="Preferencias"
+              title={t.editor.preferencesTitle}
+              aria-label={t.editor.preferencesAria}
             >
               <SettingsIcon size={16} />
             </button>
@@ -1086,20 +1142,20 @@ export default function Editor({
           <button
             className="btn-sober-secondary"
             onClick={handleSaveAs}
-            title="Guardar como una nueva copia (Ctrl+Shift+S)"
+            title={t.editor.saveAsTitle}
           >
             <SaveAsIcon size={15} />
-            <span>Guardar como</span>
+            <span>{t.editor.saveAs}</span>
           </button>
 
           <button
             className="btn-sober-primary"
             onClick={handleSave}
             disabled={saveStatus === 'saving'}
-            title="Guardar archivo (Ctrl+S)"
+            title={t.editor.saveTitle}
           >
             <SaveIcon size={15} />
-            <span>Guardar</span>
+            <span>{t.editor.save}</span>
             <kbd className="shortcut-hint">Ctrl+S</kbd>
           </button>
         </div>
@@ -1115,32 +1171,32 @@ export default function Editor({
             <button
               className={`zen-pill-btn zen-pill-icon-only ${preferences?.typewriterMode ? 'active' : ''}`}
               onClick={toggleTypewriterMode}
-              title="Modo Máquina de Escribir (Ctrl+Shift+Y)"
-              aria-label="Modo Máquina de Escribir"
+              title={t.editor.typewriterTitle(preferences?.typewriterMode)}
+              aria-label={t.editor.typewriterAria}
             >
               <TypewriterIcon size={15} />
             </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
               onClick={cycleTextAlign}
-              title="Alternar alineación (Ctrl+Shift+J)"
-              aria-label="Alternar alineación"
+              title={t.editor.alignTitle(preferences?.textAlign)}
+              aria-label={t.editor.alignAria}
             >
               <AlignJustifyIcon size={15} />
             </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
               onClick={() => setShowStatsHud((prev) => !prev)}
-              title="Ver estadísticas (Ctrl+Shift+C)"
-              aria-label="Ver estadísticas"
+              title={t.editor.statsBtnTitle}
+              aria-label={t.editor.statsBtnAria}
             >
               <BarChartIcon size={15} />
             </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
               onClick={() => setIsShortcutsModalOpen(true)}
-              title="Guía de atajos de teclado (F1 o Ctrl+/)"
-              aria-label="Guía de atajos"
+              title={t.editor.shortcutsBtnTitle}
+              aria-label={t.editor.shortcutsBtnAria}
             >
               <KeyboardIcon size={15} />
             </button>
@@ -1148,9 +1204,9 @@ export default function Editor({
             <button
               className="zen-pill-btn zen-pill-exit"
               onClick={() => toggleZenMode(false)}
-              title="Salir de Modo Zen (Esc o F11)"
+              title={t.editor.zenExitTitle}
             >
-              <span>Salir</span>
+              <span>{t.editor.zenExit}</span>
               <kbd className="zen-kbd-hint">Esc</kbd>
             </button>
           </div>
@@ -1171,14 +1227,14 @@ export default function Editor({
             className="zen-stats-card"
             onClick={(e) => e.stopPropagation()}
             role="region"
-            aria-label="Estadísticas de escritura"
+            aria-label={t.stats.title}
           >
             <div className="zen-stats-header">
-              <h3 className="zen-stats-title">Estadísticas del Manuscrito</h3>
+              <h3 className="zen-stats-title">{t.stats.title}</h3>
               <button
                 className="btn-icon-subtle"
                 onClick={() => setShowStatsHud(false)}
-                title="Cerrar (Esc)"
+                title={t.stats.closeTitle}
               >
                 <CloseIcon size={16} />
               </button>
@@ -1186,21 +1242,25 @@ export default function Editor({
             <div className="zen-stats-grid">
               <div className="zen-stat-box">
                 <span className="zen-stat-num">{words}</span>
-                <span className="zen-stat-name">{words === 1 ? 'Palabra' : 'Palabras'}</span>
+                <span className="zen-stat-name">
+                  {words === 1 ? t.stats.wordSingular : t.stats.words}
+                </span>
               </div>
               <div className="zen-stat-box">
                 <span className="zen-stat-num">{characters}</span>
-                <span className="zen-stat-name">Caracteres</span>
+                <span className="zen-stat-name">{t.stats.characters}</span>
               </div>
               <div className="zen-stat-box">
                 <span className="zen-stat-num">~{readingTime}</span>
                 <span className="zen-stat-name">
-                  {readingTime === 1 ? 'Minuto de lectura' : 'Minutos de lectura'}
+                  {readingTime === 1 ? t.stats.readingTimeSingle : t.stats.readingTimePlural}
                 </span>
               </div>
               <div className="zen-stat-box">
                 <span className="zen-stat-num">{paragraphs}</span>
-                <span className="zen-stat-name">{paragraphs === 1 ? 'Párrafo' : 'Párrafos'}</span>
+                <span className="zen-stat-name">
+                  {paragraphs === 1 ? t.stats.paragraphSingular : t.stats.paragraphs}
+                </span>
               </div>
             </div>
             {filePath && (
@@ -1227,17 +1287,15 @@ export default function Editor({
               <div className="modal-title-group">
                 <div>
                   <h2 id="shortcuts-title" className="modal-title">
-                    Atajos de Teclado
+                    {t.shortcuts.title}
                   </h2>
-                  <p className="modal-subtitle">
-                    Controla Fountain y el explorador sin usar el ratón
-                  </p>
+                  <p className="modal-subtitle">{t.shortcuts.subtitle}</p>
                 </div>
               </div>
               <button
                 className="btn-icon-subtle"
                 onClick={() => setIsShortcutsModalOpen(false)}
-                title="Cerrar (Esc)"
+                title={t.shortcuts.closeTitle}
               >
                 <CloseIcon size={18} />
               </button>
@@ -1246,45 +1304,45 @@ export default function Editor({
             <div className="modal-body zen-shortcuts-body">
               {/* Sección Archivos y Espacio de Trabajo */}
               <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">Archivos y Espacio de Trabajo</h4>
+                <h4 className="shortcuts-section-title">{t.shortcuts.sections.workspace}</h4>
                 <div className="shortcuts-list">
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Guardar documento</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.saveDoc}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>S</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Guardar copia como...</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.saveCopy}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Abrir archivo Markdown</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.openMarkdown}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>O</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Abrir carpeta de trabajo</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.openWorkspace}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Alternar barra del explorador</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.toggleSidebar}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>\</kbd>
-                      <span className="shortcut-or">o</span>
+                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
                       <kbd>Ctrl</kbd>+<kbd>B</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Ver esta ayuda de atajos</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.viewShortcuts}</span>
                     <div className="shortcut-keys">
                       <kbd>F1</kbd>
-                      <span className="shortcut-or">o</span>
+                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
                       <kbd>Ctrl</kbd>+<kbd>/</kbd>
                     </div>
                   </div>
@@ -1293,34 +1351,32 @@ export default function Editor({
 
               {/* Sección Modo Zen y Escritura */}
               <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">Modo Zen y Escritura</h4>
+                <h4 className="shortcuts-section-title">{t.shortcuts.sections.zen}</h4>
                 <div className="shortcuts-list">
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Activar / Alternar Modo Zen</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.toggleZen}</span>
                     <div className="shortcut-keys">
                       <kbd>F11</kbd>
-                      <span className="shortcut-or">o</span>
+                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">
-                      Alternar Modo Máquina de Escribir (Typewriter)
-                    </span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.toggleTypewriter}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Salir del Modo Zen</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.exitZen}</span>
                     <div className="shortcut-keys">
                       <kbd>Esc</kbd>
-                      <span className="shortcut-or">o</span>
+                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
                       <kbd>F11</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Mostrar / Ocultar estadísticas</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.toggleStats}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>
                     </div>
@@ -1330,42 +1386,40 @@ export default function Editor({
 
               {/* Sección Tipografía y Apariencia */}
               <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">Tipografía y Apariencia</h4>
+                <h4 className="shortcuts-section-title">{t.shortcuts.sections.typography}</h4>
                 <div className="shortcuts-list">
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Alternar Modo (Claro / Oscuro)</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.toggleTheme}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Alternar Tipografía (Serif / Sans / Mono)</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.toggleFont}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">
-                      Alternar Alineación (Izquierda / Justificado / Centrado)
-                    </span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.toggleAlign}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Aumentar tamaño de texto</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.increaseFontSize}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>+</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Reducir tamaño de texto</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.decreaseFontSize}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>-</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Restablecer tamaño estándar</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.resetFontSize}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>0</kbd>
                     </div>
@@ -1375,24 +1429,24 @@ export default function Editor({
 
               {/* Sección Markdown Rápido */}
               <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">Formato de Texto</h4>
+                <h4 className="shortcuts-section-title">{t.shortcuts.sections.formatting}</h4>
                 <div className="shortcuts-list">
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Negrita / Cursiva</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.boldItalic}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>Ctrl</kbd>+<kbd>I</kbd>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Títulos (H1, H2, H3)</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.headings}</span>
                     <div className="shortcut-keys">
-                      <span className="markdown-hint"># , ## , ### al inicio</span>
+                      <span className="markdown-hint">{t.shortcuts.keys.headingsHint}</span>
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">Citas y Bloques</span>
+                    <span className="shortcut-desc">{t.shortcuts.keys.quotes}</span>
                     <div className="shortcut-keys">
-                      <span className="markdown-hint">&gt; al inicio</span>
+                      <span className="markdown-hint">{t.shortcuts.keys.quotesHint}</span>
                     </div>
                   </div>
                 </div>
@@ -1401,7 +1455,7 @@ export default function Editor({
 
             <footer className="modal-footer">
               <button className="btn-done" onClick={() => setIsShortcutsModalOpen(false)}>
-                Entendido
+                {t.common.understood}
               </button>
             </footer>
           </div>
@@ -1419,6 +1473,7 @@ export default function Editor({
               onRefreshTree={onRefreshFolderTree}
               onCloseFolder={onCloseFolder}
               showToast={showToast}
+              language={preferences?.language}
             />
           </aside>
         )}
@@ -1438,16 +1493,29 @@ export default function Editor({
       <footer className="editor-footer">
         <div className="footer-stats">
           <span className="stat-item">
-            <strong>{words}</strong> {words === 1 ? 'palabra' : 'palabras'}
+            <strong>{words}</strong>{' '}
+            {words === 1
+              ? currentLang === 'en'
+                ? 'word'
+                : 'palabra'
+              : currentLang === 'en'
+                ? 'words'
+                : 'palabras'}
           </span>
           <span className="stat-separator">•</span>
           <span className="stat-item">
-            <strong>{characters}</strong> caracteres
+            <strong>{characters}</strong> {currentLang === 'en' ? 'characters' : 'caracteres'}
           </span>
           <span className="stat-separator">•</span>
           <span className="stat-item">
             <strong>~{readingTime}</strong>{' '}
-            {readingTime === 1 ? 'min de lectura' : 'mins de lectura'}
+            {readingTime === 1
+              ? currentLang === 'en'
+                ? 'min read'
+                : 'min de lectura'
+              : currentLang === 'en'
+                ? 'mins read'
+                : 'mins de lectura'}
           </span>
         </div>
 
