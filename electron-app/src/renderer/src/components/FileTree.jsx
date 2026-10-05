@@ -466,33 +466,36 @@ export default function FileTree({
         </div>
 
         <div className="tree-header-actions">
-          <button
-            type="button"
-            className="btn-tree-header-icon"
-            onClick={(e) => handleStartCreate(openedFolder.path, 'file', e)}
-            title={isEn ? 'New file in root' : 'Nuevo archivo en raíz'}
-            aria-label={t.fileTree.newFile}
-          >
-            <FilePlusIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className="btn-tree-header-icon"
-            onClick={(e) => handleStartCreate(openedFolder.path, 'folder', e)}
-            title={isEn ? 'New subfolder in root' : 'Nueva subcarpeta en raíz'}
-            aria-label={t.fileTree.newFolder}
-          >
-            <FolderPlusIcon size={14} />
-          </button>
-          <button
-            type="button"
-            className={`btn-tree-header-icon ${isRefreshing ? 'animate-spin' : ''}`}
-            onClick={handleManualRefresh}
-            title={t.fileTree.refresh}
-            aria-label={t.fileTree.refresh}
-          >
-            <RefreshIcon size={14} />
-          </button>
+          <div className="tree-header-actions-group">
+            <button
+              type="button"
+              className="btn-tree-header-icon"
+              onClick={(e) => handleStartCreate(openedFolder.path, 'file', e)}
+              title={isEn ? 'New file in root' : 'Nuevo archivo en raíz'}
+              aria-label={t.fileTree.newFile}
+            >
+              <FilePlusIcon size={14} />
+            </button>
+            <button
+              type="button"
+              className="btn-tree-header-icon"
+              onClick={(e) => handleStartCreate(openedFolder.path, 'folder', e)}
+              title={isEn ? 'New subfolder in root' : 'Nueva subcarpeta en raíz'}
+              aria-label={t.fileTree.newFolder}
+            >
+              <FolderPlusIcon size={14} />
+            </button>
+            <button
+              type="button"
+              className={`btn-tree-header-icon ${isRefreshing ? 'animate-spin' : ''}`}
+              onClick={handleManualRefresh}
+              title={t.fileTree.refresh}
+              aria-label={t.fileTree.refresh}
+            >
+              <RefreshIcon size={14} />
+            </button>
+          </div>
+
           <button
             type="button"
             className="btn-tree-header-icon btn-action-danger"
