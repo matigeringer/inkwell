@@ -1471,15 +1471,17 @@ export default function Editor({
             <span className="doc-title-text" title={filePath || fileName}>
               {fileName}
             </span>
-            <div className={`doc-status status-${saveStatus}`}>
-              <span className="doc-status-dot" />
-              <span className="doc-status-label">
-                {saveStatus === 'saved' && t.editor.statusSaved}
-                {saveStatus === 'unsaved' && t.editor.statusUnsaved}
-                {saveStatus === 'saving' && t.editor.statusSaving}
-                {saveStatus === 'error' && t.editor.statusError}
-              </span>
-            </div>
+            {filePath && (
+              <div className={`doc-status status-${saveStatus}`}>
+                <span className="doc-status-dot" />
+                <span className="doc-status-label">
+                  {saveStatus === 'saved' && t.editor.statusSaved}
+                  {saveStatus === 'unsaved' && t.editor.statusUnsaved}
+                  {saveStatus === 'saving' && t.editor.statusSaving}
+                  {saveStatus === 'error' && t.editor.statusError}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
