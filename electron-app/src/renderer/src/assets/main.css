@@ -496,7 +496,7 @@
 .doc-meta-header {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: 0.85rem;
   padding: 0.2rem 0.4rem;
   height: 100%;
   min-width: 0;
@@ -532,7 +532,7 @@
 .doc-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.55rem;
   line-height: 1;
 }
 
@@ -540,7 +540,7 @@
   width: 7px;
   height: 7px;
   border-radius: 0;
-  transform: rotate(45deg);
+  transform: translateY(-1.5px) rotate(45deg);
   flex-shrink: 0;
   display: inline-block;
   transition: background-color 0.2s ease;
@@ -559,19 +559,19 @@
 }
 
 .doc-status.status-saved .doc-status-dot {
-  background-color: var(--mark-success);
-}
-
-.doc-status.status-saved .doc-status-label {
-  color: var(--text-muted);
-}
-
-.doc-status.status-unsaved .doc-status-dot {
   background-color: var(--accent-secondary);
 }
 
-.doc-status.status-unsaved .doc-status-label {
+.doc-status.status-saved .doc-status-label {
   color: var(--accent-secondary);
+}
+
+.doc-status.status-unsaved .doc-status-dot {
+  background-color: var(--text-muted);
+}
+
+.doc-status.status-unsaved .doc-status-label {
+  color: var(--text-muted);
 }
 
 .doc-status.status-saving .doc-status-dot {
