@@ -420,9 +420,6 @@ function App() {
       <main className="main-content">
         <div className="welcome-hero">
           <div className="welcome-brand">
-            <div className="welcome-date">
-              <span className="label-caps">{todayLabel}</span>
-            </div>
             <h2 className="welcome-heading">
               {t.home.welcomeTitle} <em>{t.home.welcomeTitleEmphasis}</em>.
             </h2>
@@ -477,7 +474,6 @@ function App() {
             </button>
           </div>
 
-          <p className="welcome-colophon">{t.home.colophon}</p>
         </div>
       </main>
 
