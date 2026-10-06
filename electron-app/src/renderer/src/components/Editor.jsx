@@ -20,12 +20,61 @@ import {
   AlignLeftIcon,
   AlignJustifyIcon,
   AlignCenterIcon,
-  ExportPdfIcon,
+  ExportIcon,
+  FilePdfIcon,
+  FileDocxIcon,
+  FileOdtIcon,
+  FileMarkdownIcon,
+  FileTextIcon,
+  ChevronDownIcon,
   HistoryIcon
 } from './Icons'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
 import { getTranslation } from '../i18n'
+
+const EXPORT_OPTIONS = [
+  {
+    key: 'pdf',
+    ext: '.pdf',
+    icon: FilePdfIcon,
+    nameKey: 'pdfName',
+    descKey: 'pdfDesc',
+    badgeKey: 'pdfBadge'
+  },
+  {
+    key: 'docx',
+    ext: '.docx',
+    icon: FileDocxIcon,
+    nameKey: 'docxName',
+    descKey: 'docxDesc',
+    badgeKey: 'docxBadge'
+  },
+  {
+    key: 'odt',
+    ext: '.odt',
+    icon: FileOdtIcon,
+    nameKey: 'odtName',
+    descKey: 'odtDesc',
+    badgeKey: 'odtBadge'
+  },
+  {
+    key: 'markdown',
+    ext: '.md',
+    icon: FileMarkdownIcon,
+    nameKey: 'markdownName',
+    descKey: 'markdownDesc',
+    badgeKey: 'markdownBadge'
+  },
+  {
+    key: 'txt',
+    ext: '.txt',
+    icon: FileTextIcon,
+    nameKey: 'txtName',
+    descKey: 'txtNameDesc',
+    badgeKey: 'txtNameBadge'
+  }
+]
 
 const FONT_SIZES_SCALE = [
   '1.00rem',
@@ -69,6 +118,9 @@ export default function Editor({
   const mouseTimerRef = useRef(null)
   const [toast, setToast] = useState(null)
   const toastTimeoutRef = useRef(null)
+  const [exportMenuOpen, setExportMenuOpen] = useState(false)
+  const [isExporting, setIsExporting] = useState(false)
+  const exportDropdownRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const typewriterModeRef = useRef(Boolean(preferences?.typewriterMode))
   const typewriterPositionRef = useRef(preferences?.typewriterPosition || 'center')
@@ -78,6 +130,30 @@ export default function Editor({
   const lastAnchoredLineYRef = useRef(null)
   const isMouseDownRef = useRef(false)
   const [, setTick] = useState(0) // Forzar re-render en cambios para estadísticas
+
+  // Cerrar menú de exportación al hacer clic afuera o presionar Escape
+  useEffect(() => {
+    if (!exportMenuOpen) return
+
+    const handleClickOutside = (e) => {
+      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
+        setExportMenuOpen(false)
+      }
+    }
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setExportMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [exportMenuOpen])
 
   // Sincronizar refs de modo máquina de escribir
   useEffect(() => {
@@ -823,56 +899,75 @@ export default function Editor({
     saveHistorySnapshot
   ])
 
-  // Exportar documento activo a PDF con diseño editorial de lectura
-  const handleExportPdf = useCallback(async () => {
-    if (!window.api?.exportPdf) return
+  // Exportar documento en el formato seleccionado (PDF, Word, LibreOffice, Markdown, Texto plano)
+  const handleExport = useCallback(
+    async (format = 'pdf') => {
+      if (!window.api?.exportDocument) return
 
-    try {
-      showToast(
-        t.editor.exportingPdf ||
-          (currentLang === 'en'
-            ? 'Generating reading PDF...'
-            : 'Generando archivo de lectura en PDF...')
-      )
-      const markdownContent = getMarkdownContent()
-      const htmlContent = editor ? editor.getHTML() : null
+      setExportMenuOpen(false)
+      setIsExporting(true)
 
-      const res = await window.api.exportPdf({
-        filePath,
-        fileName,
-        content: markdownContent,
-        htmlContent
-      })
-
-      if (res?.canceled) {
-        return
+      const formatLabelMap = {
+        pdf: 'PDF',
+        docx: 'Word (.docx)',
+        odt: 'OpenDocument (.odt)',
+        markdown: 'Markdown (.md)',
+        txt: 'Texto (.txt)'
       }
+      const label = formatLabelMap[format] || format.toUpperCase()
 
-      if (res?.success) {
+      try {
         showToast(
-          t.editor.toastPdfExported?.(res.fileName) ||
-            (currentLang === 'en'
-              ? `PDF exported: ${res.fileName}`
-              : `PDF exportado: ${res.fileName}`)
+          t.editor.exportingFormat?.(label) ||
+            (currentLang === 'en' ? `Generating ${label} file...` : `Generando archivo ${label}...`)
         )
-      } else {
+        const markdownContent = getMarkdownContent()
+        const htmlContent = editor ? editor.getHTML() : null
+
+        const res = await window.api.exportDocument({
+          format,
+          filePath,
+          fileName,
+          content: markdownContent,
+          htmlContent
+        })
+
+        if (res?.canceled) {
+          return
+        }
+
+        if (res?.success) {
+          showToast(
+            t.editor.toastExported?.(res.fileName || label) ||
+              (currentLang === 'en'
+                ? `Exported successfully: ${res.fileName || label}`
+                : `Documento exportado: ${res.fileName || label}`)
+          )
+        } else {
+          showToast(
+            res?.error ||
+              t.editor.toastExportError ||
+              (currentLang === 'en' ? 'Error exporting document' : 'Error al exportar documento'),
+            'error'
+          )
+        }
+      } catch (err) {
         showToast(
-          res?.error ||
-            t.editor.toastPdfError ||
-            (currentLang === 'en' ? 'Error exporting PDF' : 'Error al exportar PDF'),
+          err.message ||
+            (currentLang === 'en'
+              ? 'Unexpected error exporting document'
+              : 'Error inesperado al exportar documento'),
           'error'
         )
+      } finally {
+        setIsExporting(false)
       }
-    } catch (err) {
-      showToast(
-        err.message ||
-          (currentLang === 'en'
-            ? 'Unexpected error exporting PDF'
-            : 'Error inesperado al exportar PDF'),
-        'error'
-      )
-    }
-  }, [filePath, fileName, editor, getMarkdownContent, showToast, currentLang, t])
+    },
+    [filePath, fileName, editor, getMarkdownContent, showToast, currentLang, t]
+  )
+
+  // Alias retrocompatible
+  const handleExportPdf = useCallback(() => handleExport('pdf'), [handleExport])
 
   // Cambiar de documento de forma fluida desde el explorador
   const handleSwitchDoc = useCallback(
@@ -1211,13 +1306,13 @@ export default function Editor({
         return
       }
 
-      // 7. Ctrl+Shift+E o Ctrl+P: Exportar a PDF
+      // 7. Ctrl+Shift+E o Ctrl+P: Conmutar menú de exportación
       if (
         (isCtrlOrMeta && e.shiftKey && (e.key === 'e' || e.key === 'E')) ||
         (isCtrlOrMeta && !e.shiftKey && (e.key === 'p' || e.key === 'P'))
       ) {
         e.preventDefault()
-        handleExportPdf()
+        setExportMenuOpen((prev) => !prev)
         return
       }
 
@@ -1451,35 +1546,88 @@ export default function Editor({
 
           <div className="header-divider" />
 
-          <button
-            className="btn-sober-secondary"
-            onClick={handleExportPdf}
-            title={t.editor.exportPdfTitle}
-            aria-label={t.editor.exportPdf}
-          >
-            <ExportPdfIcon size={15} />
-            <span>{t.editor.exportPdf}</span>
-          </button>
+          {/* Grupo de Acciones Principales (Exportar, Guardar como, Guardar) */}
+          <div className="header-primary-actions">
+            {/* Menú Desplegable de Exportación */}
+            <div className="export-dropdown-wrapper" ref={exportDropdownRef}>
+              <button
+                className={`btn-sober-secondary export-trigger-btn ${exportMenuOpen ? 'is-active' : ''}`}
+                onClick={() => setExportMenuOpen((prev) => !prev)}
+                title={t.editor.exportTitle}
+                aria-label={t.editor.export}
+                aria-expanded={exportMenuOpen}
+                aria-haspopup="true"
+                disabled={isExporting}
+              >
+                <ExportIcon size={15} />
+                <span className="header-btn-label">{t.editor.export}</span>
+                <ChevronDownIcon
+                  size={13}
+                  className={`export-chevron ${exportMenuOpen ? 'is-open' : ''}`}
+                />
+              </button>
 
-          <button
-            className="btn-sober-secondary"
-            onClick={handleSaveAs}
-            title={t.editor.saveAsTitle}
-          >
-            <SaveAsIcon size={15} />
-            <span>{t.editor.saveAs}</span>
-          </button>
+              {exportMenuOpen && (
+                <div className="export-dropdown-menu" role="menu" aria-label={t.editor.exportTitle}>
+                  <div className="export-dropdown-header">
+                    <span className="export-dropdown-title">
+                      {t.exportFormats?.menuTitle || t.editor.exportChooseFormat}
+                    </span>
+                  </div>
+                  <div className="export-dropdown-list">
+                    {EXPORT_OPTIONS.map((opt) => {
+                      const IconComponent = opt.icon
+                      const name = t.exportFormats?.[opt.nameKey] || opt.ext
+                      const desc = t.exportFormats?.[opt.descKey] || ''
+                      const badge =
+                        t.exportFormats?.[opt.badgeKey] || opt.ext.replace('.', '').toUpperCase()
 
-          <button
-            className="btn-sober-primary"
-            onClick={handleSave}
-            disabled={saveStatus === 'saving'}
-            title={t.editor.saveTitle}
-          >
-            <SaveIcon size={15} />
-            <span>{t.editor.save}</span>
-            <kbd className="shortcut-hint">Ctrl+S</kbd>
-          </button>
+                      return (
+                        <button
+                          key={opt.key}
+                          type="button"
+                          className="export-dropdown-item"
+                          role="menuitem"
+                          onClick={() => handleExport(opt.key)}
+                        >
+                          <div className="export-item-icon-wrapper">
+                            <IconComponent size={16} />
+                          </div>
+                          <div className="export-item-content">
+                            <div className="export-item-row">
+                              <span className="export-item-name">{name}</span>
+                              <span className="export-item-badge">{badge}</span>
+                            </div>
+                            {desc && <span className="export-item-desc">{desc}</span>}
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button
+              className="btn-sober-secondary"
+              onClick={handleSaveAs}
+              title={t.editor.saveAsTitle}
+            >
+              <SaveAsIcon size={15} />
+              <span className="header-btn-label">{t.editor.saveAs}</span>
+            </button>
+
+            <button
+              className="btn-sober-primary"
+              onClick={handleSave}
+              disabled={saveStatus === 'saving'}
+              title={t.editor.saveTitle}
+            >
+              <SaveIcon size={15} />
+              <span className="header-btn-label">{t.editor.save}</span>
+              <kbd className="shortcut-hint">Ctrl+S</kbd>
+            </button>
+          </div>
         </div>
       </header>
 
@@ -1654,7 +1802,9 @@ export default function Editor({
                     </div>
                   </div>
                   <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.exportPdf}</span>
+                    <span className="shortcut-desc">
+                      {t.shortcuts.keys.exportDoc || t.shortcuts.keys.exportPdf}
+                    </span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>
                       <span className="shortcut-or">{t.shortcuts.keys.or}</span>

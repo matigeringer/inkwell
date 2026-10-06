@@ -13,7 +13,10 @@ import {
   FolderCloseIcon,
   CheckIcon,
   CloseIcon,
-  FilePdfIcon
+  FilePdfIcon,
+  FileDocxIcon,
+  FileOdtIcon,
+  FileMarkdownIcon
 } from './Icons'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { getTranslation } from '../i18n'
@@ -230,15 +233,23 @@ export default function FileTree({
     }
   }
 
-  // Exportar archivo individual a PDF desde el explorador
-  const handleExportPdf = async (item) => {
-    if (!window.api?.exportPdf || !item?.path) return
+  // Exportar archivo individual en formato seleccionado desde el explorador
+  const handleExportDocument = async (item, format = 'pdf') => {
+    if (!window.api?.exportDocument || !item?.path) return
+
+    const formatNameMap = {
+      pdf: 'PDF',
+      docx: 'Word (.docx)',
+      odt: 'OpenDocument (.odt)',
+      markdown: 'Markdown (.md)',
+      txt: 'Texto (.txt)'
+    }
+    const formatName = formatNameMap[format] || format.toUpperCase()
+
     try {
-      showToast?.(
-        t.fileTree.exportingPdf ||
-          (isEn ? 'Generating reading PDF...' : 'Generando archivo de lectura en PDF...')
-      )
-      const res = await window.api.exportPdf({
+      showToast?.(isEn ? `Generating ${formatName}...` : `Generando archivo ${formatName}...`)
+      const res = await window.api.exportDocument({
+        format,
         filePath: item.path,
         fileName: item.name
       })
@@ -248,22 +259,20 @@ export default function FileTree({
       }
 
       if (res?.success) {
-        showToast?.(
-          t.fileTree.toastPdfExported?.(res.fileName) ||
-            (isEn ? `PDF exported: ${res.fileName}` : `PDF exportado: ${res.fileName}`)
-        )
+        showToast?.(isEn ? `Exported: ${res.fileName}` : `Exportado: ${res.fileName}`)
       } else {
         showToast?.(
-          res?.error ||
-            t.fileTree.toastErrorExportPdf ||
-            (isEn ? 'Error exporting file to PDF' : 'Error al exportar archivo a PDF'),
+          res?.error || (isEn ? 'Error exporting file' : 'Error al exportar archivo'),
           'error'
         )
       }
     } catch (err) {
-      showToast?.(err.message || (isEn ? 'Error exporting PDF' : 'Error al exportar PDF'), 'error')
+      showToast?.(err.message || (isEn ? 'Error exporting' : 'Error al exportar'), 'error')
     }
   }
+
+  // Alias retrocompatible
+  const handleExportPdf = (item) => handleExportDocument(item, 'pdf')
 
   // Abrir menú contextual nativo/flotante posicionado
   const handleContextMenu = (e, item) => {
@@ -698,21 +707,6 @@ export default function FileTree({
             <>
               <button
                 type="button"
-                className="tree-context-menu-item context-menu-primary"
-                onClick={() => {
-                  const item = contextMenu.item
-                  setContextMenu(null)
-                  handleExportPdf(item)
-                }}
-              >
-                <span className="tree-context-menu-icon">
-                  <FilePdfIcon size={15} />
-                </span>
-                <span className="tree-context-menu-label">{t.fileTree.exportPdf}</span>
-              </button>
-
-              <button
-                type="button"
                 className="tree-context-menu-item"
                 onClick={() => {
                   const item = contextMenu.item
@@ -725,6 +719,99 @@ export default function FileTree({
                 </span>
                 <span className="tree-context-menu-label">{t.fileTree.openFile}</span>
               </button>
+
+              <div className="tree-context-menu-divider" />
+
+              <div className="tree-context-menu-header">
+                {isEn ? 'Export to...' : 'Exportar a...'}
+              </div>
+
+              <button
+                type="button"
+                className="tree-context-menu-item context-menu-primary"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleExportDocument(item, 'pdf')
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FilePdfIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">
+                  {isEn ? 'PDF Document (.pdf)' : 'Documento PDF (.pdf)'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleExportDocument(item, 'docx')
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FileDocxIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">
+                  {isEn ? 'Microsoft Word (.docx)' : 'Microsoft Word (.docx)'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleExportDocument(item, 'odt')
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FileOdtIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">
+                  {isEn ? 'OpenDocument (.odt)' : 'OpenDocument (.odt)'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleExportDocument(item, 'markdown')
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FileMarkdownIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">
+                  {isEn ? 'Markdown (.md)' : 'Markdown (.md)'}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="tree-context-menu-item"
+                onClick={() => {
+                  const item = contextMenu.item
+                  setContextMenu(null)
+                  handleExportDocument(item, 'txt')
+                }}
+              >
+                <span className="tree-context-menu-icon">
+                  <FileTextIcon size={15} />
+                </span>
+                <span className="tree-context-menu-label">
+                  {isEn ? 'Plain Text (.txt)' : 'Texto Plano (.txt)'}
+                </span>
+              </button>
+
+              <div className="tree-context-menu-divider" />
 
               <button
                 type="button"

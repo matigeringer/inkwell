@@ -4,6 +4,7 @@ import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { exportDocumentToPdf } from './pdfExporter'
+import { exportDocument } from './documentExporter'
 import {
   saveSnapshot,
   getSnapshots,
@@ -496,9 +497,13 @@ app.whenReady().then(() => {
     }
   })
 
-  // Exportar documento de lectura a PDF
+  // Exportar documento de lectura a PDF o formatos múltiples
   ipcMain.handle('file:export-pdf', async (event, data) => {
     return exportDocumentToPdf(event, data, currentAppLanguage)
+  })
+
+  ipcMain.handle('file:export', async (event, data) => {
+    return exportDocument(event, data, currentAppLanguage)
   })
 
   // Renombrar y Eliminar (comunes para archivos y carpetas)

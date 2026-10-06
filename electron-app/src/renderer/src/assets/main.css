@@ -436,11 +436,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1.25rem;
+  padding: 0 1rem;
+  gap: 0.75rem;
   background-color: var(--bg-canvas);
   border-bottom: 1px solid var(--rule);
   user-select: none;
   z-index: 10;
+  overflow: hidden;
   transition:
     opacity 0.3s ease,
     background-color 0.25s ease;
@@ -449,13 +451,17 @@
 .header-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .header-right {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
+  flex-shrink: 0;
 }
 
 .header-divider {
@@ -493,6 +499,8 @@
   gap: 0.65rem;
   padding: 0.2rem 0.4rem;
   height: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .doc-title-text {
@@ -503,12 +511,13 @@
   color: var(--text-primary);
   letter-spacing: -0.01em;
   max-width: 260px;
+  min-width: 40px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   line-height: 1;
-  display: inline-flex;
-  align-items: center;
+  display: inline-block;
+  flex-shrink: 1;
 }
 
 .doc-meta-separator {
@@ -627,20 +636,38 @@
   border-bottom-color: var(--accent-primary);
 }
 
-.btn-sober-secondary {
+.header-primary-actions {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+  flex-shrink: 0;
+}
+
+.btn-sober-secondary,
+.btn-sober-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 32px;
+  box-sizing: border-box;
+  white-space: nowrap;
+  font-family: var(--font-ui);
+  font-size: 0.83rem;
+  line-height: 1;
+  padding: 0 0.75rem;
+  border-radius: var(--radius);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-sober-secondary {
   background-color: var(--btn-secondary-bg);
   border: 1px solid var(--btn-secondary-border);
   color: var(--btn-secondary-text);
-  font-family: var(--font-ui);
-  font-size: 0.84rem;
   font-weight: 500;
-  padding: 0.4rem 0.75rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 .btn-sober-secondary:hover {
@@ -650,19 +677,10 @@
 }
 
 .btn-sober-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
   background-color: var(--btn-bg);
   color: var(--btn-text);
   border: 1px solid var(--btn-border);
-  font-family: var(--font-ui);
-  font-size: 0.84rem;
   font-weight: 600;
-  padding: 0.4rem 0.85rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
 .btn-sober-primary:hover:not(:disabled) {
@@ -676,6 +694,11 @@
   cursor: not-allowed;
 }
 
+.header-btn-label {
+  white-space: nowrap;
+  line-height: 1;
+}
+
 .shortcut-hint {
   font-family: var(--font-mono);
   font-size: 0.66rem;
@@ -684,6 +707,7 @@
   padding: 1px 4px;
   border-radius: 3px;
   margin-left: 0.15rem;
+  line-height: 1;
 }
 
 /* ==========================================================================
@@ -3335,4 +3359,274 @@
   background-color: var(--mark-danger-subtle);
   border-color: var(--mark-danger);
   color: var(--mark-danger);
+}
+
+/* ==========================================================================
+   Export Menu & Dropdown Styles
+   ========================================================================== */
+
+.export-dropdown-wrapper {
+  position: relative;
+  display: inline-flex;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.export-trigger-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  position: relative;
+  height: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.export-trigger-btn.is-active {
+  background-color: var(--btn-secondary-hover);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.export-chevron {
+  transition: transform 0.15s ease;
+  opacity: 0.75;
+  margin-left: 0.1rem;
+}
+
+.export-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.export-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1100;
+  width: 300px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius);
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.18),
+    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 0.35rem 0;
+  display: flex;
+  flex-direction: column;
+  animation: exportMenuFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+
+@keyframes exportMenuFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.export-dropdown-header {
+  padding: 0.45rem 0.85rem 0.4rem;
+  border-bottom: 1px solid var(--rule);
+  margin-bottom: 0.25rem;
+}
+
+.export-dropdown-title {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.export-dropdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0 0.3rem;
+}
+
+.export-dropdown-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.65rem;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius) - 2px);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.export-dropdown-item:hover {
+  background-color: var(--bg-hover);
+}
+
+.export-item-icon-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--rule);
+  color: var(--text-primary);
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.export-dropdown-item:hover .export-item-icon-wrapper {
+  background-color: var(--accent-primary-subtle);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.export-item-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.export-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.export-item-name {
+  font-family: var(--font-ui);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.export-dropdown-item:hover .export-item-name {
+  color: var(--accent-primary);
+}
+
+.export-item-badge {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background-color: var(--rule);
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.export-dropdown-item:hover .export-item-badge {
+  background-color: var(--accent-primary-subtle);
+  color: var(--accent-primary);
+}
+
+.export-item-desc {
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  line-height: 1.35;
+}
+
+.tree-context-menu-header {
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  padding: 0.35rem 0.85rem 0.2rem;
+}
+
+/* ==========================================================================
+   Header Responsive Adaptations (Coordinated Button Resizing)
+   ========================================================================== */
+
+@media (max-width: 980px) {
+  .shortcut-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  .header-right {
+    gap: 0.35rem;
+  }
+
+  .header-primary-actions {
+    gap: 0.35rem;
+  }
+
+  .btn-sober-secondary,
+  .btn-sober-primary,
+  .export-trigger-btn {
+    padding: 0 0.55rem;
+    font-size: 0.8rem;
+    gap: 0.35rem;
+  }
+
+  .btn-icon-sober {
+    width: 30px;
+    height: 30px;
+  }
+
+  .header-divider {
+    margin: 0 0.15rem;
+  }
+}
+
+@media (max-width: 740px) {
+  .editor-header {
+    padding: 0 0.65rem;
+    gap: 0.5rem;
+  }
+
+  .header-left {
+    gap: 0.5rem;
+  }
+
+  .doc-title-text {
+    max-width: 140px;
+  }
+
+  .header-right {
+    gap: 0.25rem;
+  }
+
+  .header-primary-actions {
+    gap: 0.25rem;
+  }
+
+  .btn-sober-secondary,
+  .btn-sober-primary,
+  .export-trigger-btn {
+    padding: 0 0.45rem;
+    font-size: 0.77rem;
+    gap: 0.3rem;
+  }
+
+  .btn-icon-sober {
+    width: 28px;
+    height: 28px;
+  }
 }
