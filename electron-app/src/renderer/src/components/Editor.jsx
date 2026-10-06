@@ -1563,20 +1563,7 @@ export default function Editor({
 
           {/* Menú Desplegable de Acciones (Guardar, Guardar como, Exportar, Configuración) */}
           <div className="action-menu-wrapper" ref={actionsMenuRef}>
-            {!actionsMenuOpen ? (
-              <button
-                className="btn-sober-secondary action-menu-trigger"
-                onClick={() => setActionsMenuOpen(true)}
-                title={t.editor.actionsMenuTitle}
-                aria-label={t.editor.actionsMenuAria}
-                aria-expanded={false}
-                aria-haspopup="true"
-              >
-                <MenuIcon size={15} />
-                <span className="header-btn-label">{t.editor.actionsMenu}</span>
-                <ChevronDownIcon size={13} className="action-menu-chevron" />
-              </button>
-            ) : (
+            {actionsMenuOpen && (
               <div className="action-menu-dock">
                 {onOpenProfile && (
                   <button
@@ -1673,22 +1660,31 @@ export default function Editor({
                 >
                   <SaveIcon size={15} />
                   <span className="header-btn-label">{t.editor.save}</span>
-                  <kbd className="shortcut-hint">Ctrl+S</kbd>
-                </button>
-
-                <button
-                  className="btn-icon-sober action-menu-close-btn"
-                  onClick={() => {
-                    setActionsMenuOpen(false)
-                    setExportMenuOpen(false)
-                  }}
-                  title={t.editor.closeActionsMenu}
-                  aria-label={t.editor.closeActionsMenu}
-                >
-                  <CloseIcon size={15} />
                 </button>
               </div>
             )}
+
+            {/* Recuadro con el icono que permanece visible en la cabecera en todo momento */}
+            <button
+              className={`btn-sober-secondary action-menu-trigger ${actionsMenuOpen ? 'is-active' : ''}`}
+              onClick={() => {
+                setActionsMenuOpen((prev) => !prev)
+                if (actionsMenuOpen) setExportMenuOpen(false)
+              }}
+              title={actionsMenuOpen ? t.editor.closeActionsMenu : t.editor.actionsMenuTitle}
+              aria-label={t.editor.actionsMenuAria}
+              aria-expanded={actionsMenuOpen}
+              aria-haspopup="true"
+            >
+              <MenuIcon size={15} />
+              {!actionsMenuOpen && (
+                <span className="header-btn-label">{t.editor.actionsMenu}</span>
+              )}
+              <ChevronDownIcon
+                size={13}
+                className={`action-menu-chevron ${actionsMenuOpen ? 'is-open' : ''}`}
+              />
+            </button>
           </div>
         </div>
       </header>

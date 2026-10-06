@@ -651,6 +651,7 @@
   position: relative;
   display: inline-flex;
   align-items: center;
+  gap: 0.45rem;
   flex-shrink: 0;
 }
 
@@ -3452,7 +3453,7 @@
   align-items: center;
   gap: 0.45rem;
   position: relative;
-  height: 100%;
+  height: 32px;
   box-sizing: border-box;
   white-space: nowrap;
 }
@@ -3680,12 +3681,54 @@
     background-color: var(--bg-card);
     border: 1px solid var(--border-medium);
     border-radius: var(--radius);
-    padding: 0.45rem 0.6rem;
+    padding: 0.55rem;
     box-shadow:
-      0 10px 25px -5px rgba(0, 0, 0, 0.22),
-      0 8px 10px -6px rgba(0, 0, 0, 0.12);
-    gap: 0.4rem;
+      0 12px 30px -4px rgba(0, 0, 0, 0.24),
+      0 8px 12px -6px rgba(0, 0, 0, 0.14);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+    min-width: 210px;
     max-width: calc(100vw - 1.5rem);
+    animation: actionDockPopIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .action-menu-dock .btn-sober-secondary,
+  .action-menu-dock .btn-sober-primary,
+  .action-menu-dock .export-trigger-btn {
+    width: 100%;
+    height: 32px;
+    padding: 0 0.75rem;
+    font-size: 0.83rem;
+    justify-content: flex-start;
+    box-sizing: border-box;
+  }
+
+  .action-menu-dock .export-dropdown-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .action-menu-dock .export-dropdown-menu {
+    position: static;
+    width: 100%;
+    box-shadow: none;
+    border: 1px solid var(--rule);
+    margin-top: 0.3rem;
+  }
+}
+
+@keyframes actionDockPopIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -3713,14 +3756,34 @@
 
   .btn-sober-secondary,
   .btn-sober-primary,
-  .export-trigger-btn,
-  .action-menu-trigger {
+  .export-trigger-btn {
     padding: 0 0.45rem;
     font-size: 0.77rem;
     gap: 0.3rem;
   }
 
   .btn-icon-sober {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 640px) {
+  .action-menu-trigger .header-btn-label,
+  .action-menu-trigger .action-menu-chevron {
+    display: none;
+  }
+
+  .action-menu-trigger {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .action-menu-trigger {
     width: 28px;
     height: 28px;
   }
