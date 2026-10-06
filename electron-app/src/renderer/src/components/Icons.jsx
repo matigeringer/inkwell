@@ -1004,3 +1004,25 @@ export function FileMarkdownIcon({ className = '', size = 18, ...props }) {
     </svg>
   )
 }
+
+export function MenuIcon({ className = '', size = 18, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <line x1="4" y1="12" x2="20" y2="12" />
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="4" y1="18" x2="20" y2="18" />
+    </svg>
+  )
+}
+

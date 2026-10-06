@@ -27,7 +27,8 @@ import {
   FileMarkdownIcon,
   FileTextIcon,
   ChevronDownIcon,
-  HistoryIcon
+  HistoryIcon,
+  MenuIcon
 } from './Icons'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
@@ -118,8 +119,10 @@ export default function Editor({
   const mouseTimerRef = useRef(null)
   const [toast, setToast] = useState(null)
   const toastTimeoutRef = useRef(null)
+  const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
+  const actionsMenuRef = useRef(null)
   const exportDropdownRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const typewriterModeRef = useRef(Boolean(preferences?.typewriterMode))
@@ -131,19 +134,27 @@ export default function Editor({
   const isMouseDownRef = useRef(false)
   const [, setTick] = useState(0) // Forzar re-render en cambios para estadísticas
 
-  // Cerrar menú de exportación al hacer clic afuera o presionar Escape
+  // Cerrar menú de acciones o de exportación al hacer clic afuera o presionar Escape
   useEffect(() => {
-    if (!exportMenuOpen) return
+    if (!actionsMenuOpen && !exportMenuOpen) return
 
     const handleClickOutside = (e) => {
-      if (exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
+      if (exportMenuOpen && exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
+        setExportMenuOpen(false)
+      }
+      if (actionsMenuOpen && actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) {
+        setActionsMenuOpen(false)
         setExportMenuOpen(false)
       }
     }
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        setExportMenuOpen(false)
+        if (exportMenuOpen) {
+          setExportMenuOpen(false)
+        } else if (actionsMenuOpen) {
+          setActionsMenuOpen(false)
+        }
       }
     }
 
@@ -153,7 +164,7 @@ export default function Editor({
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [exportMenuOpen])
+  }, [actionsMenuOpen, exportMenuOpen])
 
   // Sincronizar refs de modo máquina de escribir
   useEffect(() => {
@@ -1254,7 +1265,7 @@ export default function Editor({
         return
       }
 
-      // 3. Escape: Cerrar modales o salir de Modo Zen
+      // 3. Escape: Cerrar modales, menú de acciones o salir de Modo Zen
       if (e.key === 'Escape') {
         if (isShortcutsModalOpen) {
           e.preventDefault()
@@ -1269,6 +1280,16 @@ export default function Editor({
         if (showStatsHud) {
           e.preventDefault()
           setShowStatsHud(false)
+          return
+        }
+        if (exportMenuOpen) {
+          e.preventDefault()
+          setExportMenuOpen(false)
+          return
+        }
+        if (actionsMenuOpen) {
+          e.preventDefault()
+          setActionsMenuOpen(false)
           return
         }
         if (isZenMode) {
@@ -1312,6 +1333,7 @@ export default function Editor({
         (isCtrlOrMeta && !e.shiftKey && (e.key === 'p' || e.key === 'P'))
       ) {
         e.preventDefault()
+        setActionsMenuOpen(true)
         setExportMenuOpen((prev) => !prev)
         return
       }
@@ -1409,6 +1431,8 @@ export default function Editor({
     isShortcutsModalOpen,
     isHistoryModalOpen,
     showStatsHud,
+    actionsMenuOpen,
+    exportMenuOpen,
     openedFolder,
     toggleZenMode,
     handleSave,
@@ -1535,100 +1559,136 @@ export default function Editor({
             <HistoryIcon size={16} />
           </button>
 
-          {onOpenProfile && (
-            <button
-              className="btn-icon-sober"
-              onClick={onOpenProfile}
-              title={t.editor.preferencesTitle}
-              aria-label={t.editor.preferencesAria}
-            >
-              <SettingsIcon size={16} />
-            </button>
-          )}
-
           <div className="header-divider" />
 
-          {/* Grupo de Acciones Principales (Exportar, Guardar como, Guardar) */}
-          <div className="header-primary-actions">
-            {/* Menú Desplegable de Exportación */}
-            <div className="export-dropdown-wrapper" ref={exportDropdownRef}>
+          {/* Menú Desplegable de Acciones (Guardar, Guardar como, Exportar, Configuración) */}
+          <div className="action-menu-wrapper" ref={actionsMenuRef}>
+            {!actionsMenuOpen ? (
               <button
-                className={`btn-sober-secondary export-trigger-btn ${exportMenuOpen ? 'is-active' : ''}`}
-                onClick={() => setExportMenuOpen((prev) => !prev)}
-                title={t.editor.exportTitle}
-                aria-label={t.editor.export}
-                aria-expanded={exportMenuOpen}
+                className="btn-sober-secondary action-menu-trigger"
+                onClick={() => setActionsMenuOpen(true)}
+                title={t.editor.actionsMenuTitle}
+                aria-label={t.editor.actionsMenuAria}
+                aria-expanded={false}
                 aria-haspopup="true"
-                disabled={isExporting}
               >
-                <ExportIcon size={15} />
-                <span className="header-btn-label">{t.editor.export}</span>
-                <ChevronDownIcon
-                  size={13}
-                  className={`export-chevron ${exportMenuOpen ? 'is-open' : ''}`}
-                />
+                <MenuIcon size={15} />
+                <span className="header-btn-label">{t.editor.actionsMenu}</span>
+                <ChevronDownIcon size={13} className="action-menu-chevron" />
               </button>
+            ) : (
+              <div className="action-menu-dock">
+                {onOpenProfile && (
+                  <button
+                    className="btn-sober-secondary action-dock-btn"
+                    onClick={() => {
+                      setActionsMenuOpen(false)
+                      onOpenProfile()
+                    }}
+                    title={t.editor.preferencesTitle}
+                    aria-label={t.editor.preferencesAria}
+                  >
+                    <SettingsIcon size={15} />
+                    <span className="header-btn-label">{t.editor.settingsBtn}</span>
+                  </button>
+                )}
 
-              {exportMenuOpen && (
-                <div className="export-dropdown-menu" role="menu" aria-label={t.editor.exportTitle}>
-                  <div className="export-dropdown-header">
-                    <span className="export-dropdown-title">
-                      {t.exportFormats?.menuTitle || t.editor.exportChooseFormat}
-                    </span>
-                  </div>
-                  <div className="export-dropdown-list">
-                    {EXPORT_OPTIONS.map((opt) => {
-                      const IconComponent = opt.icon
-                      const name = t.exportFormats?.[opt.nameKey] || opt.ext
-                      const desc = t.exportFormats?.[opt.descKey] || ''
-                      const badge =
-                        t.exportFormats?.[opt.badgeKey] || opt.ext.replace('.', '').toUpperCase()
+                {/* Menú Desplegable de Exportación */}
+                <div className="export-dropdown-wrapper" ref={exportDropdownRef}>
+                  <button
+                    className={`btn-sober-secondary export-trigger-btn ${exportMenuOpen ? 'is-active' : ''}`}
+                    onClick={() => setExportMenuOpen((prev) => !prev)}
+                    title={t.editor.exportTitle}
+                    aria-label={t.editor.export}
+                    aria-expanded={exportMenuOpen}
+                    aria-haspopup="true"
+                    disabled={isExporting}
+                  >
+                    <ExportIcon size={15} />
+                    <span className="header-btn-label">{t.editor.export}</span>
+                    <ChevronDownIcon
+                      size={13}
+                      className={`export-chevron ${exportMenuOpen ? 'is-open' : ''}`}
+                    />
+                  </button>
 
-                      return (
-                        <button
-                          key={opt.key}
-                          type="button"
-                          className="export-dropdown-item"
-                          role="menuitem"
-                          onClick={() => handleExport(opt.key)}
-                        >
-                          <div className="export-item-icon-wrapper">
-                            <IconComponent size={16} />
-                          </div>
-                          <div className="export-item-content">
-                            <div className="export-item-row">
-                              <span className="export-item-name">{name}</span>
-                              <span className="export-item-badge">{badge}</span>
-                            </div>
-                            {desc && <span className="export-item-desc">{desc}</span>}
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
+                  {exportMenuOpen && (
+                    <div className="export-dropdown-menu" role="menu" aria-label={t.editor.exportTitle}>
+                      <div className="export-dropdown-header">
+                        <span className="export-dropdown-title">
+                          {t.exportFormats?.menuTitle || t.editor.exportChooseFormat}
+                        </span>
+                      </div>
+                      <div className="export-dropdown-list">
+                        {EXPORT_OPTIONS.map((opt) => {
+                          const IconComponent = opt.icon
+                          const name = t.exportFormats?.[opt.nameKey] || opt.ext
+                          const desc = t.exportFormats?.[opt.descKey] || ''
+                          const badge =
+                            t.exportFormats?.[opt.badgeKey] || opt.ext.replace('.', '').toUpperCase()
+
+                          return (
+                            <button
+                              key={opt.key}
+                              type="button"
+                              className="export-dropdown-item"
+                              role="menuitem"
+                              onClick={() => {
+                                handleExport(opt.key)
+                                setActionsMenuOpen(false)
+                              }}
+                            >
+                              <div className="export-item-icon-wrapper">
+                                <IconComponent size={16} />
+                              </div>
+                              <div className="export-item-content">
+                                <div className="export-item-row">
+                                  <span className="export-item-name">{name}</span>
+                                  <span className="export-item-badge">{badge}</span>
+                                </div>
+                                {desc && <span className="export-item-desc">{desc}</span>}
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <button
-              className="btn-sober-secondary"
-              onClick={handleSaveAs}
-              title={t.editor.saveAsTitle}
-            >
-              <SaveAsIcon size={15} />
-              <span className="header-btn-label">{t.editor.saveAs}</span>
-            </button>
+                <button
+                  className="btn-sober-secondary"
+                  onClick={handleSaveAs}
+                  title={t.editor.saveAsTitle}
+                >
+                  <SaveAsIcon size={15} />
+                  <span className="header-btn-label">{t.editor.saveAs}</span>
+                </button>
 
-            <button
-              className="btn-sober-primary"
-              onClick={handleSave}
-              disabled={saveStatus === 'saving'}
-              title={t.editor.saveTitle}
-            >
-              <SaveIcon size={15} />
-              <span className="header-btn-label">{t.editor.save}</span>
-              <kbd className="shortcut-hint">Ctrl+S</kbd>
-            </button>
+                <button
+                  className="btn-sober-primary"
+                  onClick={handleSave}
+                  disabled={saveStatus === 'saving'}
+                  title={t.editor.saveTitle}
+                >
+                  <SaveIcon size={15} />
+                  <span className="header-btn-label">{t.editor.save}</span>
+                  <kbd className="shortcut-hint">Ctrl+S</kbd>
+                </button>
+
+                <button
+                  className="btn-icon-sober action-menu-close-btn"
+                  onClick={() => {
+                    setActionsMenuOpen(false)
+                    setExportMenuOpen(false)
+                  }}
+                  title={t.editor.closeActionsMenu}
+                  aria-label={t.editor.closeActionsMenu}
+                >
+                  <CloseIcon size={15} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>

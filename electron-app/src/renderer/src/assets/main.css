@@ -442,7 +442,7 @@
   border-bottom: 1px solid var(--rule);
   user-select: none;
   z-index: 10;
-  overflow: hidden;
+  overflow: visible;
   transition:
     opacity 0.3s ease,
     background-color 0.25s ease;
@@ -642,6 +642,81 @@
   gap: 0.45rem;
   flex-shrink: 0;
 }
+
+/* ==========================================================================
+   Menú Desplegable de Acciones en Cabecera
+   ========================================================================== */
+
+.action-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.action-menu-trigger {
+  gap: 0.45rem;
+  font-weight: 500;
+}
+
+.action-menu-trigger.is-active {
+  background-color: var(--btn-secondary-hover);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
+.action-menu-chevron {
+  transition: transform 0.18s ease;
+  opacity: 0.75;
+}
+
+.action-menu-chevron.is-open {
+  transform: rotate(180deg);
+}
+
+.action-menu-dock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  animation: actionDockSlideIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes actionDockSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+.action-dock-btn {
+  gap: 0.45rem;
+}
+
+.action-menu-close-btn {
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.action-menu-close-btn:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-medium);
+}
+
 
 .btn-sober-secondary,
 .btn-sober-primary {
@@ -3579,7 +3654,8 @@
 
   .btn-sober-secondary,
   .btn-sober-primary,
-  .export-trigger-btn {
+  .export-trigger-btn,
+  .action-menu-trigger {
     padding: 0 0.55rem;
     font-size: 0.8rem;
     gap: 0.35rem;
@@ -3592,6 +3668,24 @@
 
   .header-divider {
     margin: 0 0.15rem;
+  }
+}
+
+@media (max-width: 780px) {
+  .action-menu-dock {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 1200;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius);
+    padding: 0.45rem 0.6rem;
+    box-shadow:
+      0 10px 25px -5px rgba(0, 0, 0, 0.22),
+      0 8px 10px -6px rgba(0, 0, 0, 0.12);
+    gap: 0.4rem;
+    max-width: calc(100vw - 1.5rem);
   }
 }
 
@@ -3619,7 +3713,8 @@
 
   .btn-sober-secondary,
   .btn-sober-primary,
-  .export-trigger-btn {
+  .export-trigger-btn,
+  .action-menu-trigger {
     padding: 0 0.45rem;
     font-size: 0.77rem;
     gap: 0.3rem;
@@ -3630,3 +3725,4 @@
     height: 28px;
   }
 }
+

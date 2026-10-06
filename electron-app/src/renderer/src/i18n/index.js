@@ -127,7 +127,12 @@ export const translations = {
       toastZenEnabled: 'Modo Zen activado • F11 o Esc para salir',
       toastZenDisabled: 'Modo Zen desactivado',
       historyTitle: 'Historial de versiones (Ctrl+H)',
-      historyAria: 'Historial de versiones'
+      historyAria: 'Historial de versiones',
+      actionsMenu: 'Menú',
+      actionsMenuTitle: 'Menú de guardado, exportación y configuración',
+      actionsMenuAria: 'Menú de acciones del documento',
+      closeActionsMenu: 'Cerrar menú',
+      settingsBtn: 'Configuración'
     },
     history: {
       title: 'Historial de Versiones',
@@ -461,7 +466,12 @@ export const translations = {
       toastZenEnabled: 'Zen mode enabled • Press F11 or Esc to exit',
       toastZenDisabled: 'Zen mode disabled',
       historyTitle: 'Version history (Ctrl+H)',
-      historyAria: 'Version history'
+      historyAria: 'Version history',
+      actionsMenu: 'Menu',
+      actionsMenuTitle: 'Save, export, and settings menu',
+      actionsMenuAria: 'Document actions menu',
+      closeActionsMenu: 'Close menu',
+      settingsBtn: 'Settings'
     },
     history: {
       title: 'Version History',
