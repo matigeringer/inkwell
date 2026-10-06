@@ -13,12 +13,17 @@ import {
   AlignCenterIcon,
   FeatherIcon,
   LanguagesIcon,
-  SpellCheckIcon
+  SpellCheckIcon,
+  HistoryIcon,
+  SaveIcon,
+  TrashIcon
 } from './Icons'
 import { getTranslation } from '../i18n'
 
 export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePreferences }) {
-  const [activeTab, setActiveTab] = useState('appearance') // 'appearance' | 'typography' | 'writing' | 'language'
+  const [activeTab, setActiveTab] = useState('appearance') // 'appearance' | 'typography' | 'writing' | 'saving' | 'language'
+  const [clearingHistory, setClearingHistory] = useState(false)
+  const [historyClearedMsg, setHistoryClearedMsg] = useState(false)
 
   // Manejar tecla Escape para cerrar
   useEffect(() => {
@@ -40,6 +45,11 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
     { id: 'appearance', label: t.preferences.tabs.appearance, icon: PaletteIcon },
     { id: 'typography', label: t.preferences.tabs.typography, icon: TypeIcon },
     { id: 'writing', label: t.preferences.tabs.writing, icon: FeatherIcon },
+    {
+      id: 'saving',
+      label: t.preferences.tabs.saving || (currentLang === 'en' ? 'Saving' : 'Guardado'),
+      icon: HistoryIcon
+    },
     { id: 'language', label: t.preferences.tabs.language, icon: LanguagesIcon }
   ]
 
@@ -156,6 +166,51 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
   const currentTypewriterPosition = preferences.typewriterPosition || 'center'
   const currentTypewriterBehavior = preferences.typewriterBehavior || 'deadzone'
   const currentSpellcheck = preferences.spellcheckEnabled !== false
+  const currentAutoSave = preferences.autoSaveEnabled !== false
+  const currentAutoSaveDelay = Number(preferences.autoSaveDelay) || 2500
+  const currentHistory = preferences.historyEnabled !== false
+  const currentHistoryMax = Number(preferences.historyMaxEntries) || 50
+  const currentHistoryInterval = Number(preferences.historySnapshotInterval) || 120000
+
+  const autoSaveDelays = [
+    { id: 1000, label: currentLang === 'en' ? '1s (Fast)' : '1s (Rápido)', note: '1s' },
+    { id: 2500, label: currentLang === 'en' ? '2.5s (Standard)' : '2.5s (Estándar)', note: '2.5s' },
+    { id: 5000, label: currentLang === 'en' ? '5s (Relaxed)' : '5s (Pausado)', note: '5s' },
+    { id: 10000, label: currentLang === 'en' ? '10s (Extended)' : '10s (Extendido)', note: '10s' }
+  ]
+
+  const historyMaxOptions = [
+    { id: 20, label: '20' },
+    { id: 50, label: currentLang === 'en' ? '50 (Standard)' : '50 (Estándar)' },
+    { id: 100, label: '100' }
+  ]
+
+  const historyIntervalOptions = [
+    { id: 60000, label: currentLang === 'en' ? '1 min' : '1 minuto' },
+    { id: 120000, label: currentLang === 'en' ? '2 mins (Standard)' : '2 minutos (Estándar)' },
+    { id: 300000, label: currentLang === 'en' ? '5 mins' : '5 minutos' }
+  ]
+
+  const handleClearAllHistory = async () => {
+    if (!window.api?.historyClearAll) return
+    const confirmText =
+      currentLang === 'en'
+        ? 'Are you sure you want to delete all saved version snapshots across all documents?'
+        : '¿Estás seguro de que deseas eliminar todas las versiones temporales de todos los manuscritos?'
+    if (window.confirm(confirmText)) {
+      setClearingHistory(true)
+      try {
+        await window.api.historyClearAll()
+        setHistoryClearedMsg(true)
+        setTimeout(() => setHistoryClearedMsg(false), 3000)
+      } catch (err) {
+        console.error('Error al limpiar todo el historial:', err)
+      } finally {
+        setClearingHistory(false)
+      }
+    }
+  }
+
   const currentFontFamily =
     preferences.fontFamily === 'sans'
       ? 'var(--font-ui)'
@@ -580,6 +635,200 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                     )
                   })}
                 </div>
+              </section>
+            </div>
+          )}
+
+          {/* PESTAÑA: GUARDADO & HISTORIAL */}
+          {activeTab === 'saving' && (
+            <div className="pref-tab-panel">
+              {/* Sección 1: Auto-guardado */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">
+                    {t.preferences.saving?.autoSaveTitle || 'Guardado Automático'}
+                  </h3>
+                  <p className="section-desc">
+                    {t.preferences.saving?.autoSaveDesc ||
+                      'Persiste automáticamente los cambios cada vez que dejas de escribir.'}
+                  </p>
+                </div>
+
+                <div
+                  className={`typewriter-clean-card ${currentAutoSave ? 'is-active' : ''}`}
+                  onClick={() => onUpdatePreferences({ autoSaveEnabled: !currentAutoSave })}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onUpdatePreferences({ autoSaveEnabled: !currentAutoSave })
+                    }
+                  }}
+                >
+                  <div className="typewriter-clean-info">
+                    <div className="typewriter-clean-header">
+                      <SaveIcon size={18} />
+                      <span className="typewriter-clean-title">
+                        {t.preferences.saving?.autoSaveCardTitle || 'Auto-guardado reactivo'}
+                      </span>
+                      {currentAutoSave ? (
+                        <span className="pref-pill-badge">{t.common.active}</span>
+                      ) : (
+                        <span className="pref-pill-badge-subtle">{t.common.disabled}</span>
+                      )}
+                    </div>
+                    <p className="typewriter-clean-desc">
+                      {t.preferences.saving?.autoSaveCardDesc ||
+                        'Guarda en el archivo de disco (o borrador local protegido) tras unos segundos de pausa.'}
+                    </p>
+                  </div>
+
+                  <div className={`pref-switch-modern ${currentAutoSave ? 'checked' : ''}`}>
+                    <div className="pref-switch-thumb-modern" />
+                  </div>
+                </div>
+
+                {currentAutoSave && (
+                  <div className="typewriter-suboptions">
+                    <span className="typewriter-suboptions-label">
+                      {t.preferences.saving?.delayTitle || 'Tiempo de espera tras pausar:'}
+                    </span>
+                    <div className="size-selector-pills">
+                      {autoSaveDelays.map((d) => {
+                        const isSelected = currentAutoSaveDelay === d.id
+                        return (
+                          <button
+                            key={d.id}
+                            type="button"
+                            className={`size-pill-btn ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ autoSaveDelay: d.id })}
+                          >
+                            <span>{d.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Sección 2: Historial Temporal */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">
+                    {t.preferences.saving?.historyTitle || 'Historial Temporal de Versiones'}
+                  </h3>
+                  <p className="section-desc">
+                    {t.preferences.saving?.historyDesc ||
+                      'Registra instantáneas de tu manuscrito a lo largo del tiempo para inspección o recuperación (Ctrl+H).'}
+                  </p>
+                </div>
+
+                <div
+                  className={`typewriter-clean-card ${currentHistory ? 'is-active' : ''}`}
+                  onClick={() => onUpdatePreferences({ historyEnabled: !currentHistory })}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onUpdatePreferences({ historyEnabled: !currentHistory })
+                    }
+                  }}
+                >
+                  <div className="typewriter-clean-info">
+                    <div className="typewriter-clean-header">
+                      <HistoryIcon size={18} />
+                      <span className="typewriter-clean-title">
+                        {t.preferences.saving?.historyCardTitle || 'Instantáneas temporales'}
+                      </span>
+                      {currentHistory ? (
+                        <span className="pref-pill-badge">{t.common.active}</span>
+                      ) : (
+                        <span className="pref-pill-badge-subtle">{t.common.disabled}</span>
+                      )}
+                    </div>
+                    <p className="typewriter-clean-desc">
+                      {t.preferences.saving?.historyCardDesc ||
+                        'Guarda versiones al pulsar Ctrl+S y periódicamente durante el auto-guardado.'}
+                    </p>
+                  </div>
+
+                  <div className={`pref-switch-modern ${currentHistory ? 'checked' : ''}`}>
+                    <div className="pref-switch-thumb-modern" />
+                  </div>
+                </div>
+
+                {currentHistory && (
+                  <div className="typewriter-suboptions">
+                    <span className="typewriter-suboptions-label">
+                      {t.preferences.saving?.maxEntriesTitle ||
+                        'Límite de versiones por manuscrito:'}
+                    </span>
+                    <div className="size-selector-pills">
+                      {historyMaxOptions.map((opt) => {
+                        const isSelected = currentHistoryMax === opt.id
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            className={`size-pill-btn ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ historyMaxEntries: opt.id })}
+                          >
+                            <span>{opt.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    <span className="typewriter-suboptions-label" style={{ marginTop: '0.6rem' }}>
+                      {t.preferences.saving?.intervalTitle ||
+                        'Frecuencia mínima entre versiones automáticas:'}
+                    </span>
+                    <div className="size-selector-pills">
+                      {historyIntervalOptions.map((opt) => {
+                        const isSelected = currentHistoryInterval === opt.id
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            className={`size-pill-btn ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ historySnapshotInterval: opt.id })}
+                          >
+                            <span>{opt.label}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    {/* Mantenimiento de almacenamiento */}
+                    <div className="history-purge-box" style={{ marginTop: '1rem' }}>
+                      <div className="history-purge-info">
+                        <span className="history-purge-title">
+                          {t.preferences.saving?.purgeTitle || 'Limpieza de versiones acumuladas'}
+                        </span>
+                        <p className="history-purge-desc">
+                          {t.preferences.saving?.purgeDesc ||
+                            'Elimina todas las instantáneas temporales archivadas en el disco de la aplicación.'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-sober-secondary btn-purge-danger"
+                        onClick={handleClearAllHistory}
+                        disabled={clearingHistory}
+                      >
+                        <TrashIcon size={14} />
+                        <span>
+                          {historyClearedMsg
+                            ? t.preferences.saving?.purgedSuccess || 'Historial vaciado'
+                            : t.preferences.saving?.purgeBtn || 'Vaciar todo el historial'}
+                        </span>
+                      </button>
+                    </div>
+                  </div>
+                )}
               </section>
             </div>
           )}

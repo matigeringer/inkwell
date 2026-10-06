@@ -119,7 +119,31 @@ export const translations = {
       defaultDocName: 'documento.md',
       toastSaved: 'Documento guardado con éxito',
       toastZenEnabled: 'Modo Zen activado • F11 o Esc para salir',
-      toastZenDisabled: 'Modo Zen desactivado'
+      toastZenDisabled: 'Modo Zen desactivado',
+      historyTitle: 'Historial de versiones (Ctrl+H)',
+      historyAria: 'Historial de versiones'
+    },
+    history: {
+      title: 'Historial de Versiones',
+      singleVersion: '1 versión guardada',
+      countVersions: (n) => `${n} versiones guardadas`,
+      timelineLabel: 'Línea Temporal',
+      triggerManual: 'Manual',
+      triggerAuto: 'Auto',
+      emptyMessage:
+        'Aún no hay versiones anteriores registradas. Las instantáneas se guardarán automáticamente a medida que escribas o al guardar.',
+      wordsDiff: 'palabras vs actual',
+      copy: 'Copiar texto',
+      copyTitle: 'Copiar contenido de la versión al portapapeles',
+      copied: 'Copiado',
+      restore: 'Restaurar versión',
+      restoreTitle: 'Restaurar esta versión en el editor',
+      toastCopied: 'Contenido copiado al portapapeles',
+      toastDeleted: 'Versión eliminada con éxito',
+      selectVersionPrompt: 'Selecciona una versión de la línea temporal para ver su contenido.',
+      noVersionsPrompt: 'No hay versiones registradas aún para este documento.',
+      emptyDocument: '(Documento vacío)',
+      shortcutHint: 'Consejo: Puedes abrir este historial en cualquier momento con Ctrl+H'
     },
     stats: {
       title: 'Estadísticas del Manuscrito',
@@ -153,6 +177,7 @@ export const translations = {
         openWorkspace: 'Abrir carpeta de trabajo',
         toggleSidebar: 'Alternar barra del explorador',
         viewShortcuts: 'Ver esta ayuda de atajos',
+        versionHistory: 'Historial de versiones',
         toggleZen: 'Activar / Alternar Modo Zen',
         toggleTypewriter: 'Alternar Modo Máquina de Escribir (Typewriter)',
         exitZen: 'Salir del Modo Zen',
@@ -177,6 +202,7 @@ export const translations = {
         appearance: 'Apariencia',
         typography: 'Tipografía',
         writing: 'Escritura',
+        saving: 'Guardado',
         language: 'Idioma'
       },
       appearance: {
@@ -237,6 +263,27 @@ export const translations = {
         alignJustifyDesc: 'Márgenes limpios estilo libro',
         alignCenterName: 'Centrado',
         alignCenterDesc: 'Lírico y dramaturgia'
+      },
+      saving: {
+        autoSaveTitle: 'Guardado Automático',
+        autoSaveDesc: 'Persiste automáticamente los cambios cada vez que dejas de escribir.',
+        autoSaveCardTitle: 'Auto-guardado reactivo',
+        autoSaveCardDesc:
+          'Guarda en el archivo de disco (o borrador local protegido) tras unos segundos de pausa.',
+        delayTitle: 'Tiempo de espera tras pausar:',
+        historyTitle: 'Historial Temporal de Versiones',
+        historyDesc:
+          'Registra instantáneas de tu manuscrito a lo largo del tiempo para inspección o recuperación (Ctrl+H).',
+        historyCardTitle: 'Instantáneas temporales',
+        historyCardDesc:
+          'Guarda versiones al pulsar Ctrl+S y periódicamente durante el auto-guardado.',
+        maxEntriesTitle: 'Límite de versiones por manuscrito:',
+        intervalTitle: 'Frecuencia mínima entre versiones automáticas:',
+        purgeTitle: 'Limpieza de versiones acumuladas',
+        purgeDesc:
+          'Elimina todas las instantáneas temporales archivadas en el disco de la aplicación.',
+        purgeBtn: 'Vaciar todo el historial',
+        purgedSuccess: 'Historial vaciado con éxito'
       },
       language: {
         sectionTitle: 'Idioma de la Aplicación',
@@ -381,7 +428,31 @@ export const translations = {
       defaultDocName: 'document.md',
       toastSaved: 'Document saved successfully',
       toastZenEnabled: 'Zen mode enabled • Press F11 or Esc to exit',
-      toastZenDisabled: 'Zen mode disabled'
+      toastZenDisabled: 'Zen mode disabled',
+      historyTitle: 'Version history (Ctrl+H)',
+      historyAria: 'Version history'
+    },
+    history: {
+      title: 'Version History',
+      singleVersion: '1 version saved',
+      countVersions: (n) => `${n} versions saved`,
+      timelineLabel: 'Timeline',
+      triggerManual: 'Manual',
+      triggerAuto: 'Auto',
+      emptyMessage:
+        'No previous versions recorded yet. Snapshots will appear here as you write or save.',
+      wordsDiff: 'words vs current',
+      copy: 'Copy text',
+      copyTitle: 'Copy version content to clipboard',
+      copied: 'Copied',
+      restore: 'Restore version',
+      restoreTitle: 'Restore this version to the editor',
+      toastCopied: 'Version content copied to clipboard',
+      toastDeleted: 'Version deleted successfully',
+      selectVersionPrompt: 'Select a version from the timeline to view its contents.',
+      noVersionsPrompt: 'No versions recorded yet for this document.',
+      emptyDocument: '(Empty document)',
+      shortcutHint: 'Tip: You can open this history anytime with Ctrl+H'
     },
     stats: {
       title: 'Manuscript Statistics',
@@ -415,6 +486,7 @@ export const translations = {
         openWorkspace: 'Open workspace folder',
         toggleSidebar: 'Toggle explorer sidebar',
         viewShortcuts: 'View this shortcuts guide',
+        versionHistory: 'Version history',
         toggleZen: 'Toggle Zen Mode',
         toggleTypewriter: 'Toggle Typewriter Mode',
         exitZen: 'Exit Zen Mode',
@@ -439,6 +511,7 @@ export const translations = {
         appearance: 'Appearance',
         typography: 'Typography',
         writing: 'Writing',
+        saving: 'Saving',
         language: 'Language'
       },
       appearance: {
@@ -499,6 +572,25 @@ export const translations = {
         alignJustifyDesc: 'Clean book-style margins',
         alignCenterName: 'Centered',
         alignCenterDesc: 'Poetry and scriptwriting'
+      },
+      saving: {
+        autoSaveTitle: 'Auto-Save',
+        autoSaveDesc: 'Automatically saves your changes whenever you pause typing.',
+        autoSaveCardTitle: 'Reactive auto-save',
+        autoSaveCardDesc:
+          'Saves directly to disk (or protected local draft) after a few seconds of inactivity.',
+        delayTitle: 'Inactivity delay before saving:',
+        historyTitle: 'Temporal Version History',
+        historyDesc:
+          'Captures snapshots of your manuscript over time for inspection and recovery (Ctrl+H).',
+        historyCardTitle: 'Temporal snapshots',
+        historyCardDesc: 'Saves versions on Ctrl+S and periodically during auto-save.',
+        maxEntriesTitle: 'Version retention limit per manuscript:',
+        intervalTitle: 'Minimum interval between auto snapshots:',
+        purgeTitle: 'Purge archived versions',
+        purgeDesc: 'Deletes all stored temporal snapshots from application disk storage.',
+        purgeBtn: 'Clear all history',
+        purgedSuccess: 'History cleared'
       },
       language: {
         sectionTitle: 'Application Language',

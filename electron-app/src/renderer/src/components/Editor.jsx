@@ -20,9 +20,11 @@ import {
   AlignLeftIcon,
   AlignJustifyIcon,
   AlignCenterIcon,
-  ExportPdfIcon
+  ExportPdfIcon,
+  HistoryIcon
 } from './Icons'
 import FileTree from './FileTree'
+import HistoryModal from './HistoryModal'
 import { getTranslation } from '../i18n'
 
 const FONT_SIZES_SCALE = [
@@ -59,6 +61,10 @@ export default function Editor({
   const [isSidebarOpen, setIsSidebarOpen] = useState(Boolean(openedFolder))
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
+  const autoSaveTimerRef = useRef(null)
+  const lastSnapshotTimeRef = useRef(0)
+  const lastSnapshotWordsRef = useRef(0)
   const [isMouseActive, setIsMouseActive] = useState(false)
   const mouseTimerRef = useRef(null)
   const [toast, setToast] = useState(null)
@@ -346,7 +352,12 @@ export default function Editor({
         }
       })
     ],
-    content: initialDoc?.content || '',
+    content:
+      initialDoc?.content ||
+      (!initialDoc?.filePath && initialDoc?.id && typeof localStorage !== 'undefined'
+        ? localStorage.getItem(`fountain_draft_${initialDoc.id}`) || ''
+        : '') ||
+      '',
     autofocus: 'end',
     editorProps: {
       attributes: {
@@ -425,6 +436,21 @@ export default function Editor({
     onUpdate: ({ editor: ed }) => {
       setSaveStatus('unsaved')
       setTick((t) => t + 1)
+
+      // Auto-guardado con debounce tras inactividad si está configurado
+      if (preferences?.autoSaveEnabled !== false) {
+        if (autoSaveTimerRef.current) {
+          clearTimeout(autoSaveTimerRef.current)
+        }
+        const delay = preferences?.autoSaveDelay || 2500
+        autoSaveTimerRef.current = setTimeout(() => {
+          const currentMarkdown = ed.storage.markdown.getMarkdown()
+          if (executeAutoSaveRef.current) {
+            executeAutoSaveRef.current(currentMarkdown)
+          }
+        }, delay)
+      }
+
       if (typewriterModeRef.current) {
         // Reacople automático y desplazamiento suave en la línea activa al escribir o dar saltos de línea (Enter / word-wrap)
         isUserManualScrollingRef.current = false
@@ -494,6 +520,176 @@ export default function Editor({
     return editor.storage.markdown.getMarkdown()
   }, [editor, initialDoc?.content])
 
+  // Guardar instantánea en el historial temporal
+  const saveHistorySnapshot = useCallback(
+    async ({ trigger = 'auto', forcedContent = null, customFilePath = null } = {}) => {
+      if (!window.api?.historySaveSnapshot || preferences?.historyEnabled === false) {
+        return
+      }
+
+      const content = forcedContent !== null ? forcedContent : getMarkdownContent()
+      const wordsCount = content.trim() ? content.trim().split(/\s+/).filter(Boolean).length : 0
+      const charsCount = content.length
+
+      // Si es auto, verificar intervalo de tiempo o delta sustancial de palabras
+      if (trigger === 'auto') {
+        const interval = preferences?.historySnapshotInterval || 120000
+        const timeSinceLast = Date.now() - lastSnapshotTimeRef.current
+        const wordsDiff = Math.abs(wordsCount - lastSnapshotWordsRef.current)
+
+        if (timeSinceLast < interval && wordsDiff < 25) {
+          return
+        }
+      }
+
+      const targetPath = customFilePath !== null ? customFilePath : filePath
+      const currentDocKey = targetPath || (initialDoc?.id ? `draft_${initialDoc.id}` : 'temp_doc')
+
+      try {
+        const res = await window.api.historySaveSnapshot({
+          docKey: currentDocKey,
+          docName: fileName,
+          filePath: targetPath,
+          content,
+          trigger,
+          words: wordsCount,
+          characters: charsCount,
+          maxEntries: preferences?.historyMaxEntries || 50
+        })
+
+        if (res && res.success && !res.duplicate) {
+          lastSnapshotTimeRef.current = Date.now()
+          lastSnapshotWordsRef.current = wordsCount
+        }
+      } catch (err) {
+        console.warn('Error al guardar snapshot de historial:', err)
+      }
+    },
+    [
+      filePath,
+      fileName,
+      initialDoc?.id,
+      getMarkdownContent,
+      preferences?.historyEnabled,
+      preferences?.historySnapshotInterval,
+      preferences?.historyMaxEntries
+    ]
+  )
+
+  // Ejecutar auto-guardado reactivo
+  const executeAutoSave = useCallback(
+    async (contentToSave) => {
+      if (preferences?.autoSaveEnabled === false) return
+      const content = contentToSave !== undefined ? contentToSave : getMarkdownContent()
+
+      // 1. Si el archivo ya tiene ruta en disco, persistir directamente
+      if (filePath && window.api?.saveFile) {
+        try {
+          const res = await window.api.saveFile({
+            content,
+            filePath,
+            defaultName: fileName
+          })
+          if (res && res.success) {
+            setSaveStatus('saved')
+            saveHistorySnapshot({ trigger: 'auto', forcedContent: content })
+            if (onRefreshFolderTree) {
+              onRefreshFolderTree()
+            }
+          }
+        } catch (err) {
+          console.warn('Error en auto-guardado en disco:', err)
+        }
+      } else {
+        // 2. Si no tiene ruta (nuevo manuscrito), persistir el borrador localmente sin abrir diálogos invasivos
+        try {
+          if (initialDoc?.id) {
+            localStorage.setItem(`fountain_draft_${initialDoc.id}`, content)
+          }
+          setSaveStatus('saved')
+          saveHistorySnapshot({ trigger: 'auto', forcedContent: content })
+        } catch (err) {
+          console.warn('Error en auto-guardado de borrador:', err)
+        }
+      }
+    },
+    [
+      preferences?.autoSaveEnabled,
+      getMarkdownContent,
+      filePath,
+      fileName,
+      initialDoc?.id,
+      saveHistorySnapshot,
+      onRefreshFolderTree
+    ]
+  )
+
+  const executeAutoSaveRef = useRef(executeAutoSave)
+  useEffect(() => {
+    executeAutoSaveRef.current = executeAutoSave
+  }, [executeAutoSave])
+
+  // Limpiar temporizador de auto-guardado al desmontar
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Restaurar versión desde el historial temporal
+  const handleRestoreVersion = useCallback(
+    async (restoredContent, snapshot) => {
+      if (!editor) return
+
+      // Tomar una instantánea previa del estado actual como respaldo seguro antes de restaurar
+      saveHistorySnapshot({ trigger: 'manual' })
+
+      editor.commands.setContent(restoredContent || '', false)
+      setSaveStatus('saved')
+
+      // Si tiene archivo en disco y auto-guardado está activo, persistir inmediatamente
+      if (filePath && preferences?.autoSaveEnabled !== false && window.api?.saveFile) {
+        try {
+          await window.api.saveFile({
+            content: restoredContent,
+            filePath,
+            defaultName: fileName
+          })
+        } catch (err) {
+          console.warn('Error al guardar tras restaurar:', err)
+        }
+      } else if (!filePath && initialDoc?.id) {
+        try {
+          localStorage.setItem(`fountain_draft_${initialDoc.id}`, restoredContent)
+        } catch {
+          // ignorar
+        }
+      }
+
+      const timeStr = snapshot?.timestamp
+        ? new Date(snapshot.timestamp).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        : ''
+      showToast(
+        currentLang === 'en' ? `Version restored (${timeStr})` : `Versión restaurada (${timeStr})`
+      )
+    },
+    [
+      editor,
+      saveHistorySnapshot,
+      filePath,
+      preferences?.autoSaveEnabled,
+      fileName,
+      initialDoc?.id,
+      currentLang,
+      showToast
+    ]
+  )
+
   // Guardar archivo (normal o si es nuevo abre diálogo)
   const handleSave = useCallback(async () => {
     if (!window.api?.saveFile) {
@@ -525,6 +721,11 @@ export default function Editor({
         setFileName(res.fileName)
         setSaveStatus('saved')
         showToast(currentLang === 'en' ? `Saved: ${res.fileName}` : `Guardado: ${res.fileName}`)
+        saveHistorySnapshot({
+          trigger: 'manual',
+          forcedContent: markdownContent,
+          customFilePath: res.filePath
+        })
         if (onRefreshFolderTree) {
           onRefreshFolderTree()
         }
@@ -549,7 +750,15 @@ export default function Editor({
         'error'
       )
     }
-  }, [getMarkdownContent, filePath, fileName, onRefreshFolderTree, showToast, currentLang])
+  }, [
+    getMarkdownContent,
+    filePath,
+    fileName,
+    onRefreshFolderTree,
+    showToast,
+    currentLang,
+    saveHistorySnapshot
+  ])
 
   // Guardar como (siempre abre diálogo nativo)
   const handleSaveAs = useCallback(async () => {
@@ -578,6 +787,11 @@ export default function Editor({
         showToast(
           currentLang === 'en' ? `Saved as: ${res.fileName}` : `Guardado como: ${res.fileName}`
         )
+        saveHistorySnapshot({
+          trigger: 'manual',
+          forcedContent: markdownContent,
+          customFilePath: res.filePath
+        })
         if (onRefreshFolderTree) {
           onRefreshFolderTree()
         }
@@ -599,7 +813,15 @@ export default function Editor({
       )
       showToast(currentLang === 'en' ? 'Error saving copy' : 'Error al guardar copia', 'error')
     }
-  }, [getMarkdownContent, fileName, filePath, onRefreshFolderTree, showToast, currentLang])
+  }, [
+    getMarkdownContent,
+    fileName,
+    filePath,
+    onRefreshFolderTree,
+    showToast,
+    currentLang,
+    saveHistorySnapshot
+  ])
 
   // Exportar documento activo a PDF con diseño editorial de lectura
   const handleExportPdf = useCallback(async () => {
@@ -944,6 +1166,11 @@ export default function Editor({
           setIsShortcutsModalOpen(false)
           return
         }
+        if (isHistoryModalOpen) {
+          e.preventDefault()
+          setIsHistoryModalOpen(false)
+          return
+        }
         if (showStatsHud) {
           e.preventDefault()
           setShowStatsHud(false)
@@ -963,7 +1190,14 @@ export default function Editor({
         return
       }
 
-      // 5. Ctrl+S: Guardar
+      // 5. Ctrl+H: Historial de Versiones
+      if (isCtrlOrMeta && !e.shiftKey && (e.key === 'h' || e.key === 'H')) {
+        e.preventDefault()
+        setIsHistoryModalOpen((prev) => !prev)
+        return
+      }
+
+      // 6. Ctrl+S: Guardar
       if (isCtrlOrMeta && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
         handleSave()
@@ -1078,6 +1312,7 @@ export default function Editor({
   }, [
     isZenMode,
     isShortcutsModalOpen,
+    isHistoryModalOpen,
     showStatsHud,
     openedFolder,
     toggleZenMode,
@@ -1189,6 +1424,20 @@ export default function Editor({
             <ZenFocusIcon size={16} />
           </button>
 
+          <button
+            className={`btn-icon-sober ${isHistoryModalOpen ? 'active' : ''}`}
+            onClick={() => setIsHistoryModalOpen(true)}
+            title={
+              t.editor.historyTitle ||
+              (currentLang === 'en'
+                ? 'Version history (Ctrl+H)'
+                : 'Historial de versiones (Ctrl+H)')
+            }
+            aria-label={t.editor.historyAria || 'Historial de versiones'}
+          >
+            <HistoryIcon size={16} />
+          </button>
+
           {onOpenProfile && (
             <button
               className="btn-icon-sober"
@@ -1264,6 +1513,19 @@ export default function Editor({
               aria-label={t.editor.statsBtnAria}
             >
               <BarChartIcon size={15} />
+            </button>
+            <button
+              className="zen-pill-btn zen-pill-icon-only"
+              onClick={() => setIsHistoryModalOpen(true)}
+              title={
+                t.editor.historyTitle ||
+                (currentLang === 'en'
+                  ? 'Version history (Ctrl+H)'
+                  : 'Historial de versiones (Ctrl+H)')
+              }
+              aria-label={t.editor.historyAria || 'Historial de versiones'}
+            >
+              <HistoryIcon size={15} />
             </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
@@ -1427,6 +1689,15 @@ export default function Editor({
                       <kbd>Ctrl</kbd>+<kbd>/</kbd>
                     </div>
                   </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">
+                      {t.shortcuts.keys.versionHistory ||
+                        (currentLang === 'en' ? 'Version history' : 'Historial de versiones')}
+                    </span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>H</kbd>
+                    </div>
+                  </div>
                 </div>
               </section>
 
@@ -1542,6 +1813,18 @@ export default function Editor({
           </div>
         </div>
       )}
+
+      {/* Modal Historial de Versiones */}
+      <HistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        docKey={filePath || (initialDoc?.id ? `draft_${initialDoc.id}` : 'temp_doc')}
+        docName={fileName}
+        currentContent={getMarkdownContent()}
+        onRestoreVersion={handleRestoreVersion}
+        preferences={preferences}
+        showToast={showToast}
+      />
 
       {/* Disposición dividida para panel lateral y lienzo */}
       <div className="editor-workspace-layout">

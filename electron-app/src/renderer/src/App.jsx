@@ -42,7 +42,12 @@ function App() {
           typewriterPosition: parsed.typewriterPosition === 'eye' ? 'eye' : 'center',
           typewriterBehavior: parsed.typewriterBehavior === 'strict' ? 'strict' : 'deadzone',
           language: parsed.language === 'en' ? 'en' : 'es',
-          spellcheckEnabled: parsed.spellcheckEnabled !== false
+          spellcheckEnabled: parsed.spellcheckEnabled !== false,
+          autoSaveEnabled: parsed.autoSaveEnabled !== false,
+          autoSaveDelay: Number(parsed.autoSaveDelay) || 2500,
+          historyEnabled: parsed.historyEnabled !== false,
+          historyMaxEntries: Number(parsed.historyMaxEntries) || 50,
+          historySnapshotInterval: Number(parsed.historySnapshotInterval) || 120000
         }
       }
     } catch {
@@ -58,7 +63,12 @@ function App() {
       typewriterPosition: 'center', // 'center' (50% medio) | 'eye' (38% tercio superior / línea de ojos)
       typewriterBehavior: 'deadzone', // 'deadzone' | 'strict'
       language: 'es', // 'es' | 'en'
-      spellcheckEnabled: true // boolean: corrector ortográfico activo
+      spellcheckEnabled: true, // boolean: corrector ortográfico activo
+      autoSaveEnabled: true, // boolean: guardado automático tras pausa
+      autoSaveDelay: 2500, // ms: tiempo de inactividad para auto-guardar
+      historyEnabled: true, // boolean: instantáneas de historial temporal activas
+      historyMaxEntries: 50, // número de versiones retenidas por documento
+      historySnapshotInterval: 120000 // ms: intervalo mínimo entre snapshots automáticas (2 min)
     }
   })
 

@@ -4,6 +4,14 @@ import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { exportDocumentToPdf } from './pdfExporter'
+import {
+  saveSnapshot,
+  getSnapshots,
+  getSnapshotContent,
+  deleteSnapshot,
+  clearDocHistory,
+  clearAllHistory
+} from './historyManager'
 
 // Idioma activo de la aplicación ('es' | 'en') y soporte de corrección ortográfica
 let currentAppLanguage = 'es'
@@ -566,6 +574,31 @@ app.whenReady().then(() => {
   ipcMain.handle('window:is-fullscreen', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     return win ? win.isFullScreen() : false
+  })
+
+  // Manejadores IPC para Historial Temporal de Versiones
+  ipcMain.handle('history:save-snapshot', async (_event, data) => {
+    return saveSnapshot(data)
+  })
+
+  ipcMain.handle('history:get-snapshots', async (_event, docKey) => {
+    return getSnapshots(docKey)
+  })
+
+  ipcMain.handle('history:get-snapshot-content', async (_event, data) => {
+    return getSnapshotContent(data)
+  })
+
+  ipcMain.handle('history:delete-snapshot', async (_event, data) => {
+    return deleteSnapshot(data)
+  })
+
+  ipcMain.handle('history:clear', async (_event, docKey) => {
+    return clearDocHistory(docKey)
+  })
+
+  ipcMain.handle('history:clear-all', async () => {
+    return clearAllHistory()
   })
 
   createWindow()

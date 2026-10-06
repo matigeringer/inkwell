@@ -34,7 +34,15 @@ const api = {
   // Corrector Ortográfico e Idioma
   setSpellCheckerConfig: (config) => ipcRenderer.invoke('spellcheck:set-config', config),
   getSpellCheckerConfig: () => ipcRenderer.invoke('spellcheck:get-config'),
-  setAppLanguage: (lang) => ipcRenderer.invoke('app:set-language', lang)
+  setAppLanguage: (lang) => ipcRenderer.invoke('app:set-language', lang),
+
+  // Historial Temporal de Versiones
+  historySaveSnapshot: (data) => ipcRenderer.invoke('history:save-snapshot', data),
+  historyGetSnapshots: (docKey) => ipcRenderer.invoke('history:get-snapshots', docKey),
+  historyGetSnapshotContent: (data) => ipcRenderer.invoke('history:get-snapshot-content', data),
+  historyDeleteSnapshot: (data) => ipcRenderer.invoke('history:delete-snapshot', data),
+  historyClear: (docKey) => ipcRenderer.invoke('history:clear', docKey),
+  historyClearAll: () => ipcRenderer.invoke('history:clear-all')
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to
