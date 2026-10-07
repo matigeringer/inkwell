@@ -21,6 +21,14 @@ import {
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { getTranslation } from '../i18n'
 
+function getTreeFileIcon(fileName) {
+  const ext = fileName?.split('.').pop()?.toLowerCase()
+  if (ext === 'md' || ext === 'markdown') {
+    return <FileMarkdownIcon size={14} className="file-icon" />
+  }
+  return <FileTextIcon size={14} className="file-icon" />
+}
+
 export default function FileTree({
   openedFolder,
   activeFilePath,
@@ -512,8 +520,9 @@ export default function FileTree({
                   onContextMenu={(e) => handleContextMenu(e, item)}
                   title={item.path}
                 >
+                  <span className="tree-folder-caret-spacer" />
                   <div className="tree-item-icon">
-                    <FileTextIcon size={15} className="file-icon" />
+                    {getTreeFileIcon(item.name)}
                   </div>
 
                   <span className="tree-item-name">{item.name}</span>
@@ -572,13 +581,13 @@ export default function FileTree({
     <div className="file-tree-container">
       {/* Cabecera del Espacio de Trabajo */}
       <div className="file-tree-header">
-        <div className="tree-workspace-title-row" title={openedFolder.path}>
-          <FolderIcon size={16} className="workspace-folder-icon" />
-          <span className="tree-workspace-name">{openedFolder.name}</span>
-        </div>
+        <div className="tree-workspace-title-row">
+          <div className="tree-workspace-info" title={openedFolder.path}>
+            <FolderIcon size={15} className="workspace-folder-icon" />
+            <span className="tree-workspace-name">{openedFolder.name}</span>
+          </div>
 
-        <div className="tree-header-actions">
-          <div className="tree-header-actions-group">
+          <div className="tree-header-actions">
             <button
               type="button"
               className="btn-tree-header-icon"
@@ -586,7 +595,7 @@ export default function FileTree({
               title={isEn ? 'New file in root' : 'Nuevo archivo en raíz'}
               aria-label={t.fileTree.newFile}
             >
-              <FilePlusIcon size={14} />
+              <FilePlusIcon size={13} />
             </button>
             <button
               type="button"
@@ -595,7 +604,7 @@ export default function FileTree({
               title={isEn ? 'New subfolder in root' : 'Nueva subcarpeta en raíz'}
               aria-label={t.fileTree.newFolder}
             >
-              <FolderPlusIcon size={14} />
+              <FolderPlusIcon size={13} />
             </button>
             <button
               type="button"
@@ -604,19 +613,18 @@ export default function FileTree({
               title={t.fileTree.refresh}
               aria-label={t.fileTree.refresh}
             >
-              <RefreshIcon size={14} />
+              <RefreshIcon size={13} />
+            </button>
+            <button
+              type="button"
+              className="btn-tree-header-icon btn-action-danger"
+              onClick={onCloseFolder}
+              title={t.fileTree.closeFolder}
+              aria-label={t.fileTree.closeFolder}
+            >
+              <FolderCloseIcon size={13} />
             </button>
           </div>
-
-          <button
-            type="button"
-            className="btn-tree-header-icon btn-action-danger"
-            onClick={onCloseFolder}
-            title={t.fileTree.closeFolder}
-            aria-label={t.fileTree.closeFolder}
-          >
-            <FolderCloseIcon size={14} />
-          </button>
         </div>
       </div>
 

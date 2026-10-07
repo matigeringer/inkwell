@@ -31,6 +31,7 @@ import {
 } from './Icons'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
+import ZenFloatingFolder from './ZenFloatingFolder'
 import { getTranslation } from '../i18n'
 
 const EXPORT_OPTIONS = [
@@ -1796,6 +1797,17 @@ export default function Editor({
         <div className={`zen-toast zen-toast-${toast.type}`} role="status" aria-live="polite">
           <span className="zen-toast-text">{toast.message}</span>
         </div>
+      )}
+
+      {/* Ventana flotante de notas y subcarpetas en Modo Zen (superior izquierda) */}
+      {isZenMode && openedFolder && (
+        <ZenFloatingFolder
+          openedFolder={openedFolder}
+          activeFilePath={filePath}
+          onSelectFile={handleSwitchDoc}
+          isMouseActive={isMouseActive}
+          language={preferences?.language}
+        />
       )}
 
       {/* HUD de Estadísticas Flotante (Ctrl+Shift+C) */}

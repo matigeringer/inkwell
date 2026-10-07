@@ -132,7 +132,13 @@ export const translations = {
       actionsMenuTitle: 'Menú de guardado, exportación y configuración',
       actionsMenuAria: 'Menú de acciones del documento',
       closeActionsMenu: 'Cerrar menú',
-      settingsBtn: 'Configuración'
+      settingsBtn: 'Configuración',
+      zenFilesTitle: 'Cambiar de archivo (Ctrl+P o Ctrl+B)',
+      zenFilesAria: 'Explorador de archivos de la carpeta',
+      zenFilesSearchPlaceholder: 'Buscar archivo en la carpeta...',
+      zenFilesNoResults: 'No se encontraron archivos que coincidan',
+      zenFilesHint: '↑ ↓ para navegar • Enter para abrir • Esc para cerrar',
+      zenFilesActiveBadge: 'Activo'
     },
     history: {
       title: 'Historial de Versiones',
@@ -471,7 +477,13 @@ export const translations = {
       actionsMenuTitle: 'Save, export, and settings menu',
       actionsMenuAria: 'Document actions menu',
       closeActionsMenu: 'Close menu',
-      settingsBtn: 'Settings'
+      settingsBtn: 'Settings',
+      zenFilesTitle: 'Switch file (Ctrl+P or Ctrl+B)',
+      zenFilesAria: 'Folder file switcher',
+      zenFilesSearchPlaceholder: 'Search file in folder...',
+      zenFilesNoResults: 'No matching files found',
+      zenFilesHint: '↑ ↓ to navigate • Enter to open • Esc to close',
+      zenFilesActiveBadge: 'Active'
     },
     history: {
       title: 'Version History',
