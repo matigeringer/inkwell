@@ -840,6 +840,63 @@
   transform: translateY(0);
 }
 
+/* Floating minimalist stats bar in Zen Mode (bottom right) */
+.zen-floating-stats {
+  position: fixed;
+  bottom: 18px;
+  right: 22px;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition:
+    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.zen-floating-stats.visible,
+.zen-floating-stats:hover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.zen-stats-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-bottom: 2px solid var(--accent-primary);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-ui);
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  user-select: none;
+}
+
+.zen-stats-pill-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.zen-stats-pill-item strong {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.zen-stats-pill-sep {
+  color: var(--border-medium);
+  font-size: 0.65rem;
+  user-select: none;
+}
+
 .zen-toolbar-pill {
   display: flex;
   align-items: center;

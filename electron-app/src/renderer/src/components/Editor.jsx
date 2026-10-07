@@ -13,7 +13,6 @@ import {
   SettingsIcon,
   ZenFocusIcon,
   KeyboardIcon,
-  BarChartIcon,
   CloseIcon,
   SidebarIcon,
   TypewriterIcon,
@@ -1720,14 +1719,6 @@ export default function Editor({
             </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
-              onClick={() => setShowStatsHud((prev) => !prev)}
-              title={t.editor.statsBtnTitle}
-              aria-label={t.editor.statsBtnAria}
-            >
-              <BarChartIcon size={15} />
-            </button>
-            <button
-              className="zen-pill-btn zen-pill-icon-only"
               onClick={() => setIsHistoryModalOpen(true)}
               title={
                 t.editor.historyTitle ||
@@ -1756,6 +1747,46 @@ export default function Editor({
               <span>{t.editor.zenExit}</span>
               <kbd className="zen-kbd-hint">Esc</kbd>
             </button>
+          </div>
+        </aside>
+      )}
+
+      {/* Barra flotante minimalista de estadísticas en Modo Zen (inferior derecha) */}
+      {isZenMode && (
+        <aside
+          className={`zen-floating-stats ${isMouseActive ? 'visible' : ''}`}
+          aria-label={t.stats.title}
+        >
+          <div className="zen-stats-pill">
+            <span className="zen-stats-pill-item">
+              <strong>{words}</strong>{' '}
+              {words === 1
+                ? t.stats.wordSingular.toLowerCase()
+                : t.stats.words.toLowerCase()}
+            </span>
+            <span className="zen-stats-pill-sep">•</span>
+            <span className="zen-stats-pill-item">
+              <strong>{characters}</strong> {t.stats.characters.toLowerCase()}
+            </span>
+            <span className="zen-stats-pill-sep">•</span>
+            <span className="zen-stats-pill-item">
+              <strong>{paragraphs}</strong>{' '}
+              {paragraphs === 1
+                ? t.stats.paragraphSingular.toLowerCase()
+                : t.stats.paragraphs.toLowerCase()}
+            </span>
+            <span className="zen-stats-pill-sep">•</span>
+            <span
+              className="zen-stats-pill-item"
+              title={
+                readingTime === 1
+                  ? t.stats.readingTimeSingle
+                  : t.stats.readingTimePlural
+              }
+            >
+              <strong>~{readingTime}</strong>{' '}
+              {currentLang === 'en' ? (readingTime === 1 ? 'min' : 'mins') : 'min'}
+            </span>
           </div>
         </aside>
       )}
