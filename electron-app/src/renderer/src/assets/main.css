@@ -873,6 +873,17 @@
   color: var(--text-primary);
 }
 
+.zen-pill-btn.active {
+  color: var(--accent-primary);
+  background-color: var(--accent-primary-subtle);
+}
+
+.zen-pill-btn.active:hover {
+  color: var(--accent-primary);
+  background-color: var(--accent-primary-subtle);
+}
+
+
 .zen-pill-icon-only {
   width: 28px;
   height: 28px;
