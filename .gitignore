@@ -67,3 +67,6 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# AI agent project rules
+GEMINI.md

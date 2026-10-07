@@ -1705,12 +1705,18 @@ export default function Editor({
               <TypewriterIcon size={15} />
             </button>
             <button
-              className="zen-pill-btn zen-pill-icon-only"
+              className={`zen-pill-btn zen-pill-icon-only ${preferences?.textAlign === 'justify' ? 'active' : ''}`}
               onClick={cycleTextAlign}
               title={t.editor.alignTitle(preferences?.textAlign)}
               aria-label={t.editor.alignAria}
             >
-              <AlignJustifyIcon size={15} />
+              {preferences?.textAlign === 'justify' ? (
+                <AlignJustifyIcon size={15} />
+              ) : preferences?.textAlign === 'center' ? (
+                <AlignCenterIcon size={15} />
+              ) : (
+                <AlignLeftIcon size={15} />
+              )}
             </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
