@@ -78,9 +78,9 @@ function App() {
     }
   })
 
-  const [profileInitialTab, setProfileInitialTab] = useState('appearance')
+  const [profileInitialTab, setProfileInitialTab] = useState('general')
 
-  const handleOpenProfile = (tab = 'appearance') => {
+  const handleOpenProfile = (tab = 'general') => {
     setProfileInitialTab(tab)
     setIsProfileOpen(true)
   }
@@ -392,7 +392,7 @@ function App() {
           <div className="sidebar-settings-bar">
             <button
               className="sidebar-settings-btn"
-              onClick={() => handleOpenProfile('appearance')}
+              onClick={() => handleOpenProfile('general')}
               type="button"
               title={t.sidebar.preferencesTitle}
             >

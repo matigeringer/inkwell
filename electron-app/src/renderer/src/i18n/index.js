@@ -241,147 +241,65 @@ export const translations = {
       subtitle: 'Configuración del entorno de escritura',
       tabs: {
         appearance: 'Apariencia',
-        typography: 'Tipografía',
         writing: 'Escritura',
-        zen: 'Modo Zen',
-        saving: 'Guardado',
-        language: 'Idioma'
+        general: 'General',
+        // Fallbacks para navegación contextual
+        typography: 'Apariencia',
+        zen: 'Escritura',
+        saving: 'General',
+        language: 'General'
       },
       appearance: {
-        modeTitle: 'Modo de Iluminación',
-        modeDesc: 'Selecciona la iluminación para el lienzo y la interfaz',
+        modeTitle: 'Modo de apariencia',
         lightName: 'Claro',
-        lightDesc: 'Papel de galera iluminado',
         darkName: 'Oscuro',
-        darkDesc: 'Linotipia nocturna',
         systemName: 'Sistema',
-        systemDesc: 'Sincronizado con el SO',
-        paletteTitle: 'Paleta Editorial',
-        paletteDesc: 'Materiales y proporciones del taller tipográfico',
-        paletteName: 'Puro',
-        paletteSubtitle: 'Prueba de imprenta',
-        paletteDetail:
-          'Papel de galera en gris cálido, tinta carbón, lápiz bermellón de corrector y trazo azul no-reproducible.'
-      },
-      typography: {
-        fontFamilyTitle: 'Familia Tipográfica',
-        fontFamilyDesc: 'Diseño de letra para el editor principal',
-        fontSizeTitle: 'Tamaño de Fuente',
+        fontFamilyTitle: 'Tipografía',
+        fontSizeTitle: 'Tamaño de texto',
         compact: 'Compacto',
         standard: 'Estándar',
-        large: 'Amplio',
-        exampleSerif:
-          'En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor.',
-        exampleSans:
-          'El pensamiento claro precede a la escritura fluida y directa. Las palabras exactas encuentran su ritmo natural sobre un lienzo silencioso.',
-        exampleMono:
-          '01. Hipótesis inicial y estructura técnica del borrador: ritmo constante y precisión en cada línea.'
+        large: 'Grande',
+        alignTitle: 'Alineación de texto',
+        alignLeftName: 'Izquierda',
+        alignJustifyName: 'Justificado',
+        alignCenterName: 'Centrado',
+        paletteTitle: 'Paleta editorial',
+        paletteName: 'Puro — Galera editorial',
+        exampleText:
+          'En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor. Una olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lantejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda.'
       },
       writing: {
-        typewriterTitle: 'Modo Rodillo (Typewriter)',
-        typewriterDesc: 'Enfoque continuo de concentración vertical',
-        typewriterCardTitle: 'Typewriter Scrolling',
-        typewriterCardDesc:
-          'Mantiene la línea donde escribes fija en el centro vertical de la pantalla.',
-        typewriterShortcutHint: 'Atajo rápido:',
-        anchorTitle: 'Posición del ancla vertical:',
-        anchorCenterTitle: 'Centrado exacto (50%)',
-        anchorCenterDesc:
-          'Fija la línea activa en la mitad vertical. Ofrece equilibrio simétrico entre texto escrito y espacio despejado.',
-        anchorEyeTitle: 'Línea de ojos (38%)',
-        anchorEyeDesc:
-          'Tercio superior. Ubica el renglón a la altura natural de la vista en monitor, dejando más espacio inferior visible.',
-        navTitle: 'Navegación con flechas (Arriba / Abajo):',
-        navDeadzoneTitle: 'Zona de tolerancia (Deadzone)',
-        navDeadzoneDesc:
-          'Permite mover el cursor unas pocas líneas libremente para correcciones; se re-centra suavemente al escribir.',
-        navStrictTitle: 'Modo estricto',
-        navStrictDesc: 'Re-centra la pantalla de forma continua con cada pulsación de flecha.',
-        alignTitle: 'Alineación del Párrafo',
-        alignDesc: 'Disposición del cuerpo de texto en el lienzo',
-        alignLeftName: 'Izquierda',
-        alignLeftDesc: 'Alineación natural',
-        alignJustifyName: 'Justificado',
-        alignJustifyDesc: 'Márgenes limpios estilo libro',
-        alignCenterName: 'Centrado',
-        alignCenterDesc: 'Lírico y dramaturgia'
+        typewriterTitle: 'Modo máquina de escribir',
+        typewriterDesc:
+          'Mantiene la línea donde escribes fija en el centro de la pantalla, desplazando el papel automáticamente',
+        anchorTitle: 'Altura en pantalla',
+        anchorDesc: 'Dónde se sitúa la línea activa al escribir',
+        anchorCenterTitle: 'Centro',
+        anchorEyeTitle: 'Tercio superior',
+        navTitle: 'Moverse con flechas',
+        navDesc: 'Permite explorar líneas cercanas sin mover la página, o recentra en cada línea',
+        navDeadzoneTitle: 'Flexible',
+        navStrictTitle: 'Fijo',
+        zenTitle: 'Modo Zen',
+        zenDesc: 'Ventanas flotantes activas en pantalla completa',
+        zenToolbarTitle: 'Barra de herramientas',
+        zenStatsTitle: 'Estadísticas',
+        zenFolderTitle: 'Explorador de carpetas',
+        zenMockupTitle: 'Simulación de pantalla Zen'
       },
-      zen: {
-        title: 'Modo Zen y Ventanas Flotantes',
-        desc: 'Personaliza qué elementos y ventanas flotantes se muestran para lograr el nivel de concentración que buscas.',
-        presetsTitle: 'Nivel de limpieza de pantalla:',
-        presetFullTitle: 'Completo',
-        presetFullDesc: 'Todas las ventanas flotantes activas',
-        presetBalancedTitle: 'Equilibrado',
-        presetBalancedDesc: 'Herramientas y estadísticas (sin explorador)',
-        presetMinimalTitle: 'Minimalista',
-        presetMinimalDesc: 'Solo herramientas de control',
-        presetPureTitle: 'Zen Puro',
-        presetPureDesc: 'Lienzo 100% limpio sin ventanas flotantes',
-        presetCustomTitle: 'Personalizado',
-        previewTitle: 'Vista previa de la pantalla Zen',
-        previewPureNotice:
-          'Pantalla 100% limpia • Concentración absoluta sin ventanas flotantes. Usa Esc o F11 para salir.',
-        previewActiveNotice:
-          'Ventanas flotantes activas • Se revelan suavemente al mover el ratón.',
-        folderTitle: 'Navegador de documentos y carpetas',
-        folderDesc:
-          'Ventana flotante en la esquina superior izquierda. Permite explorar y cambiar de documento dentro de la carpeta de trabajo.',
-        folderBadge: 'Superior Izquierda',
-        toolbarTitle: 'Barra de herramientas superior',
-        toolbarDesc:
-          'Píldora en la esquina superior derecha con accesos a modo rodillo, alineación, historial, atajos y botón de salir.',
-        toolbarBadge: 'Superior Derecha',
-        toolbarHintEsc:
-          'Al ocultar la barra, puedes salir del modo Zen en cualquier momento pulsando Esc o F11.',
-        statsTitle: 'Contador de estadísticas flotante',
-        statsDesc:
-          'Píldora en la esquina inferior derecha con conteo en vivo de palabras, caracteres, párrafos y tiempo estimado de lectura.',
-        statsBadge: 'Inferior Derecha',
-        statsHintHud:
-          'Puedes abrir el HUD de estadísticas en cualquier momento pulsando Ctrl+Shift+C.'
-      },
-      saving: {
-        autoSaveTitle: 'Guardado Automático',
-        autoSaveDesc: 'Persiste automáticamente los cambios cada vez que dejas de escribir.',
-        autoSaveCardTitle: 'Auto-guardado reactivo',
-        autoSaveCardDesc:
-          'Guarda en el archivo de disco (o borrador local protegido) tras unos segundos de pausa.',
-        delayTitle: 'Tiempo de espera tras pausar:',
-        historyTitle: 'Historial Temporal de Versiones',
-        historyDesc:
-          'Registra instantáneas de tu manuscrito a lo largo del tiempo para inspección o recuperación (Ctrl+H).',
-        historyCardTitle: 'Instantáneas temporales',
-        historyCardDesc:
-          'Guarda versiones al pulsar Ctrl+S y periódicamente durante el auto-guardado.',
-        maxEntriesTitle: 'Límite de versiones por manuscrito:',
-        intervalTitle: 'Frecuencia mínima entre versiones automáticas:',
-        purgeTitle: 'Limpieza de versiones acumuladas',
-        purgeDesc:
-          'Elimina todas las instantáneas temporales archivadas en el disco de la aplicación.',
-        purgeBtn: 'Vaciar todo el historial',
-        purgedSuccess: 'Historial vaciado con éxito'
-      },
-      language: {
-        sectionTitle: 'Idioma de la Aplicación',
-        sectionDesc: 'Selecciona el idioma de la interfaz y del corrector ortográfico integrado.',
+      general: {
+        languageTitle: 'Idioma de la interfaz',
         spanishName: 'Español',
-        spanishRegion: 'Español (Castellano / América)',
-        spanishDesc: 'Interfaz en español y corrector ortográfico con diccionario español (es-ES).',
         englishName: 'English',
-        englishRegion: 'English (US / International)',
-        englishDesc: 'Full English user interface and spell check dictionary (en-US).',
-        spellSectionTitle: 'Corrector Ortográfico',
-        spellSectionDesc:
-          'Revisa la ortografía en tiempo real según el idioma seleccionado. Al hacer clic derecho sobre una palabra marcada, puedes ver sugerencias de corrección o agregarla a tu diccionario.',
-        spellToggleTitle: 'Corrección ortográfica en tiempo real',
-        spellToggleDesc:
-          'Subraya en rojo las palabras dudosas o con faltas de ortografía en el editor.',
-        activeDictionary: 'Diccionario activo:',
-        dictionarySpanish: 'Español (es-ES)',
-        dictionaryEnglish: 'English (en-US)',
-        rightClickHint:
-          'Haz clic derecho sobre cualquier palabra marcada con una línea roja ondulada para ver sugerencias y corregirla al instante.'
+        spellSectionTitle: 'Corrector ortográfico',
+        autoSaveTitle: 'Guardado automático',
+        autoSaveDesc: 'Guarda los cambios automáticamente 2,5 segundos tras pausar la escritura',
+        historyTitle: 'Historial de versiones',
+        historyDesc: 'Instantáneas automáticas para revisión y recuperación',
+        maxEntriesTitle: 'Límite de versiones',
+        purgeDesc: 'Elimina todas las versiones archivadas en el equipo',
+        purgeBtn: 'Vaciar historial',
+        purgedSuccess: 'Historial vaciado con éxito'
       }
     }
   },
@@ -627,142 +545,65 @@ export const translations = {
       subtitle: 'Writing environment configuration',
       tabs: {
         appearance: 'Appearance',
-        typography: 'Typography',
         writing: 'Writing',
-        zen: 'Zen Mode',
-        saving: 'Saving',
-        language: 'Language'
+        general: 'General',
+        // Fallbacks for contextual navigation
+        typography: 'Appearance',
+        zen: 'Writing',
+        saving: 'General',
+        language: 'General'
       },
       appearance: {
-        modeTitle: 'Lighting Mode',
-        modeDesc: 'Select lighting for canvas and interface',
+        modeTitle: 'Appearance Mode',
         lightName: 'Light',
-        lightDesc: 'Illuminated galley proof',
         darkName: 'Dark',
-        darkDesc: 'Nocturnal linotype',
         systemName: 'System',
-        systemDesc: 'Synced with OS',
-        paletteTitle: 'Editorial Palette',
-        paletteDesc: 'Materials and proportions of the letterpress workshop',
-        paletteName: 'Pure',
-        paletteSubtitle: 'Press proof',
-        paletteDetail:
-          'Warm gray galley paper, carbon ink, corrector vermilion pencil, and non-repro blue stroke.'
-      },
-      typography: {
-        fontFamilyTitle: 'Typeface Family',
-        fontFamilyDesc: 'Letterform design for the main editor',
+        fontFamilyTitle: 'Typeface',
         fontSizeTitle: 'Font Size',
         compact: 'Compact',
         standard: 'Standard',
         large: 'Large',
-        exampleSerif:
-          'Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world.',
-        exampleSans:
-          'Clear thinking precedes fluid and direct writing. Precise words find their natural rhythm upon a silent canvas.',
-        exampleMono:
-          '01. Initial hypothesis and technical draft outline: constant rhythm and exact precision in every single line.'
+        alignTitle: 'Text Alignment',
+        alignLeftName: 'Left',
+        alignJustifyName: 'Justified',
+        alignCenterName: 'Centered',
+        paletteTitle: 'Editorial Palette',
+        paletteName: 'Pure — Editorial galley',
+        exampleText:
+          'Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation.'
       },
       writing: {
         typewriterTitle: 'Typewriter Scrolling',
-        typewriterDesc: 'Continuous vertical concentration focus',
-        typewriterCardTitle: 'Typewriter Scrolling',
-        typewriterCardDesc:
-          'Keeps the active typing line locked in the vertical center of the screen.',
-        typewriterShortcutHint: 'Quick shortcut:',
-        anchorTitle: 'Vertical anchor position:',
-        anchorCenterTitle: 'Exact center (50%)',
-        anchorCenterDesc:
-          'Locks active line at the vertical midpoint. Provides symmetric balance between written prose and clear space.',
-        anchorEyeTitle: 'Eye level (38%)',
-        anchorEyeDesc:
-          'Upper third. Positions the line at natural eye height on display monitors, leaving more preview space below.',
-        navTitle: 'Arrow key navigation (Up / Down):',
-        navDeadzoneTitle: 'Tolerance zone (Deadzone)',
-        navDeadzoneDesc:
-          'Allows moving cursor a few lines freely for quick edits; smoothly re-centers upon typing.',
-        navStrictTitle: 'Strict mode',
-        navStrictDesc: 'Continuously recenters the view with every single arrow keystroke.',
-        alignTitle: 'Paragraph Alignment',
-        alignDesc: 'Body text layout on canvas',
-        alignLeftName: 'Left',
-        alignLeftDesc: 'Natural alignment',
-        alignJustifyName: 'Justified',
-        alignJustifyDesc: 'Clean book-style margins',
-        alignCenterName: 'Centered',
-        alignCenterDesc: 'Poetry and scriptwriting'
+        typewriterDesc:
+          'Keeps the active typing line locked in screen center, scrolling the page upward automatically',
+        anchorTitle: 'Screen Height',
+        anchorDesc: 'Where the active line is placed while typing',
+        anchorCenterTitle: 'Center',
+        anchorEyeTitle: 'Upper Third',
+        navTitle: 'Arrow Navigation',
+        navDesc: 'Explore nearby lines freely without moving the page, or recenter on each line',
+        navDeadzoneTitle: 'Flexible',
+        navStrictTitle: 'Strict',
+        zenTitle: 'Zen Mode',
+        zenDesc: 'Active floating windows in fullscreen mode',
+        zenToolbarTitle: 'Toolbar',
+        zenStatsTitle: 'Statistics',
+        zenFolderTitle: 'Folder tree',
+        zenMockupTitle: 'Zen Screen Preview'
       },
-      zen: {
-        title: 'Zen Mode & Floating Windows',
-        desc: 'Customize which floating elements appear in fullscreen writing mode according to how clean and distraction-free you want your screen.',
-        presetsTitle: 'Screen Cleanliness Level:',
-        presetFullTitle: 'Full',
-        presetFullDesc: 'All floating windows active',
-        presetBalancedTitle: 'Balanced',
-        presetBalancedDesc: 'Toolbar and stats (no folder tree)',
-        presetMinimalTitle: 'Minimal',
-        presetMinimalDesc: 'Toolbar controls only',
-        presetPureTitle: 'Pure Zen',
-        presetPureDesc: '100% clean canvas with zero floating windows',
-        presetCustomTitle: 'Custom',
-        previewTitle: 'Zen Screen Preview',
-        previewPureNotice:
-          '100% clean screen • Absolute focus with zero floating windows. Press Esc or F11 to exit.',
-        previewActiveNotice: 'Floating windows enabled • Gently revealed when moving the mouse.',
-        folderTitle: 'Document & Folder Navigator',
-        folderDesc:
-          'Floating window in the top-left corner. Lets you browse and switch documents in your workspace folder.',
-        folderBadge: 'Top Left',
-        toolbarTitle: 'Top Floating Toolbar',
-        toolbarDesc:
-          'Pill in the top-right corner with shortcuts for typewriter mode, alignment, history, shortcuts, and exit.',
-        toolbarBadge: 'Top Right',
-        toolbarHintEsc:
-          'When the toolbar is hidden, you can exit Zen mode at any time with Esc or F11.',
-        statsTitle: 'Floating Statistics Counter',
-        statsDesc:
-          'Pill in the bottom-right corner with live word count, characters, paragraphs, and estimated reading time.',
-        statsBadge: 'Bottom Right',
-        statsHintHud: 'You can open the full stats HUD at any time using Ctrl+Shift+C.'
-      },
-      saving: {
-        autoSaveTitle: 'Auto-Save',
-        autoSaveDesc: 'Automatically saves your changes whenever you pause typing.',
-        autoSaveCardTitle: 'Reactive auto-save',
-        autoSaveCardDesc:
-          'Saves directly to disk (or protected local draft) after a few seconds of inactivity.',
-        delayTitle: 'Inactivity delay before saving:',
-        historyTitle: 'Temporal Version History',
-        historyDesc:
-          'Captures snapshots of your manuscript over time for inspection and recovery (Ctrl+H).',
-        historyCardTitle: 'Temporal snapshots',
-        historyCardDesc: 'Saves versions on Ctrl+S and periodically during auto-save.',
-        maxEntriesTitle: 'Version retention limit per manuscript:',
-        intervalTitle: 'Minimum interval between auto snapshots:',
-        purgeTitle: 'Purge archived versions',
-        purgeDesc: 'Deletes all stored temporal snapshots from application disk storage.',
-        purgeBtn: 'Clear all history',
-        purgedSuccess: 'History cleared'
-      },
-      language: {
-        sectionTitle: 'Application Language',
-        sectionDesc: 'Choose the language for the user interface and built-in spell checker.',
+      general: {
+        languageTitle: 'Interface Language',
         spanishName: 'Español',
-        spanishRegion: 'Spanish (Castilian / Americas)',
-        spanishDesc: 'Spanish user interface with Spanish dictionary spell checking (es-ES).',
         englishName: 'English',
-        englishRegion: 'English (US / International)',
-        englishDesc: 'Full English user interface and spell check dictionary (en-US).',
         spellSectionTitle: 'Spell Checker',
-        spellSectionDesc:
-          'Real-time spell check tailored to your selected language. Right-click any underlined word to view spelling suggestions or add it to your personal dictionary.',
-        spellToggleTitle: 'Real-time spell checking',
-        spellToggleDesc: 'Underlines unrecognized words or misspellings in red within the editor.',
-        activeDictionary: 'Active dictionary:',
-        dictionarySpanish: 'Spanish (es-ES)',
-        dictionaryEnglish: 'English (en-US)',
-        rightClickHint:
-          'Right-click any word underlined in red to view instant suggestions and replace it.'
+        autoSaveTitle: 'Auto-Save',
+        autoSaveDesc: 'Automatically saves changes 2.5 seconds after a writing pause',
+        historyTitle: 'Version History',
+        historyDesc: 'Automatic snapshots for review and recovery',
+        maxEntriesTitle: 'Version limit',
+        purgeDesc: 'Delete all archived snapshots from this computer',
+        purgeBtn: 'Clear history',
+        purgedSuccess: 'History cleared successfully'
       }
     }
   }
