@@ -47,7 +47,10 @@ function App() {
           autoSaveDelay: Number(parsed.autoSaveDelay) || 2500,
           historyEnabled: parsed.historyEnabled !== false,
           historyMaxEntries: Number(parsed.historyMaxEntries) || 50,
-          historySnapshotInterval: Number(parsed.historySnapshotInterval) || 120000
+          historySnapshotInterval: Number(parsed.historySnapshotInterval) || 120000,
+          zenShowToolbar: parsed.zenShowToolbar !== false,
+          zenShowStats: parsed.zenShowStats !== false,
+          zenShowFolder: parsed.zenShowFolder !== false
         }
       }
     } catch {
@@ -68,18 +71,22 @@ function App() {
       autoSaveDelay: 2500, // ms: tiempo de inactividad para auto-guardar
       historyEnabled: true, // boolean: instantáneas de historial temporal activas
       historyMaxEntries: 50, // número de versiones retenidas por documento
-      historySnapshotInterval: 120000 // ms: intervalo mínimo entre snapshots automáticas (2 min)
+      historySnapshotInterval: 120000, // ms: intervalo mínimo entre snapshots automáticas (2 min)
+      zenShowToolbar: true, // boolean: barra de herramientas flotante en modo zen
+      zenShowStats: true, // boolean: barra de estadísticas flotante en modo zen
+      zenShowFolder: true // boolean: navegador de carpetas flotante en modo zen
     }
   })
 
+  const [profileInitialTab, setProfileInitialTab] = useState('appearance')
+
+  const handleOpenProfile = (tab = 'appearance') => {
+    setProfileInitialTab(tab)
+    setIsProfileOpen(true)
+  }
+
   const currentLang = preferences.language || 'es'
   const t = getTranslation(currentLang)
-
-  const todayLabel = new Intl.DateTimeFormat(currentLang === 'en' ? 'en-US' : 'es-ES', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  }).format(new Date())
 
   // Recuperar última carpeta de trabajo guardada al inicio
   useEffect(() => {
@@ -331,7 +338,7 @@ function App() {
           onBack={handleBackToHome}
           preferences={preferences}
           onUpdatePreferences={handleUpdatePreferences}
-          onOpenProfile={() => setIsProfileOpen(true)}
+          onOpenProfile={handleOpenProfile}
           openedFolder={openedFolder}
           onRefreshFolderTree={handleRefreshFolderTree}
           onCloseFolder={handleCloseFolder}
@@ -342,6 +349,7 @@ function App() {
           onClose={() => setIsProfileOpen(false)}
           preferences={preferences}
           onUpdatePreferences={handleUpdatePreferences}
+          initialTab={profileInitialTab}
         />
       </>
     )
@@ -384,7 +392,7 @@ function App() {
           <div className="sidebar-settings-bar">
             <button
               className="sidebar-settings-btn"
-              onClick={() => setIsProfileOpen(true)}
+              onClick={() => handleOpenProfile('appearance')}
               type="button"
               title={t.sidebar.preferencesTitle}
             >
@@ -473,7 +481,6 @@ function App() {
               <kbd className="action-kbd">{t.home.openFolderShortcut}</kbd>
             </button>
           </div>
-
         </div>
       </main>
 
@@ -483,6 +490,7 @@ function App() {
         onClose={() => setIsProfileOpen(false)}
         preferences={preferences}
         onUpdatePreferences={handleUpdatePreferences}
+        initialTab={profileInitialTab}
       />
     </div>
   )

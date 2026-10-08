@@ -125,6 +125,7 @@ export const translations = {
       defaultDocName: 'documento.md',
       toastSaved: 'Documento guardado con éxito',
       toastZenEnabled: 'Modo Zen activado • F11 o Esc para salir',
+      toastZenClean: 'Modo Zen activado (Pantalla limpia) • Pulsa Esc o F11 para salir',
       toastZenDisabled: 'Modo Zen desactivado',
       historyTitle: 'Historial de versiones (Ctrl+H)',
       historyAria: 'Historial de versiones',
@@ -133,6 +134,9 @@ export const translations = {
       actionsMenuAria: 'Menú de acciones del documento',
       closeActionsMenu: 'Cerrar menú',
       settingsBtn: 'Configuración',
+      zenSettingsTitle: 'Personalizar Modo Zen y ventanas flotantes (Ctrl+,)',
+      zenSettingsAria: 'Personalizar Modo Zen',
+      zenCustomizationBtn: 'Configurar Modo Zen',
       zenFilesTitle: 'Cambiar de archivo (Ctrl+P o Ctrl+B)',
       zenFilesAria: 'Explorador de archivos de la carpeta',
       zenFilesSearchPlaceholder: 'Buscar archivo en la carpeta...',
@@ -214,6 +218,7 @@ export const translations = {
         toggleSidebar: 'Alternar barra del explorador',
         viewShortcuts: 'Ver esta ayuda de atajos',
         versionHistory: 'Historial de versiones',
+        preferences: 'Abrir preferencias / Personalizar Zen',
         toggleZen: 'Activar / Alternar Modo Zen',
         toggleTypewriter: 'Alternar Modo Máquina de Escribir (Typewriter)',
         exitZen: 'Salir del Modo Zen',
@@ -238,6 +243,7 @@ export const translations = {
         appearance: 'Apariencia',
         typography: 'Tipografía',
         writing: 'Escritura',
+        zen: 'Modo Zen',
         saving: 'Guardado',
         language: 'Idioma'
       },
@@ -299,6 +305,41 @@ export const translations = {
         alignJustifyDesc: 'Márgenes limpios estilo libro',
         alignCenterName: 'Centrado',
         alignCenterDesc: 'Lírico y dramaturgia'
+      },
+      zen: {
+        title: 'Modo Zen y Ventanas Flotantes',
+        desc: 'Personaliza qué elementos y ventanas flotantes se muestran para lograr el nivel de concentración que buscas.',
+        presetsTitle: 'Nivel de limpieza de pantalla:',
+        presetFullTitle: 'Completo',
+        presetFullDesc: 'Todas las ventanas flotantes activas',
+        presetBalancedTitle: 'Equilibrado',
+        presetBalancedDesc: 'Herramientas y estadísticas (sin explorador)',
+        presetMinimalTitle: 'Minimalista',
+        presetMinimalDesc: 'Solo herramientas de control',
+        presetPureTitle: 'Zen Puro',
+        presetPureDesc: 'Lienzo 100% limpio sin ventanas flotantes',
+        presetCustomTitle: 'Personalizado',
+        previewTitle: 'Vista previa de la pantalla Zen',
+        previewPureNotice:
+          'Pantalla 100% limpia • Concentración absoluta sin ventanas flotantes. Usa Esc o F11 para salir.',
+        previewActiveNotice:
+          'Ventanas flotantes activas • Se revelan suavemente al mover el ratón.',
+        folderTitle: 'Navegador de documentos y carpetas',
+        folderDesc:
+          'Ventana flotante en la esquina superior izquierda. Permite explorar y cambiar de documento dentro de la carpeta de trabajo.',
+        folderBadge: 'Superior Izquierda',
+        toolbarTitle: 'Barra de herramientas superior',
+        toolbarDesc:
+          'Píldora en la esquina superior derecha con accesos a modo rodillo, alineación, historial, atajos y botón de salir.',
+        toolbarBadge: 'Superior Derecha',
+        toolbarHintEsc:
+          'Al ocultar la barra, puedes salir del modo Zen en cualquier momento pulsando Esc o F11.',
+        statsTitle: 'Contador de estadísticas flotante',
+        statsDesc:
+          'Píldora en la esquina inferior derecha con conteo en vivo de palabras, caracteres, párrafos y tiempo estimado de lectura.',
+        statsBadge: 'Inferior Derecha',
+        statsHintHud:
+          'Puedes abrir el HUD de estadísticas en cualquier momento pulsando Ctrl+Shift+C.'
       },
       saving: {
         autoSaveTitle: 'Guardado Automático',
@@ -470,6 +511,7 @@ export const translations = {
       defaultDocName: 'document.md',
       toastSaved: 'Document saved successfully',
       toastZenEnabled: 'Zen mode enabled • Press F11 or Esc to exit',
+      toastZenClean: 'Zen mode enabled (Clean screen) • Press Esc or F11 to exit',
       toastZenDisabled: 'Zen mode disabled',
       historyTitle: 'Version history (Ctrl+H)',
       historyAria: 'Version history',
@@ -478,6 +520,9 @@ export const translations = {
       actionsMenuAria: 'Document actions menu',
       closeActionsMenu: 'Close menu',
       settingsBtn: 'Settings',
+      zenSettingsTitle: 'Customize Zen Mode & floating windows (Ctrl+,)',
+      zenSettingsAria: 'Customize Zen Mode',
+      zenCustomizationBtn: 'Configure Zen Mode',
       zenFilesTitle: 'Switch file (Ctrl+P or Ctrl+B)',
       zenFilesAria: 'Folder file switcher',
       zenFilesSearchPlaceholder: 'Search file in folder...',
@@ -559,6 +604,7 @@ export const translations = {
         toggleSidebar: 'Toggle explorer sidebar',
         viewShortcuts: 'View this shortcuts guide',
         versionHistory: 'Version history',
+        preferences: 'Open preferences / Customize Zen',
         toggleZen: 'Toggle Zen Mode',
         toggleTypewriter: 'Toggle Typewriter Mode',
         exitZen: 'Exit Zen Mode',
@@ -583,6 +629,7 @@ export const translations = {
         appearance: 'Appearance',
         typography: 'Typography',
         writing: 'Writing',
+        zen: 'Zen Mode',
         saving: 'Saving',
         language: 'Language'
       },
@@ -644,6 +691,39 @@ export const translations = {
         alignJustifyDesc: 'Clean book-style margins',
         alignCenterName: 'Centered',
         alignCenterDesc: 'Poetry and scriptwriting'
+      },
+      zen: {
+        title: 'Zen Mode & Floating Windows',
+        desc: 'Customize which floating elements appear in fullscreen writing mode according to how clean and distraction-free you want your screen.',
+        presetsTitle: 'Screen Cleanliness Level:',
+        presetFullTitle: 'Full',
+        presetFullDesc: 'All floating windows active',
+        presetBalancedTitle: 'Balanced',
+        presetBalancedDesc: 'Toolbar and stats (no folder tree)',
+        presetMinimalTitle: 'Minimal',
+        presetMinimalDesc: 'Toolbar controls only',
+        presetPureTitle: 'Pure Zen',
+        presetPureDesc: '100% clean canvas with zero floating windows',
+        presetCustomTitle: 'Custom',
+        previewTitle: 'Zen Screen Preview',
+        previewPureNotice:
+          '100% clean screen • Absolute focus with zero floating windows. Press Esc or F11 to exit.',
+        previewActiveNotice: 'Floating windows enabled • Gently revealed when moving the mouse.',
+        folderTitle: 'Document & Folder Navigator',
+        folderDesc:
+          'Floating window in the top-left corner. Lets you browse and switch documents in your workspace folder.',
+        folderBadge: 'Top Left',
+        toolbarTitle: 'Top Floating Toolbar',
+        toolbarDesc:
+          'Pill in the top-right corner with shortcuts for typewriter mode, alignment, history, shortcuts, and exit.',
+        toolbarBadge: 'Top Right',
+        toolbarHintEsc:
+          'When the toolbar is hidden, you can exit Zen mode at any time with Esc or F11.',
+        statsTitle: 'Floating Statistics Counter',
+        statsDesc:
+          'Pill in the bottom-right corner with live word count, characters, paragraphs, and estimated reading time.',
+        statsBadge: 'Bottom Right',
+        statsHintHud: 'You can open the full stats HUD at any time using Ctrl+Shift+C.'
       },
       saving: {
         autoSaveTitle: 'Auto-Save',

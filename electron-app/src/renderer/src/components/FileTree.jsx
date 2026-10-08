@@ -521,9 +521,7 @@ export default function FileTree({
                   title={item.path}
                 >
                   <span className="tree-folder-caret-spacer" />
-                  <div className="tree-item-icon">
-                    {getTreeFileIcon(item.name)}
-                  </div>
+                  <div className="tree-item-icon">{getTreeFileIcon(item.name)}</div>
 
                   <span className="tree-item-name">{item.name}</span>
 

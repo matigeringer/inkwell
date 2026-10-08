@@ -7,7 +7,6 @@ import {
   ChevronDownIcon,
   ChevronRightIcon
 } from './Icons'
-import { getTranslation } from '../i18n'
 
 function getFileIcon(fileName) {
   const ext = fileName?.split('.').pop()?.toLowerCase()
@@ -30,6 +29,30 @@ function countTotalFiles(items) {
   return count
 }
 
+// Filtrado recursivo cuando hay texto en el buscador
+function filterTree(items, query) {
+  if (!query) return items
+  const q = query.toLowerCase()
+
+  return items
+    .map((item) => {
+      if (item.isDirectory) {
+        const matchingChildren = filterTree(item.children || [], query)
+        const folderMatches = item.name.toLowerCase().includes(q)
+        if (folderMatches || matchingChildren.length > 0) {
+          return {
+            ...item,
+            children: matchingChildren
+          }
+        }
+        return null
+      } else {
+        return item.name.toLowerCase().includes(q) ? item : null
+      }
+    })
+    .filter(Boolean)
+}
+
 export default function ZenFloatingFolder({
   openedFolder,
   activeFilePath,
@@ -37,7 +60,6 @@ export default function ZenFloatingFolder({
   isMouseActive,
   language = 'es'
 }) {
-  const t = getTranslation(language)
   const isEn = language === 'en'
 
   const [isCollapsed, setIsCollapsed] = useState(false)
@@ -74,30 +96,6 @@ export default function ZenFloatingFolder({
       }
       return next
     })
-  }
-
-  // Filtrado recursivo cuando hay texto en el buscador
-  const filterTree = (items, query) => {
-    if (!query) return items
-    const q = query.toLowerCase()
-
-    return items
-      .map((item) => {
-        if (item.isDirectory) {
-          const matchingChildren = filterTree(item.children || [], query)
-          const folderMatches = item.name.toLowerCase().includes(q)
-          if (folderMatches || matchingChildren.length > 0) {
-            return {
-              ...item,
-              children: matchingChildren
-            }
-          }
-          return null
-        } else {
-          return item.name.toLowerCase().includes(q) ? item : null
-        }
-      })
-      .filter(Boolean)
   }
 
   const displayedTree = useMemo(() => {
@@ -167,9 +165,7 @@ export default function ZenFloatingFolder({
             title={item.name}
           >
             <span className="zen-tree-caret-spacer" />
-            <div className="zen-tree-item-icon">
-              {getFileIcon(item.name)}
-            </div>
+            <div className="zen-tree-item-icon">{getFileIcon(item.name)}</div>
             <span className="zen-tree-name zen-tree-file-name">{item.name}</span>
           </div>
         </div>
@@ -188,7 +184,9 @@ export default function ZenFloatingFolder({
       <header
         className="zen-folder-header"
         onClick={() => setIsCollapsed((prev) => !prev)}
-        title={isCollapsed ? (isEn ? 'Expand notes' : 'Desplegar notas') : (isEn ? 'Collapse' : 'Plegar')}
+        title={
+          isCollapsed ? (isEn ? 'Expand notes' : 'Desplegar notas') : isEn ? 'Collapse' : 'Plegar'
+        }
       >
         <div className="zen-folder-header-left">
           <FolderIcon size={14} className="zen-folder-header-icon" />

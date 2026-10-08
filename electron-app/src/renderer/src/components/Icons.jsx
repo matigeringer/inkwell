@@ -1025,4 +1025,3 @@ export function MenuIcon({ className = '', size = 18, ...props }) {
     </svg>
   )
 }
-

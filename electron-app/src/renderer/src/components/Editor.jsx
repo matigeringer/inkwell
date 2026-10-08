@@ -139,7 +139,11 @@ export default function Editor({
     if (!actionsMenuOpen && !exportMenuOpen) return
 
     const handleClickOutside = (e) => {
-      if (exportMenuOpen && exportDropdownRef.current && !exportDropdownRef.current.contains(e.target)) {
+      if (
+        exportMenuOpen &&
+        exportDropdownRef.current &&
+        !exportDropdownRef.current.contains(e.target)
+      ) {
         setExportMenuOpen(false)
       }
       if (actionsMenuOpen && actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) {
@@ -1068,14 +1072,23 @@ export default function Editor({
       }
 
       if (nextState) {
-        showToast(t.editor.toastZenEnabled)
+        const isPureZen =
+          preferences?.zenShowToolbar === false &&
+          preferences?.zenShowStats === false &&
+          preferences?.zenShowFolder === false
+        showToast(
+          isPureZen
+            ? t.editor.toastZenClean ||
+                'Modo Zen activado (Pantalla limpia) • Pulsa Esc o F11 para salir'
+            : t.editor.toastZenEnabled
+        )
       } else {
         showToast(t.editor.toastZenDisabled)
         setShowStatsHud(false)
         setIsShortcutsModalOpen(false)
       }
     },
-    [isZenMode, showToast, t]
+    [isZenMode, preferences, showToast, t]
   )
 
   // Escuchar cambios externos de pantalla completa (gestos del SO o tecla F11 nativa)
@@ -1419,6 +1432,15 @@ export default function Editor({
         resetFontSize()
         return
       }
+
+      // 18. Ctrl+, : Abrir configuración (en Modo Zen abre directamente la pestaña Zen)
+      if (isCtrlOrMeta && !e.shiftKey && (e.key === ',' || e.key === '<')) {
+        e.preventDefault()
+        if (onOpenProfile) {
+          onOpenProfile(isZenMode ? 'zen' : 'appearance')
+        }
+        return
+      }
     }
 
     window.addEventListener('keydown', handleKeyDown)
@@ -1440,6 +1462,7 @@ export default function Editor({
     handleExportPdf,
     handleOpenFileDirectly,
     onOpenFolder,
+    onOpenProfile,
     cycleTheme,
     cycleFontFamily,
     toggleTypewriterMode,
@@ -1566,18 +1589,34 @@ export default function Editor({
             {actionsMenuOpen && (
               <div className="action-menu-dock">
                 {onOpenProfile && (
-                  <button
-                    className="btn-sober-secondary action-dock-btn"
-                    onClick={() => {
-                      setActionsMenuOpen(false)
-                      onOpenProfile()
-                    }}
-                    title={t.editor.preferencesTitle}
-                    aria-label={t.editor.preferencesAria}
-                  >
-                    <SettingsIcon size={15} />
-                    <span className="header-btn-label">{t.editor.settingsBtn}</span>
-                  </button>
+                  <>
+                    <button
+                      className="btn-sober-secondary action-dock-btn"
+                      onClick={() => {
+                        setActionsMenuOpen(false)
+                        onOpenProfile()
+                      }}
+                      title={t.editor.preferencesTitle}
+                      aria-label={t.editor.preferencesAria}
+                    >
+                      <SettingsIcon size={15} />
+                      <span className="header-btn-label">{t.editor.settingsBtn}</span>
+                    </button>
+                    <button
+                      className="btn-sober-secondary action-dock-btn"
+                      onClick={() => {
+                        setActionsMenuOpen(false)
+                        onOpenProfile('zen')
+                      }}
+                      title={t.preferences.zen?.title || 'Personalizar Modo Zen'}
+                      aria-label={t.preferences.zen?.title || 'Personalizar Modo Zen'}
+                    >
+                      <ZenFocusIcon size={15} />
+                      <span className="header-btn-label">
+                        {t.editor.zenCustomizationBtn || 'Configurar Modo Zen'}
+                      </span>
+                    </button>
+                  </>
                 )}
 
                 {/* Menú Desplegable de Exportación */}
@@ -1600,7 +1639,11 @@ export default function Editor({
                   </button>
 
                   {exportMenuOpen && (
-                    <div className="export-dropdown-menu" role="menu" aria-label={t.editor.exportTitle}>
+                    <div
+                      className="export-dropdown-menu"
+                      role="menu"
+                      aria-label={t.editor.exportTitle}
+                    >
                       <div className="export-dropdown-header">
                         <span className="export-dropdown-title">
                           {t.exportFormats?.menuTitle || t.editor.exportChooseFormat}
@@ -1612,7 +1655,8 @@ export default function Editor({
                           const name = t.exportFormats?.[opt.nameKey] || opt.ext
                           const desc = t.exportFormats?.[opt.descKey] || ''
                           const badge =
-                            t.exportFormats?.[opt.badgeKey] || opt.ext.replace('.', '').toUpperCase()
+                            t.exportFormats?.[opt.badgeKey] ||
+                            opt.ext.replace('.', '').toUpperCase()
 
                           return (
                             <button
@@ -1677,9 +1721,7 @@ export default function Editor({
               aria-haspopup="true"
             >
               <MenuIcon size={15} />
-              {!actionsMenuOpen && (
-                <span className="header-btn-label">{t.editor.actionsMenu}</span>
-              )}
+              {!actionsMenuOpen && <span className="header-btn-label">{t.editor.actionsMenu}</span>}
               <ChevronDownIcon
                 size={13}
                 className={`action-menu-chevron ${actionsMenuOpen ? 'is-open' : ''}`}
@@ -1690,7 +1732,7 @@ export default function Editor({
       </header>
 
       {/* Controles flotantes discretos en Modo Zen (visibles únicamente al mover el ratón) */}
-      {isZenMode && (
+      {isZenMode && preferences?.zenShowToolbar !== false && (
         <aside
           className={`zen-floating-toolbar ${isMouseActive ? 'visible' : ''}`}
           aria-label="Controles discretos de modo Zen"
@@ -1739,6 +1781,21 @@ export default function Editor({
             >
               <KeyboardIcon size={15} />
             </button>
+            {onOpenProfile && (
+              <button
+                className="zen-pill-btn zen-pill-icon-only"
+                onClick={() => onOpenProfile('zen')}
+                title={
+                  t.editor.zenSettingsTitle ||
+                  (currentLang === 'en'
+                    ? 'Customize Zen Mode & floating windows (Ctrl+,)'
+                    : 'Personalizar Modo Zen y ventanas flotantes (Ctrl+,)')
+                }
+                aria-label={t.editor.zenSettingsAria || 'Personalizar Modo Zen'}
+              >
+                <SettingsIcon size={15} />
+              </button>
+            )}
             <div className="zen-pill-divider" />
             <button
               className="zen-pill-btn zen-pill-exit"
@@ -1753,7 +1810,7 @@ export default function Editor({
       )}
 
       {/* Barra flotante minimalista de estadísticas en Modo Zen (inferior derecha) */}
-      {isZenMode && (
+      {isZenMode && preferences?.zenShowStats !== false && (
         <aside
           className={`zen-floating-stats ${isMouseActive ? 'visible' : ''}`}
           aria-label={t.stats.title}
@@ -1761,9 +1818,7 @@ export default function Editor({
           <div className="zen-stats-pill">
             <span className="zen-stats-pill-item">
               <strong>{words}</strong>{' '}
-              {words === 1
-                ? t.stats.wordSingular.toLowerCase()
-                : t.stats.words.toLowerCase()}
+              {words === 1 ? t.stats.wordSingular.toLowerCase() : t.stats.words.toLowerCase()}
             </span>
             <span className="zen-stats-pill-sep">•</span>
             <span className="zen-stats-pill-item">
@@ -1779,11 +1834,7 @@ export default function Editor({
             <span className="zen-stats-pill-sep">•</span>
             <span
               className="zen-stats-pill-item"
-              title={
-                readingTime === 1
-                  ? t.stats.readingTimeSingle
-                  : t.stats.readingTimePlural
-              }
+              title={readingTime === 1 ? t.stats.readingTimeSingle : t.stats.readingTimePlural}
             >
               <strong>~{readingTime}</strong>{' '}
               {currentLang === 'en' ? (readingTime === 1 ? 'min' : 'mins') : 'min'}
@@ -1800,7 +1851,7 @@ export default function Editor({
       )}
 
       {/* Ventana flotante de notas y subcarpetas en Modo Zen (superior izquierda) */}
-      {isZenMode && openedFolder && (
+      {isZenMode && openedFolder && preferences?.zenShowFolder !== false && (
         <ZenFloatingFolder
           openedFolder={openedFolder}
           activeFilePath={filePath}
@@ -1988,6 +2039,17 @@ export default function Editor({
                     <span className="shortcut-desc">{t.shortcuts.keys.toggleStats}</span>
                     <div className="shortcut-keys">
                       <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>
+                    </div>
+                  </div>
+                  <div className="shortcut-row">
+                    <span className="shortcut-desc">
+                      {t.shortcuts.keys.preferences ||
+                        (currentLang === 'en'
+                          ? 'Open preferences / Customize Zen'
+                          : 'Abrir preferencias / Personalizar Zen')}
+                    </span>
+                    <div className="shortcut-keys">
+                      <kbd>Ctrl</kbd>+<kbd>,</kbd>
                     </div>
                   </div>
                 </div>

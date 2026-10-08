@@ -16,24 +16,44 @@ import {
   SpellCheckIcon,
   HistoryIcon,
   SaveIcon,
-  TrashIcon
+  TrashIcon,
+  ZenFocusIcon,
+  FolderTreeIcon,
+  BarChartIcon
 } from './Icons'
 import { getTranslation } from '../i18n'
 
-export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePreferences }) {
-  const [activeTab, setActiveTab] = useState('appearance') // 'appearance' | 'typography' | 'writing' | 'saving' | 'language'
+export default function ProfileModal({
+  isOpen,
+  onClose,
+  preferences,
+  onUpdatePreferences,
+  initialTab = 'appearance'
+}) {
+  const [currentTabOverride, setCurrentTabOverride] = useState(null)
+  const [prevInitialTab, setPrevInitialTab] = useState(initialTab)
+
+  if (initialTab !== prevInitialTab) {
+    setPrevInitialTab(initialTab)
+    setCurrentTabOverride(null)
+  }
+
+  const activeTab = currentTabOverride || initialTab || 'appearance'
+  const setActiveTab = (tab) => setCurrentTabOverride(tab)
   const [clearingHistory, setClearingHistory] = useState(false)
   const [historyClearedMsg, setHistoryClearedMsg] = useState(false)
 
-  // Manejar tecla Escape para cerrar
+  // Manejar tecla Escape para cerrar modal con captura para no afectar Zen mode
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
+        e.preventDefault()
+        e.stopImmediatePropagation()
         onClose()
       }
     }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [isOpen, onClose])
 
   if (!isOpen) return null
@@ -45,6 +65,11 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
     { id: 'appearance', label: t.preferences.tabs.appearance, icon: PaletteIcon },
     { id: 'typography', label: t.preferences.tabs.typography, icon: TypeIcon },
     { id: 'writing', label: t.preferences.tabs.writing, icon: FeatherIcon },
+    {
+      id: 'zen',
+      label: t.preferences.tabs.zen || (currentLang === 'en' ? 'Zen Mode' : 'Modo Zen'),
+      icon: ZenFocusIcon
+    },
     {
       id: 'saving',
       label: t.preferences.tabs.saving || (currentLang === 'en' ? 'Saving' : 'Guardado'),
@@ -210,6 +235,64 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
       }
     }
   }
+
+  const currentZenToolbar = preferences.zenShowToolbar !== false
+  const currentZenStats = preferences.zenShowStats !== false
+  const currentZenFolder = preferences.zenShowFolder !== false
+
+  const getActiveZenPreset = () => {
+    if (currentZenToolbar && currentZenStats && currentZenFolder) return 'full'
+    if (currentZenToolbar && currentZenStats && !currentZenFolder) return 'balanced'
+    if (currentZenToolbar && !currentZenStats && !currentZenFolder) return 'minimal'
+    if (!currentZenToolbar && !currentZenStats && !currentZenFolder) return 'pure'
+    return 'custom'
+  }
+
+  const activeZenPreset = getActiveZenPreset()
+
+  const zenPresets = [
+    {
+      id: 'full',
+      title: t.preferences.zen?.presetFullTitle || (currentLang === 'en' ? 'Full' : 'Completo'),
+      desc:
+        t.preferences.zen?.presetFullDesc ||
+        (currentLang === 'en'
+          ? 'All floating windows active'
+          : 'Todas las ventanas flotantes activas'),
+      config: { zenShowToolbar: true, zenShowStats: true, zenShowFolder: true }
+    },
+    {
+      id: 'balanced',
+      title:
+        t.preferences.zen?.presetBalancedTitle ||
+        (currentLang === 'en' ? 'Balanced' : 'Equilibrado'),
+      desc:
+        t.preferences.zen?.presetBalancedDesc ||
+        (currentLang === 'en'
+          ? 'Toolbar & stats (no folder tree)'
+          : 'Herramientas y estadísticas (sin explorador)'),
+      config: { zenShowToolbar: true, zenShowStats: true, zenShowFolder: false }
+    },
+    {
+      id: 'minimal',
+      title:
+        t.preferences.zen?.presetMinimalTitle || (currentLang === 'en' ? 'Minimal' : 'Minimalista'),
+      desc:
+        t.preferences.zen?.presetMinimalDesc ||
+        (currentLang === 'en' ? 'Toolbar controls only' : 'Solo herramientas de control'),
+      config: { zenShowToolbar: true, zenShowStats: false, zenShowFolder: false }
+    },
+    {
+      id: 'pure',
+      title: t.preferences.zen?.presetPureTitle || (currentLang === 'en' ? 'Pure Zen' : 'Zen Puro'),
+      desc:
+        t.preferences.zen?.presetPureDesc ||
+        (currentLang === 'en'
+          ? '100% clean canvas with zero floating windows'
+          : 'Lienzo 100% limpio sin ventanas flotantes'),
+      config: { zenShowToolbar: false, zenShowStats: false, zenShowFolder: false }
+    }
+  ]
 
   const currentFontFamily =
     preferences.fontFamily === 'sans'
@@ -634,6 +717,255 @@ export default function ProfileModal({ isOpen, onClose, preferences, onUpdatePre
                       </button>
                     )
                   })}
+                </div>
+              </section>
+            </div>
+          )}
+
+          {/* PESTAÑA: MODO ZEN & VENTANAS FLOTANTES */}
+          {activeTab === 'zen' && (
+            <div className="pref-tab-panel">
+              {/* Sección 1: Presets de Limpieza */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">
+                    {t.preferences.zen?.presetsTitle || 'Nivel de limpieza de pantalla:'}
+                  </h3>
+                  <p className="section-desc">
+                    {t.preferences.zen?.desc ||
+                      'Personaliza los elementos flotantes que se muestran al escribir a pantalla completa para adaptar el lienzo a tu nivel de concentración.'}
+                  </p>
+                </div>
+
+                <div className="zen-preset-grid">
+                  {zenPresets.map((p) => {
+                    const isSelected = activeZenPreset === p.id
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className={`zen-preset-card ${isSelected ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences(p.config)}
+                      >
+                        <div className="zen-preset-header">
+                          <span className="zen-preset-title">{p.title}</span>
+                          {isSelected && <CheckIcon size={14} className="theme-check" />}
+                        </div>
+                        <span className="zen-preset-desc">{p.desc}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+
+              {/* Sección 2: Maqueta Visual Interactiva de la Pantalla */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">
+                    {t.preferences.zen?.previewTitle || 'Vista previa de la pantalla Zen'}
+                  </h3>
+                </div>
+
+                <div className="zen-mockup-wrapper">
+                  <div className="zen-mockup-screen">
+                    {/* Ventana flotante de carpeta (Superior Izquierda) */}
+                    <div
+                      className={`zen-mockup-element zen-mockup-folder ${
+                        currentZenFolder ? 'is-active' : 'is-disabled'
+                      }`}
+                      title={t.preferences.zen?.folderTitle}
+                    >
+                      <FolderTreeIcon size={11} />
+                      <span>{t.preferences.zen?.folderBadge || 'Superior Izq.'}</span>
+                    </div>
+
+                    {/* Barra flotante de herramientas (Superior Derecha) */}
+                    <div
+                      className={`zen-mockup-element zen-mockup-toolbar ${
+                        currentZenToolbar ? 'is-active' : 'is-disabled'
+                      }`}
+                      title={t.preferences.zen?.toolbarTitle}
+                    >
+                      <span className="zen-mockup-dot" />
+                      <span className="zen-mockup-dot" />
+                      <span className="zen-mockup-kbd">Esc</span>
+                    </div>
+
+                    {/* Lienzo central (Manuscrito simulado) */}
+                    <div className="zen-mockup-canvas">
+                      <div className="zen-mockup-line line-main" />
+                      <div className="zen-mockup-line line-sub" />
+                      <div className="zen-mockup-line line-short" />
+                      <span className="zen-mockup-cursor" />
+                    </div>
+
+                    {/* Barra flotante de estadísticas (Inferior Derecha) */}
+                    <div
+                      className={`zen-mockup-element zen-mockup-stats ${
+                        currentZenStats ? 'is-active' : 'is-disabled'
+                      }`}
+                      title={t.preferences.zen?.statsTitle}
+                    >
+                      <BarChartIcon size={11} />
+                      <span>{t.preferences.zen?.statsBadge || 'Inferior Der.'}</span>
+                    </div>
+                  </div>
+
+                  <div className="zen-mockup-footer">
+                    <span className="zen-mockup-status">
+                      {!currentZenToolbar && !currentZenStats && !currentZenFolder
+                        ? t.preferences.zen?.previewPureNotice ||
+                          'Pantalla 100% limpia • Concentración absoluta sin ventanas flotantes. Usa Esc o F11 para salir.'
+                        : t.preferences.zen?.previewActiveNotice ||
+                          'Ventanas flotantes activas • Se revelan suavemente al mover el ratón.'}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Sección 3: Conmutadores individuales de Ventanas Flotantes */}
+              <section className="pref-section">
+                <div className="section-heading">
+                  <h3 className="section-title">
+                    {t.preferences.zen?.title || 'Ventanas Flotantes'}
+                  </h3>
+                </div>
+
+                <div className="zen-toggles-stack">
+                  {/* Toggle 1: Navegador de carpetas */}
+                  <div
+                    className={`typewriter-clean-card ${currentZenFolder ? 'is-active' : ''}`}
+                    onClick={() => onUpdatePreferences({ zenShowFolder: !currentZenFolder })}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onUpdatePreferences({ zenShowFolder: !currentZenFolder })
+                      }
+                    }}
+                  >
+                    <div className="typewriter-clean-info">
+                      <div className="typewriter-clean-header">
+                        <FolderTreeIcon size={18} />
+                        <span className="typewriter-clean-title">
+                          {t.preferences.zen?.folderTitle || 'Navegador de documentos y carpetas'}
+                        </span>
+                        <span className="pref-pill-badge-subtle">
+                          {t.preferences.zen?.folderBadge || 'Superior Izquierda'}
+                        </span>
+                        {currentZenFolder ? (
+                          <span className="pref-pill-badge">{t.common.active}</span>
+                        ) : (
+                          <span className="pref-pill-badge-subtle">{t.common.disabled}</span>
+                        )}
+                      </div>
+                      <p className="typewriter-clean-desc">
+                        {t.preferences.zen?.folderDesc ||
+                          'Ventana flotante en la esquina superior izquierda. Permite explorar y cambiar de documento dentro de la carpeta de trabajo.'}
+                      </p>
+                    </div>
+
+                    <div className={`pref-switch-modern ${currentZenFolder ? 'checked' : ''}`}>
+                      <div className="pref-switch-thumb-modern" />
+                    </div>
+                  </div>
+
+                  {/* Toggle 2: Barra de herramientas */}
+                  <div
+                    className={`typewriter-clean-card ${currentZenToolbar ? 'is-active' : ''}`}
+                    onClick={() => onUpdatePreferences({ zenShowToolbar: !currentZenToolbar })}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onUpdatePreferences({ zenShowToolbar: !currentZenToolbar })
+                      }
+                    }}
+                  >
+                    <div className="typewriter-clean-info">
+                      <div className="typewriter-clean-header">
+                        <FeatherIcon size={18} />
+                        <span className="typewriter-clean-title">
+                          {t.preferences.zen?.toolbarTitle || 'Barra de herramientas superior'}
+                        </span>
+                        <span className="pref-pill-badge-subtle">
+                          {t.preferences.zen?.toolbarBadge || 'Superior Derecha'}
+                        </span>
+                        {currentZenToolbar ? (
+                          <span className="pref-pill-badge">{t.common.active}</span>
+                        ) : (
+                          <span className="pref-pill-badge-subtle">{t.common.disabled}</span>
+                        )}
+                      </div>
+                      <p className="typewriter-clean-desc">
+                        {t.preferences.zen?.toolbarDesc ||
+                          'Píldora en la esquina superior derecha con accesos a modo rodillo, alineación, historial, atajos y botón de salir.'}
+                      </p>
+                      {!currentZenToolbar && (
+                        <p
+                          className="typewriter-clean-desc"
+                          style={{ marginTop: '0.2rem', color: 'var(--text-secondary)' }}
+                        >
+                          💡{' '}
+                          {t.preferences.zen?.toolbarHintEsc ||
+                            'Al ocultar la barra, puedes salir del modo Zen en cualquier momento pulsando Esc o F11.'}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className={`pref-switch-modern ${currentZenToolbar ? 'checked' : ''}`}>
+                      <div className="pref-switch-thumb-modern" />
+                    </div>
+                  </div>
+
+                  {/* Toggle 3: Barra de estadísticas */}
+                  <div
+                    className={`typewriter-clean-card ${currentZenStats ? 'is-active' : ''}`}
+                    onClick={() => onUpdatePreferences({ zenShowStats: !currentZenStats })}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        onUpdatePreferences({ zenShowStats: !currentZenStats })
+                      }
+                    }}
+                  >
+                    <div className="typewriter-clean-info">
+                      <div className="typewriter-clean-header">
+                        <BarChartIcon size={18} />
+                        <span className="typewriter-clean-title">
+                          {t.preferences.zen?.statsTitle || 'Contador de estadísticas flotante'}
+                        </span>
+                        <span className="pref-pill-badge-subtle">
+                          {t.preferences.zen?.statsBadge || 'Inferior Derecha'}
+                        </span>
+                        {currentZenStats ? (
+                          <span className="pref-pill-badge">{t.common.active}</span>
+                        ) : (
+                          <span className="pref-pill-badge-subtle">{t.common.disabled}</span>
+                        )}
+                      </div>
+                      <p className="typewriter-clean-desc">
+                        {t.preferences.zen?.statsDesc ||
+                          'Píldora en la esquina inferior derecha con conteo en vivo de palabras, caracteres, párrafos y tiempo estimado de lectura.'}
+                      </p>
+                      <p
+                        className="typewriter-clean-desc"
+                        style={{ marginTop: '0.2rem', color: 'var(--text-secondary)' }}
+                      >
+                        ⌨️{' '}
+                        {t.preferences.zen?.statsHintHud ||
+                          'Puedes abrir el HUD de estadísticas en cualquier momento pulsando Ctrl+Shift+C.'}
+                      </p>
+                    </div>
+
+                    <div className={`pref-switch-modern ${currentZenStats ? 'checked' : ''}`}>
+                      <div className="pref-switch-thumb-modern" />
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>
