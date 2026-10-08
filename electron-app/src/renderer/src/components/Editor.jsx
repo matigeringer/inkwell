@@ -1584,39 +1584,23 @@ export default function Editor({
 
           <div className="header-divider" />
 
-          {/* Menú Desplegable de Acciones (Guardar, Guardar como, Exportar, Configuración) */}
+          {/* Menú Desplegable de Acciones (Guardar, Guardar como, Exportar, Preferencias) */}
           <div className="action-menu-wrapper" ref={actionsMenuRef}>
             {actionsMenuOpen && (
               <div className="action-menu-dock">
                 {onOpenProfile && (
-                  <>
-                    <button
-                      className="btn-sober-secondary action-dock-btn"
-                      onClick={() => {
-                        setActionsMenuOpen(false)
-                        onOpenProfile()
-                      }}
-                      title={t.editor.preferencesTitle}
-                      aria-label={t.editor.preferencesAria}
-                    >
-                      <SettingsIcon size={15} />
-                      <span className="header-btn-label">{t.editor.settingsBtn}</span>
-                    </button>
-                    <button
-                      className="btn-sober-secondary action-dock-btn"
-                      onClick={() => {
-                        setActionsMenuOpen(false)
-                        onOpenProfile('zen')
-                      }}
-                      title={t.preferences.zen?.title || 'Personalizar Modo Zen'}
-                      aria-label={t.preferences.zen?.title || 'Personalizar Modo Zen'}
-                    >
-                      <ZenFocusIcon size={15} />
-                      <span className="header-btn-label">
-                        {t.editor.zenCustomizationBtn || 'Configurar Modo Zen'}
-                      </span>
-                    </button>
-                  </>
+                  <button
+                    className="btn-sober-secondary action-dock-btn"
+                    onClick={() => {
+                      setActionsMenuOpen(false)
+                      onOpenProfile()
+                    }}
+                    title={t.editor.preferencesTitle}
+                    aria-label={t.editor.preferencesAria}
+                  >
+                    <SettingsIcon size={15} />
+                    <span className="header-btn-label">{t.editor.settingsBtn}</span>
+                  </button>
                 )}
 
                 {/* Menú Desplegable de Exportación */}
