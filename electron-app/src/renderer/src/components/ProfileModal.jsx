@@ -15,6 +15,7 @@ import {
   BarChartIcon
 } from './Icons'
 import { getTranslation } from '../i18n'
+import ConfirmModal from './ConfirmModal'
 
 export default function ProfileModal({
   isOpen,
@@ -41,19 +42,24 @@ export default function ProfileModal({
   const setActiveTab = (tab) => setCurrentTabOverride(tab)
   const [clearingHistory, setClearingHistory] = useState(false)
   const [historyClearedMsg, setHistoryClearedMsg] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState(null)
 
-  // Cerrar modal con tecla Escape
+  // Cerrar modal con tecla Escape (o cerrar el diálogo de confirmación si está abierto)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
         e.preventDefault()
         e.stopImmediatePropagation()
-        onClose()
+        if (confirmDialog) {
+          setConfirmDialog(null)
+        } else {
+          onClose()
+        }
       }
     }
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [isOpen, onClose])
+  }, [isOpen, onClose, confirmDialog])
 
   if (!isOpen) return null
 
@@ -132,606 +138,682 @@ export default function ProfileModal({
     }
   }
 
-  const handleClearAllHistory = async () => {
-    if (!window.api?.historyClearAll) return
-    const confirmText =
-      currentLang === 'en'
-        ? 'Are you sure you want to delete all saved version snapshots across all documents?'
-        : '¿Estás seguro de que deseas eliminar todas las versiones temporales de todos los manuscritos?'
-    if (window.confirm(confirmText)) {
-      setClearingHistory(true)
-      try {
-        await window.api.historyClearAll()
-        setHistoryClearedMsg(true)
-        setTimeout(() => setHistoryClearedMsg(false), 3000)
-      } catch (err) {
-        console.error('Error al limpiar todo el historial:', err)
-      } finally {
-        setClearingHistory(false)
-      }
+  const handleToggleHistory = () => {
+    if (currentHistory) {
+      setConfirmDialog({
+        title: t.preferences.general.historyDisableConfirmTitle,
+        message: t.preferences.general.historyDisableConfirmDesc,
+        confirmLabel: t.preferences.general.historyDisableConfirmBtn,
+        cancelLabel: t.common.cancel,
+        variant: 'danger',
+        onConfirm: () => onUpdatePreferences({ historyEnabled: false })
+      })
+    } else {
+      onUpdatePreferences({ historyEnabled: true })
     }
   }
 
+  const handleSelectHistoryMax = (targetMax) => {
+    if (targetMax < currentHistoryMax) {
+      const diff = currentHistoryMax - targetMax
+      const desc =
+        typeof t.preferences.general.historyReduceConfirmDesc === 'function'
+          ? t.preferences.general.historyReduceConfirmDesc(targetMax, diff)
+          : t.preferences.general.historyReduceConfirmDesc
+      setConfirmDialog({
+        title: t.preferences.general.historyReduceConfirmTitle,
+        message: desc,
+        confirmLabel: t.preferences.general.historyReduceConfirmBtn,
+        cancelLabel: t.common.cancel,
+        variant: 'warning',
+        onConfirm: async () => {
+          onUpdatePreferences({ historyMaxEntries: targetMax })
+          if (window.api?.historyPruneAll) {
+            try {
+              await window.api.historyPruneAll(targetMax)
+            } catch (err) {
+              console.error('Error al podar historial:', err)
+            }
+          }
+        }
+      })
+    } else {
+      onUpdatePreferences({ historyMaxEntries: targetMax })
+    }
+  }
+
+  const handleClearAllHistory = () => {
+    if (!window.api?.historyClearAll) return
+    setConfirmDialog({
+      title: t.preferences.general.historyClearConfirmTitle,
+      message: t.preferences.general.historyClearConfirmDesc,
+      confirmLabel: t.preferences.general.historyClearConfirmBtn,
+      cancelLabel: t.common.cancel,
+      variant: 'danger',
+      onConfirm: async () => {
+        setClearingHistory(true)
+        try {
+          await window.api.historyClearAll()
+          setHistoryClearedMsg(true)
+          setTimeout(() => setHistoryClearedMsg(false), 3000)
+        } catch (err) {
+          console.error('Error al limpiar todo el historial:', err)
+        } finally {
+          setClearingHistory(false)
+        }
+      }
+    })
+  }
+
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div
-        className="modal-card modal-card-wide"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
-        <header className="modal-header-wide">
-          <div className="modal-header-title-bar">
-            <div>
+    <>
+      <div className="modal-backdrop" onClick={onClose}>
+        <div
+          className="modal-card modal-card-wide"
+          onClick={(e) => e.stopPropagation()}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="modal-title"
+        >
+          <header className="modal-header-wide">
+            <div className="modal-header-title-bar">
               <h2 id="modal-title" className="modal-title">
                 {t.preferences.title}
               </h2>
-              <p className="modal-subtitle">{t.preferences.subtitle}</p>
+              <button
+                className="btn-icon-subtle"
+                onClick={onClose}
+                aria-label={t.common.close}
+                title={`${t.common.close} (Esc)`}
+              >
+                <CloseIcon size={18} />
+              </button>
             </div>
-            <button
-              className="btn-icon-subtle"
-              onClick={onClose}
-              aria-label={t.common.close}
-              title={`${t.common.close} (Esc)`}
-            >
-              <CloseIcon size={18} />
-            </button>
-          </div>
 
-          {/* Navegación de 3 pestañas principales */}
-          <nav className="modal-segmented-nav" aria-label="Secciones de configuración">
-            {tabs.map((tab) => {
-              const TabIcon = tab.icon
-              const isActive = activeTab === tab.id
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  className={`segmented-tab-btn ${isActive ? 'is-active' : ''}`}
-                  onClick={() => setActiveTab(tab.id)}
-                >
-                  <TabIcon size={15} />
-                  <span>{tab.label}</span>
-                </button>
-              )
-            })}
-          </nav>
-        </header>
+            {/* Navegación de 3 pestañas principales */}
+            <nav className="modal-segmented-nav" aria-label="Secciones de configuración">
+              {tabs.map((tab) => {
+                const TabIcon = tab.icon
+                const isActive = activeTab === tab.id
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`segmented-tab-btn ${isActive ? 'is-active' : ''}`}
+                    onClick={() => setActiveTab(tab.id)}
+                  >
+                    <TabIcon size={15} />
+                    <span>{tab.label}</span>
+                  </button>
+                )
+              })}
+            </nav>
+          </header>
 
-        <div className="modal-body modal-body-wide">
-          {/* =================================================================
+          <div className="modal-body modal-body-wide">
+            {/* =================================================================
               PESTAÑA 1: GENERAL (Idioma, Corrector, Guardado, Historial)
              ================================================================= */}
-          {activeTab === 'general' && (
-            <div className="pref-tab-panel">
-              {/* Fila: Idioma de la interfaz */}
-              <div className="pref-row">
-                <div className="pref-row-info">
-                  <span className="pref-row-title">{t.preferences.general.languageTitle}</span>
-                </div>
-                <div className="pref-row-control">
-                  <div className="pref-segment-group">
-                    <button
-                      type="button"
-                      className={`pref-segment-btn ${currentLang === 'es' ? 'is-selected' : ''}`}
-                      onClick={() => onUpdatePreferences({ language: 'es' })}
-                    >
-                      <span>{t.preferences.general.spanishName}</span>
-                    </button>
-                    <button
-                      type="button"
-                      className={`pref-segment-btn ${currentLang === 'en' ? 'is-selected' : ''}`}
-                      onClick={() => onUpdatePreferences({ language: 'en' })}
-                    >
-                      <span>{t.preferences.general.englishName}</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Fila: Corrector ortográfico */}
-              <div className="pref-row">
-                <div className="pref-row-info">
-                  <span className="pref-row-title">{t.preferences.general.spellSectionTitle}</span>
-                </div>
-                <div className="pref-row-control">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={currentSpellcheck}
-                    className={`pref-switch ${currentSpellcheck ? 'is-active' : ''}`}
-                    onClick={() => onUpdatePreferences({ spellcheckEnabled: !currentSpellcheck })}
-                  >
-                    <span className="pref-switch-handle" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Fila: Guardado automático (fijo en 2.5s) */}
-              <div className="pref-row">
-                <div className="pref-row-info">
-                  <span className="pref-row-title">{t.preferences.general.autoSaveTitle}</span>
-                  <span className="pref-row-desc">{t.preferences.general.autoSaveDesc}</span>
-                </div>
-                <div className="pref-row-control">
-                  <button
-                    type="button"
-                    role="switch"
-                    aria-checked={currentAutoSave}
-                    className={`pref-switch ${currentAutoSave ? 'is-active' : ''}`}
-                    onClick={() =>
-                      onUpdatePreferences({
-                        autoSaveEnabled: !currentAutoSave,
-                        autoSaveDelay: 2500
-                      })
-                    }
-                  >
-                    <span className="pref-switch-handle" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Fila: Historial de versiones */}
-              <div className="pref-section-group">
+            {activeTab === 'general' && (
+              <div className="pref-tab-panel">
+                {/* Fila: Idioma de la interfaz */}
                 <div className="pref-row">
                   <div className="pref-row-info">
-                    <span className="pref-row-title">{t.preferences.general.historyTitle}</span>
-                    <span className="pref-row-desc">{t.preferences.general.historyDesc}</span>
+                    <span className="pref-row-title">{t.preferences.general.languageTitle}</span>
+                  </div>
+                  <div className="pref-row-control">
+                    <div className="pref-segment-group">
+                      <button
+                        type="button"
+                        className={`pref-segment-btn ${currentLang === 'es' ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ language: 'es' })}
+                      >
+                        <span>{t.preferences.general.spanishName}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`pref-segment-btn ${currentLang === 'en' ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ language: 'en' })}
+                      >
+                        <span>{t.preferences.general.englishName}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Fila: Corrector ortográfico */}
+                <div className="pref-row">
+                  <div className="pref-row-info">
+                    <span className="pref-row-title">
+                      {t.preferences.general.spellSectionTitle}
+                    </span>
                   </div>
                   <div className="pref-row-control">
                     <button
                       type="button"
                       role="switch"
-                      aria-checked={currentHistory}
-                      className={`pref-switch ${currentHistory ? 'is-active' : ''}`}
-                      onClick={() => onUpdatePreferences({ historyEnabled: !currentHistory })}
+                      aria-checked={currentSpellcheck}
+                      className={`pref-switch ${currentSpellcheck ? 'is-active' : ''}`}
+                      onClick={() => onUpdatePreferences({ spellcheckEnabled: !currentSpellcheck })}
                     >
                       <span className="pref-switch-handle" />
                     </button>
                   </div>
                 </div>
 
-                {currentHistory && (
-                  <div className="pref-suboptions-box">
-                    <div className="pref-sub-row">
-                      <span className="pref-sub-title">
-                        {t.preferences.general.maxEntriesTitle}
-                      </span>
-                      <div className="pref-segment-group pref-segment-sm">
-                        {historyMaxOptions.map((opt) => (
-                          <button
-                            key={opt.id}
-                            type="button"
-                            className={`pref-segment-btn ${currentHistoryMax === opt.id ? 'is-selected' : ''}`}
-                            onClick={() => onUpdatePreferences({ historyMaxEntries: opt.id })}
-                          >
-                            <span>{opt.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                {/* Fila: Guardado automático (fijo en 2.5s) */}
+                <div className="pref-row">
+                  <div className="pref-row-info">
+                    <span className="pref-row-title">{t.preferences.general.autoSaveTitle}</span>
+                    <span className="pref-row-desc">{t.preferences.general.autoSaveDesc}</span>
+                  </div>
+                  <div className="pref-row-control">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={currentAutoSave}
+                      className={`pref-switch ${currentAutoSave ? 'is-active' : ''}`}
+                      onClick={() =>
+                        onUpdatePreferences({
+                          autoSaveEnabled: !currentAutoSave,
+                          autoSaveDelay: 2500
+                        })
+                      }
+                    >
+                      <span className="pref-switch-handle" />
+                    </button>
+                  </div>
+                </div>
 
-                    <div className="pref-purge-inline">
-                      <span className="pref-purge-desc">{t.preferences.general.purgeDesc}</span>
+                {/* Fila: Historial de versiones */}
+                <div className="pref-section-group">
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.preferences.general.historyTitle}</span>
+                      <span className="pref-row-desc">{t.preferences.general.historyDesc}</span>
+                    </div>
+                    <div className="pref-row-control">
                       <button
                         type="button"
-                        className="btn-sober-secondary btn-purge-danger"
-                        onClick={handleClearAllHistory}
-                        disabled={clearingHistory}
+                        role="switch"
+                        aria-checked={currentHistory}
+                        className={`pref-switch ${currentHistory ? 'is-active' : ''}`}
+                        onClick={handleToggleHistory}
                       >
-                        <TrashIcon size={13} />
-                        <span>
-                          {historyClearedMsg
-                            ? t.preferences.general.purgedSuccess
-                            : t.preferences.general.purgeBtn}
-                        </span>
+                        <span className="pref-switch-handle" />
                       </button>
                     </div>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
 
-          {/* =================================================================
-              PESTAÑA 2: APARIENCIA
-             ================================================================= */}
-          {activeTab === 'appearance' && (
-            <div className="pref-tab-panel">
-              {/* Fila: Modo de apariencia */}
-              <div className="pref-row">
-                <div className="pref-row-info">
-                  <span className="pref-row-title">{t.preferences.appearance.modeTitle}</span>
-                </div>
-                <div className="pref-row-control">
-                  <div className="pref-segment-group">
-                    {modes.map((m) => {
-                      const ModeIcon = m.icon
-                      const isSelected = (preferences.mode || 'light') === m.id
-                      return (
-                        <button
-                          key={m.id}
-                          type="button"
-                          className={`pref-segment-btn ${isSelected ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ mode: m.id })}
-                        >
-                          <ModeIcon size={14} />
-                          <span>{m.name}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Muestra minimalista de paleta y tema integrada (centrada sin rectángulo mayor) */}
-              <div className="theme-mockup-wrapper" aria-hidden="true">
-                <div className="theme-mockup-screen">
-                  {preferences.mode === 'system' ? (
-                    <div className="compact-mockup-split">
-                      <div
-                        className="compact-mockup-half"
-                        style={{ backgroundColor: themeSpecimen.light.bg }}
-                      >
-                        <span
-                          className="compact-mockup-dot"
-                          style={{ backgroundColor: themeSpecimen.light.accent }}
-                        />
-                        <div className="compact-mockup-lines">
-                          <span
-                            className="compact-line"
-                            style={{ backgroundColor: themeSpecimen.light.text }}
-                          />
-                          <span
-                            className="compact-line compact-line-accent"
-                            style={{ backgroundColor: themeSpecimen.light.accent }}
-                          />
+                  {currentHistory && (
+                    <div className="pref-suboptions-box">
+                      <div className="pref-sub-row">
+                        <span className="pref-sub-title">
+                          {t.preferences.general.maxEntriesTitle}
+                        </span>
+                        <div className="pref-segment-group pref-segment-sm">
+                          {historyMaxOptions.map((opt) => (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              className={`pref-segment-btn ${currentHistoryMax === opt.id ? 'is-selected' : ''}`}
+                              onClick={() => handleSelectHistoryMax(opt.id)}
+                            >
+                              <span>{opt.label}</span>
+                            </button>
+                          ))}
                         </div>
                       </div>
-                      <div
-                        className="compact-mockup-half"
-                        style={{
-                          backgroundColor: themeSpecimen.dark.bg,
-                          borderLeft: '1px solid var(--border-subtle)'
-                        }}
-                      >
-                        <span
-                          className="compact-mockup-dot"
-                          style={{ backgroundColor: themeSpecimen.dark.accent }}
-                        />
-                        <div className="compact-mockup-lines">
-                          <span
-                            className="compact-line"
-                            style={{ backgroundColor: themeSpecimen.dark.text }}
-                          />
-                          <span
-                            className="compact-line compact-line-accent"
-                            style={{ backgroundColor: themeSpecimen.dark.accent }}
-                          />
-                        </div>
+
+                      <div className="pref-purge-inline">
+                        <span className="pref-purge-desc">{t.preferences.general.purgeDesc}</span>
+                        <button
+                          type="button"
+                          className="btn-sober-secondary btn-purge-danger"
+                          onClick={handleClearAllHistory}
+                          disabled={clearingHistory}
+                        >
+                          <TrashIcon size={13} />
+                          <span>
+                            {historyClearedMsg
+                              ? t.preferences.general.purgedSuccess
+                              : t.preferences.general.purgeBtn}
+                          </span>
+                        </button>
                       </div>
                     </div>
-                  ) : (
-                    (() => {
-                      const palette =
-                        preferences.mode === 'dark' ? themeSpecimen.dark : themeSpecimen.light
-                      return (
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* =================================================================
+              PESTAÑA 2: APARIENCIA
+             ================================================================= */}
+            {activeTab === 'appearance' && (
+              <div className="pref-tab-panel">
+                {/* Fila: Modo de apariencia */}
+                <div className="pref-row">
+                  <div className="pref-row-info">
+                    <span className="pref-row-title">{t.preferences.appearance.modeTitle}</span>
+                  </div>
+                  <div className="pref-row-control">
+                    <div className="pref-segment-group">
+                      {modes.map((m) => {
+                        const ModeIcon = m.icon
+                        const isSelected = (preferences.mode || 'light') === m.id
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            className={`pref-segment-btn ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ mode: m.id })}
+                          >
+                            <ModeIcon size={14} />
+                            <span>{m.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Muestra minimalista de paleta y tema integrada (centrada sin rectángulo mayor) */}
+                <div className="theme-mockup-wrapper" aria-hidden="true">
+                  <div className="theme-mockup-screen">
+                    {preferences.mode === 'system' ? (
+                      <div className="compact-mockup-split">
                         <div
-                          className="compact-mockup-full"
-                          style={{ backgroundColor: palette.bg }}
+                          className="compact-mockup-half"
+                          style={{ backgroundColor: themeSpecimen.light.bg }}
                         >
                           <span
                             className="compact-mockup-dot"
-                            style={{ backgroundColor: palette.accent }}
+                            style={{ backgroundColor: themeSpecimen.light.accent }}
                           />
                           <div className="compact-mockup-lines">
                             <span
                               className="compact-line"
-                              style={{ backgroundColor: palette.text }}
+                              style={{ backgroundColor: themeSpecimen.light.text }}
                             />
                             <span
                               className="compact-line compact-line-accent"
-                              style={{ backgroundColor: palette.accent }}
+                              style={{ backgroundColor: themeSpecimen.light.accent }}
                             />
                           </div>
                         </div>
-                      )
-                    })()
-                  )}
-                </div>
-              </div>
-
-              {/* Fila: Tipografía */}
-              <div className="pref-row">
-                <div className="pref-row-info">
-                  <span className="pref-row-title">{t.preferences.appearance.fontFamilyTitle}</span>
-                </div>
-                <div className="pref-row-control">
-                  <div className="pref-segment-group">
-                    {fonts.map((f) => {
-                      const isSelected = preferences.fontFamily === f.id
-                      return (
-                        <button
-                          key={f.id}
-                          type="button"
-                          className={`pref-segment-btn ${f.fontClass} ${isSelected ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ fontFamily: f.id })}
+                        <div
+                          className="compact-mockup-half"
+                          style={{
+                            backgroundColor: themeSpecimen.dark.bg,
+                            borderLeft: '1px solid var(--border-subtle)'
+                          }}
                         >
-                          <span>{f.name}</span>
-                        </button>
-                      )
-                    })}
+                          <span
+                            className="compact-mockup-dot"
+                            style={{ backgroundColor: themeSpecimen.dark.accent }}
+                          />
+                          <div className="compact-mockup-lines">
+                            <span
+                              className="compact-line"
+                              style={{ backgroundColor: themeSpecimen.dark.text }}
+                            />
+                            <span
+                              className="compact-line compact-line-accent"
+                              style={{ backgroundColor: themeSpecimen.dark.accent }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      (() => {
+                        const palette =
+                          preferences.mode === 'dark' ? themeSpecimen.dark : themeSpecimen.light
+                        return (
+                          <div
+                            className="compact-mockup-full"
+                            style={{ backgroundColor: palette.bg }}
+                          >
+                            <span
+                              className="compact-mockup-dot"
+                              style={{ backgroundColor: palette.accent }}
+                            />
+                            <div className="compact-mockup-lines">
+                              <span
+                                className="compact-line"
+                                style={{ backgroundColor: palette.text }}
+                              />
+                              <span
+                                className="compact-line compact-line-accent"
+                                style={{ backgroundColor: palette.accent }}
+                              />
+                            </div>
+                          </div>
+                        )
+                      })()
+                    )}
                   </div>
                 </div>
-              </div>
 
-              {/* Fila: Tamaño de texto */}
-              <div className="pref-row">
-                <div className="pref-row-info">
-                  <span className="pref-row-title">{t.preferences.appearance.fontSizeTitle}</span>
-                </div>
-                <div className="pref-row-control">
-                  <div className="pref-segment-group">
-                    {fontSizes.map((s) => {
-                      const isSelected = currentFontSize === s.id
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          className={`pref-segment-btn ${isSelected ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ fontSize: s.id })}
-                        >
-                          <span>{s.label}</span>
-                          <span className="pref-segment-note">{s.note}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Fila: Alineación */}
-              <div className="pref-row">
-                <div className="pref-row-info">
-                  <span className="pref-row-title">{t.preferences.appearance.alignTitle}</span>
-                </div>
-                <div className="pref-row-control">
-                  <div className="pref-segment-group">
-                    {alignments.map((a) => {
-                      const Icon = a.icon
-                      const isSelected = currentTextAlign === a.id
-                      return (
-                        <button
-                          key={a.id}
-                          type="button"
-                          className={`pref-segment-btn ${isSelected ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ textAlign: a.id })}
-                        >
-                          <Icon size={14} />
-                          <span>{a.name}</span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Muestra interactiva de texto sobria (mancha tipográfica de prueba) */}
-              <div className="live-preview-compact">
-                <p
-                  className="live-preview-line"
-                  style={{
-                    fontSize: currentFontSize,
-                    fontFamily: currentFontFamily,
-                    textAlign: currentTextAlign
-                  }}
-                >
-                  {t.preferences.appearance.exampleText}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* =================================================================
-              PESTAÑA 3: ESCRITURA (Rodillo + Modo Zen)
-             ================================================================= */}
-          {activeTab === 'writing' && (
-            <div className="pref-tab-panel">
-              {/* Sección A: Modo máquina de escribir */}
-              <div className="pref-section-group">
+                {/* Fila: Tipografía */}
                 <div className="pref-row">
                   <div className="pref-row-info">
-                    <span className="pref-row-title">{t.preferences.writing.typewriterTitle}</span>
-                    <span className="pref-row-desc">{t.preferences.writing.typewriterDesc}</span>
+                    <span className="pref-row-title">
+                      {t.preferences.appearance.fontFamilyTitle}
+                    </span>
                   </div>
                   <div className="pref-row-control">
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={currentTypewriter}
-                      className={`pref-switch ${currentTypewriter ? 'is-active' : ''}`}
-                      onClick={() => onUpdatePreferences({ typewriterMode: !currentTypewriter })}
-                    >
-                      <span className="pref-switch-handle" />
-                    </button>
+                    <div className="pref-segment-group">
+                      {fonts.map((f) => {
+                        const isSelected = preferences.fontFamily === f.id
+                        return (
+                          <button
+                            key={f.id}
+                            type="button"
+                            className={`pref-segment-btn ${f.fontClass} ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ fontFamily: f.id })}
+                          >
+                            <span>{f.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
 
-                {currentTypewriter && (
-                  <div className="pref-suboptions-box">
-                    <div className="pref-sub-row">
-                      <div className="pref-sub-info">
-                        <span className="pref-sub-title">{t.preferences.writing.anchorTitle}</span>
-                        <span className="pref-sub-desc">{t.preferences.writing.anchorDesc}</span>
-                      </div>
-                      <div className="pref-segment-group pref-segment-sm">
-                        <button
-                          type="button"
-                          className={`pref-segment-btn ${currentTypewriterPosition === 'center' ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ typewriterPosition: 'center' })}
-                        >
-                          <span>{t.preferences.writing.anchorCenterTitle}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={`pref-segment-btn ${currentTypewriterPosition === 'eye' ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ typewriterPosition: 'eye' })}
-                        >
-                          <span>{t.preferences.writing.anchorEyeTitle}</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="pref-sub-row">
-                      <div className="pref-sub-info">
-                        <span className="pref-sub-title">{t.preferences.writing.navTitle}</span>
-                        <span className="pref-sub-desc">{t.preferences.writing.navDesc}</span>
-                      </div>
-                      <div className="pref-segment-group pref-segment-sm">
-                        <button
-                          type="button"
-                          className={`pref-segment-btn ${currentTypewriterBehavior === 'deadzone' ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ typewriterBehavior: 'deadzone' })}
-                        >
-                          <span>{t.preferences.writing.navDeadzoneTitle}</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={`pref-segment-btn ${currentTypewriterBehavior === 'strict' ? 'is-selected' : ''}`}
-                          onClick={() => onUpdatePreferences({ typewriterBehavior: 'strict' })}
-                        >
-                          <span>{t.preferences.writing.navStrictTitle}</span>
-                        </button>
-                      </div>
+                {/* Fila: Tamaño de texto */}
+                <div className="pref-row">
+                  <div className="pref-row-info">
+                    <span className="pref-row-title">{t.preferences.appearance.fontSizeTitle}</span>
+                  </div>
+                  <div className="pref-row-control">
+                    <div className="pref-segment-group">
+                      {fontSizes.map((s) => {
+                        const isSelected = currentFontSize === s.id
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className={`pref-segment-btn ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ fontSize: s.id })}
+                          >
+                            <span>{s.label}</span>
+                            <span className="pref-segment-note">{s.note}</span>
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
-                )}
+                </div>
+
+                {/* Fila: Alineación */}
+                <div className="pref-row">
+                  <div className="pref-row-info">
+                    <span className="pref-row-title">{t.preferences.appearance.alignTitle}</span>
+                  </div>
+                  <div className="pref-row-control">
+                    <div className="pref-segment-group">
+                      {alignments.map((a) => {
+                        const Icon = a.icon
+                        const isSelected = currentTextAlign === a.id
+                        return (
+                          <button
+                            key={a.id}
+                            type="button"
+                            className={`pref-segment-btn ${isSelected ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ textAlign: a.id })}
+                          >
+                            <Icon size={14} />
+                            <span>{a.name}</span>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Muestra interactiva de texto sobria (mancha tipográfica de prueba) */}
+                <div className="live-preview-compact">
+                  <p
+                    className="live-preview-line"
+                    style={{
+                      fontSize: currentFontSize,
+                      fontFamily: currentFontFamily,
+                      textAlign: currentTextAlign
+                    }}
+                  >
+                    {t.preferences.appearance.exampleText}
+                  </p>
+                </div>
               </div>
+            )}
 
-              {/* Separador sutil */}
-              <div className="pref-divider" />
-
-              {/* Sección B: Modo Zen con maqueta reactiva y 3 opciones limpias */}
-              <div className="pref-section-group">
-                <div className="pref-section-header">
-                  <span className="pref-section-title">{t.preferences.writing.zenTitle}</span>
-                  <span className="pref-section-desc">{t.preferences.writing.zenDesc}</span>
-                </div>
-
-                {/* Maqueta simulada minimalista integrada (reactiva a cada toggle) */}
-                <div className="zen-mockup-compact-wrapper" aria-hidden="true">
-                  <div className="zen-mockup-compact-screen">
-                    {/* Explorador de carpetas */}
-                    <div
-                      className={`zen-mockup-item-tag zen-mockup-folder ${
-                        currentZenFolder ? 'is-visible' : 'is-hidden'
-                      }`}
-                    >
-                      <FolderTreeIcon size={11} />
-                      <span>{t.preferences.writing.zenFolderTitle}</span>
-                    </div>
-
-                    {/* Barra de herramientas */}
-                    <div
-                      className={`zen-mockup-item-tag zen-mockup-toolbar ${
-                        currentZenToolbar ? 'is-visible' : 'is-hidden'
-                      }`}
-                    >
-                      <span className="zen-mockup-dot" />
-                      <span className="zen-mockup-dot" />
-                      <span className="zen-mockup-kbd">Esc</span>
-                    </div>
-
-                    {/* Lienzo central simulado */}
-                    <div className="zen-mockup-canvas-lines">
-                      <span className="zen-mockup-line line-main" />
-                      <span className="zen-mockup-line line-sub" />
-                      <span className="zen-mockup-line line-short" />
-                      <span className="zen-mockup-cursor" />
-                    </div>
-
-                    {/* Estadísticas */}
-                    <div
-                      className={`zen-mockup-item-tag zen-mockup-stats ${
-                        currentZenStats ? 'is-visible' : 'is-hidden'
-                      }`}
-                    >
-                      <BarChartIcon size={11} />
-                      <span>{t.preferences.writing.zenStatsTitle}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Los 3 toggles directos y limpios solicitados */}
-                <div className="zen-clean-toggles">
-                  {/* Opción 1: Barra de herramientas */}
+            {/* =================================================================
+              PESTAÑA 3: ESCRITURA (Rodillo + Modo Zen)
+             ================================================================= */}
+            {activeTab === 'writing' && (
+              <div className="pref-tab-panel">
+                {/* Sección A: Modo máquina de escribir */}
+                <div className="pref-section-group">
                   <div className="pref-row">
                     <div className="pref-row-info">
                       <span className="pref-row-title">
-                        {t.preferences.writing.zenToolbarTitle}
+                        {t.preferences.writing.typewriterTitle}
                       </span>
+                      <span className="pref-row-desc">{t.preferences.writing.typewriterDesc}</span>
                     </div>
                     <div className="pref-row-control">
                       <button
                         type="button"
                         role="switch"
-                        aria-checked={currentZenToolbar}
-                        className={`pref-switch ${currentZenToolbar ? 'is-active' : ''}`}
-                        onClick={() => onUpdatePreferences({ zenShowToolbar: !currentZenToolbar })}
+                        aria-checked={currentTypewriter}
+                        className={`pref-switch ${currentTypewriter ? 'is-active' : ''}`}
+                        onClick={() => onUpdatePreferences({ typewriterMode: !currentTypewriter })}
                       >
                         <span className="pref-switch-handle" />
                       </button>
                     </div>
                   </div>
 
-                  {/* Opción 2: Estadísticas */}
-                  <div className="pref-row">
-                    <div className="pref-row-info">
-                      <span className="pref-row-title">{t.preferences.writing.zenStatsTitle}</span>
+                  {currentTypewriter && (
+                    <div className="pref-suboptions-box">
+                      <div className="pref-sub-row">
+                        <div className="pref-sub-info">
+                          <span className="pref-sub-title">
+                            {t.preferences.writing.anchorTitle}
+                          </span>
+                          <span className="pref-sub-desc">{t.preferences.writing.anchorDesc}</span>
+                        </div>
+                        <div className="pref-segment-group pref-segment-sm">
+                          <button
+                            type="button"
+                            className={`pref-segment-btn ${currentTypewriterPosition === 'center' ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ typewriterPosition: 'center' })}
+                          >
+                            <span>{t.preferences.writing.anchorCenterTitle}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`pref-segment-btn ${currentTypewriterPosition === 'eye' ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ typewriterPosition: 'eye' })}
+                          >
+                            <span>{t.preferences.writing.anchorEyeTitle}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="pref-sub-row">
+                        <div className="pref-sub-info">
+                          <span className="pref-sub-title">{t.preferences.writing.navTitle}</span>
+                          <span className="pref-sub-desc">{t.preferences.writing.navDesc}</span>
+                        </div>
+                        <div className="pref-segment-group pref-segment-sm">
+                          <button
+                            type="button"
+                            className={`pref-segment-btn ${currentTypewriterBehavior === 'deadzone' ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ typewriterBehavior: 'deadzone' })}
+                          >
+                            <span>{t.preferences.writing.navDeadzoneTitle}</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={`pref-segment-btn ${currentTypewriterBehavior === 'strict' ? 'is-selected' : ''}`}
+                            onClick={() => onUpdatePreferences({ typewriterBehavior: 'strict' })}
+                          >
+                            <span>{t.preferences.writing.navStrictTitle}</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="pref-row-control">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={currentZenStats}
-                        className={`pref-switch ${currentZenStats ? 'is-active' : ''}`}
-                        onClick={() => onUpdatePreferences({ zenShowStats: !currentZenStats })}
+                  )}
+                </div>
+
+                {/* Separador sutil */}
+                <div className="pref-divider" />
+
+                {/* Sección B: Modo Zen con maqueta reactiva y 3 opciones limpias */}
+                <div className="pref-section-group">
+                  <div className="pref-section-header">
+                    <span className="pref-section-title">{t.preferences.writing.zenTitle}</span>
+                    <span className="pref-section-desc">{t.preferences.writing.zenDesc}</span>
+                  </div>
+
+                  {/* Maqueta simulada minimalista integrada (reactiva a cada toggle) */}
+                  <div className="zen-mockup-compact-wrapper" aria-hidden="true">
+                    <div className="zen-mockup-compact-screen">
+                      {/* Explorador de carpetas */}
+                      <div
+                        className={`zen-mockup-item-tag zen-mockup-folder ${
+                          currentZenFolder ? 'is-visible' : 'is-hidden'
+                        }`}
                       >
-                        <span className="pref-switch-handle" />
-                      </button>
+                        <FolderTreeIcon size={11} />
+                        <span>{t.preferences.writing.zenFolderTitle}</span>
+                      </div>
+
+                      {/* Barra de herramientas */}
+                      <div
+                        className={`zen-mockup-item-tag zen-mockup-toolbar ${
+                          currentZenToolbar ? 'is-visible' : 'is-hidden'
+                        }`}
+                      >
+                        <span className="zen-mockup-dot" />
+                        <span className="zen-mockup-dot" />
+                        <span className="zen-mockup-kbd">Esc</span>
+                      </div>
+
+                      {/* Lienzo central simulado */}
+                      <div className="zen-mockup-canvas-lines">
+                        <span className="zen-mockup-line line-main" />
+                        <span className="zen-mockup-line line-sub" />
+                        <span className="zen-mockup-line line-short" />
+                        <span className="zen-mockup-cursor" />
+                      </div>
+
+                      {/* Estadísticas */}
+                      <div
+                        className={`zen-mockup-item-tag zen-mockup-stats ${
+                          currentZenStats ? 'is-visible' : 'is-hidden'
+                        }`}
+                      >
+                        <BarChartIcon size={11} />
+                        <span>{t.preferences.writing.zenStatsTitle}</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Opción 3: Explorador de carpetas */}
-                  <div className="pref-row">
-                    <div className="pref-row-info">
-                      <span className="pref-row-title">{t.preferences.writing.zenFolderTitle}</span>
+                  {/* Los 3 toggles directos y limpios solicitados */}
+                  <div className="zen-clean-toggles">
+                    {/* Opción 1: Barra de herramientas */}
+                    <div className="pref-row">
+                      <div className="pref-row-info">
+                        <span className="pref-row-title">
+                          {t.preferences.writing.zenToolbarTitle}
+                        </span>
+                      </div>
+                      <div className="pref-row-control">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={currentZenToolbar}
+                          className={`pref-switch ${currentZenToolbar ? 'is-active' : ''}`}
+                          onClick={() =>
+                            onUpdatePreferences({ zenShowToolbar: !currentZenToolbar })
+                          }
+                        >
+                          <span className="pref-switch-handle" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="pref-row-control">
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={currentZenFolder}
-                        className={`pref-switch ${currentZenFolder ? 'is-active' : ''}`}
-                        onClick={() => onUpdatePreferences({ zenShowFolder: !currentZenFolder })}
-                      >
-                        <span className="pref-switch-handle" />
-                      </button>
+
+                    {/* Opción 2: Estadísticas */}
+                    <div className="pref-row">
+                      <div className="pref-row-info">
+                        <span className="pref-row-title">
+                          {t.preferences.writing.zenStatsTitle}
+                        </span>
+                      </div>
+                      <div className="pref-row-control">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={currentZenStats}
+                          className={`pref-switch ${currentZenStats ? 'is-active' : ''}`}
+                          onClick={() => onUpdatePreferences({ zenShowStats: !currentZenStats })}
+                        >
+                          <span className="pref-switch-handle" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Opción 3: Explorador de carpetas */}
+                    <div className="pref-row">
+                      <div className="pref-row-info">
+                        <span className="pref-row-title">
+                          {t.preferences.writing.zenFolderTitle}
+                        </span>
+                      </div>
+                      <div className="pref-row-control">
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={currentZenFolder}
+                          className={`pref-switch ${currentZenFolder ? 'is-active' : ''}`}
+                          onClick={() => onUpdatePreferences({ zenShowFolder: !currentZenFolder })}
+                        >
+                          <span className="pref-switch-handle" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
 
-        <footer className="modal-footer-wide">
-          <button className="btn-modal-close" onClick={onClose}>
-            {t.common.done}
-          </button>
-        </footer>
+          <footer className="modal-footer-wide">
+            <button className="btn-modal-close" onClick={onClose}>
+              {t.common.done}
+            </button>
+          </footer>
+        </div>
       </div>
-    </div>
+
+      {confirmDialog && (
+        <ConfirmModal
+          isOpen={Boolean(confirmDialog)}
+          title={confirmDialog.title}
+          message={confirmDialog.message}
+          confirmLabel={confirmDialog.confirmLabel}
+          cancelLabel={confirmDialog.cancelLabel || t.common.cancel}
+          variant={confirmDialog.variant}
+          onConfirm={() => {
+            confirmDialog.onConfirm?.()
+            setConfirmDialog(null)
+          }}
+          onClose={() => setConfirmDialog(null)}
+        />
+      )}
+    </>
   )
 }

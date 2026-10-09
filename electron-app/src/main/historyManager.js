@@ -273,3 +273,43 @@ export async function clearAllHistory() {
     return { success: false, error: error.message }
   }
 }
+
+/**
+ * Poda el historial de todos los documentos para ajustarse a un nuevo límite máximo
+ */
+export async function pruneAllHistory(maxEntries) {
+  try {
+    const baseDir = getHistoryBaseDir()
+    const limit = Math.max(5, Number(maxEntries) || 50)
+
+    try {
+      await fs.access(baseDir)
+    } catch {
+      return { success: true }
+    }
+
+    const entries = await fs.readdir(baseDir, { withFileTypes: true })
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const docDir = join(baseDir, entry.name)
+        const meta = await readDocMeta(docDir)
+        if (meta && Array.isArray(meta.snapshots) && meta.snapshots.length > limit) {
+          const toRemove = meta.snapshots.slice(limit)
+          meta.snapshots = meta.snapshots.slice(0, limit)
+          for (const item of toRemove) {
+            try {
+              await fs.unlink(join(docDir, item.file))
+            } catch {
+              // Ignorar si ya fue eliminado
+            }
+          }
+          await writeDocMeta(docDir, meta)
+        }
+      }
+    }
+    return { success: true }
+  } catch (error) {
+    console.error('Error al podar historial general:', error)
+    return { success: false, error: error.message }
+  }
+}

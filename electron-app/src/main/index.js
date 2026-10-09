@@ -11,7 +11,8 @@ import {
   getSnapshotContent,
   deleteSnapshot,
   clearDocHistory,
-  clearAllHistory
+  clearAllHistory,
+  pruneAllHistory
 } from './historyManager'
 
 // Idioma activo de la aplicación ('es' | 'en') y soporte de corrección ortográfica
@@ -604,6 +605,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('history:clear-all', async () => {
     return clearAllHistory()
+  })
+
+  ipcMain.handle('history:prune-all', async (_event, maxEntries) => {
+    return pruneAllHistory(maxEntries)
   })
 
   createWindow()

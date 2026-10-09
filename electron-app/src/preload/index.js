@@ -43,7 +43,8 @@ const api = {
   historyGetSnapshotContent: (data) => ipcRenderer.invoke('history:get-snapshot-content', data),
   historyDeleteSnapshot: (data) => ipcRenderer.invoke('history:delete-snapshot', data),
   historyClear: (docKey) => ipcRenderer.invoke('history:clear', docKey),
-  historyClearAll: () => ipcRenderer.invoke('history:clear-all')
+  historyClearAll: () => ipcRenderer.invoke('history:clear-all'),
+  historyPruneAll: (maxEntries) => ipcRenderer.invoke('history:prune-all', maxEntries)
 }
 
 // Use `contextBridge` APIs to expose Electron APIs to

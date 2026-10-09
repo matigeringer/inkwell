@@ -276,8 +276,9 @@ export const translations = {
         anchorDesc: 'Dónde se sitúa la línea activa al escribir',
         anchorCenterTitle: 'Centro',
         anchorEyeTitle: 'Tercio superior',
-        navTitle: 'Moverse con flechas',
-        navDesc: 'Permite explorar líneas cercanas sin mover la página, o recentra en cada línea',
+        navTitle: 'Recentrado al navegar',
+        navDesc:
+          'Define si la pantalla se recentra en cada línea al pulsar las flechas o si mantiene la vista estable para explorar líneas cercanas sin saltos',
         navDeadzoneTitle: 'Flexible',
         navStrictTitle: 'Fijo',
         zenTitle: 'Modo Zen',
@@ -299,7 +300,21 @@ export const translations = {
         maxEntriesTitle: 'Límite de versiones',
         purgeDesc: 'Elimina todas las versiones archivadas en el equipo',
         purgeBtn: 'Vaciar historial',
-        purgedSuccess: 'Historial vaciado con éxito'
+        purgedSuccess: 'Historial vaciado con éxito',
+        historyDisableConfirmTitle: '¿Desactivar el historial de versiones?',
+        historyDisableConfirmDesc:
+          'Se detendrá el guardado automático de versiones para todos los documentos. Las versiones que ya tengas guardadas se mantendrán, pero no se crearán nuevos puntos de restauración.',
+        historyDisableConfirmBtn: 'Desactivar',
+        historyReduceConfirmTitle: '¿Reducir el límite de versiones?',
+        historyReduceConfirmDesc: (newLimit, diff) =>
+          diff
+            ? `Solo se conservarán las ${newLimit} versiones más recientes de cada documento. Las ${diff} versiones anteriores que superen este nuevo límite se eliminarán de forma permanente y ya no podrás recuperarlas.`
+            : `Solo se conservarán las ${newLimit} versiones más recientes de cada documento. Todas las versiones anteriores que superen este límite se eliminarán de forma permanente y ya no podrás recuperarlas.`,
+        historyReduceConfirmBtn: 'Reducir',
+        historyClearConfirmTitle: '¿Vaciar todo el historial?',
+        historyClearConfirmDesc:
+          'Se eliminarán de forma permanente todas las versiones e instantáneas guardadas de todos tus documentos en este equipo. Esta acción no se puede deshacer.',
+        historyClearConfirmBtn: 'Vaciar'
       }
     }
   },
@@ -580,8 +595,9 @@ export const translations = {
         anchorDesc: 'Where the active line is placed while typing',
         anchorCenterTitle: 'Center',
         anchorEyeTitle: 'Upper Third',
-        navTitle: 'Arrow Navigation',
-        navDesc: 'Explore nearby lines freely without moving the page, or recenter on each line',
+        navTitle: 'Navigation Re-centering',
+        navDesc:
+          'Determines whether the screen re-centers with each arrow keystroke or stays steady to browse nearby lines without jumping',
         navDeadzoneTitle: 'Flexible',
         navStrictTitle: 'Strict',
         zenTitle: 'Zen Mode',
@@ -603,7 +619,21 @@ export const translations = {
         maxEntriesTitle: 'Version limit',
         purgeDesc: 'Delete all archived snapshots from this computer',
         purgeBtn: 'Clear history',
-        purgedSuccess: 'History cleared successfully'
+        purgedSuccess: 'History cleared successfully',
+        historyDisableConfirmTitle: 'Disable Version History?',
+        historyDisableConfirmDesc:
+          'Automatic version saving will stop for all documents. Existing saved versions will be kept, but no new restore points will be created.',
+        historyDisableConfirmBtn: 'Disable',
+        historyReduceConfirmTitle: 'Reduce Version Limit?',
+        historyReduceConfirmDesc: (newLimit, diff) =>
+          diff
+            ? `Only the ${newLimit} most recent versions of each document will be kept. The ${diff} older versions exceeding this new limit will be permanently deleted and cannot be recovered.`
+            : `Only the ${newLimit} most recent versions of each document will be kept. Any older versions exceeding this limit will be permanently deleted and cannot be recovered.`,
+        historyReduceConfirmBtn: 'Reduce',
+        historyClearConfirmTitle: 'Clear All History?',
+        historyClearConfirmDesc:
+          'All saved versions and snapshots across all documents on this computer will be permanently deleted. This action cannot be undone.',
+        historyClearConfirmBtn: 'Clear'
       }
     }
   }
