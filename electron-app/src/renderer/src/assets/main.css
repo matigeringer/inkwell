@@ -836,7 +836,7 @@
 .zen-floating-toolbar:focus-within {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: none;
 }
 
 /* Floating minimalist stats bar in Zen Mode (bottom right) */
@@ -857,7 +857,7 @@
 .zen-floating-stats:hover {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: none;
 }
 
 .zen-stats-pill {
@@ -1135,14 +1135,18 @@
     width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  backface-visibility: hidden;
 }
 
 .zen-floating-folder.visible,
+.zen-floating-folder.is-creating,
 .zen-floating-folder:hover,
 .zen-floating-folder:focus-within {
   opacity: 1;
   pointer-events: auto;
-  transform: translateY(0);
+  transform: none;
 }
 
 .zen-floating-folder.is-collapsed {
@@ -1153,7 +1157,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.6rem;
+  gap: 0.5rem;
   padding: 0.4rem 0.65rem;
   background-color: var(--bg-surface);
   cursor: pointer;
@@ -1189,19 +1193,50 @@
   min-width: 0;
 }
 
+.zen-folder-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.btn-zen-folder-header-action {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius);
+  transition: all 0.12s ease;
+}
+
+.btn-zen-folder-header-action:hover {
+  background-color: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
 .zen-folder-toggle-btn {
   background: transparent;
   border: none;
   color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: color 0.15s ease;
+  border-radius: var(--radius);
+  transition: all 0.12s ease;
 }
 
-.zen-folder-header:hover .zen-folder-toggle-btn {
+.zen-folder-toggle-btn:hover {
+  background-color: var(--bg-hover);
   color: var(--accent-primary);
 }
 
@@ -1354,6 +1389,169 @@
   font-size: 0.72rem;
   color: var(--text-muted);
   font-style: italic;
+}
+
+.zen-tree-item-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
+.zen-tree-item:hover .zen-tree-item-actions {
+  display: flex;
+}
+
+.btn-zen-tree-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-zen-tree-action:hover {
+  background-color: var(--bg-hover);
+  color: var(--accent-primary);
+}
+
+.btn-zen-tree-action.btn-action-danger:hover {
+  color: var(--mark-danger);
+  background-color: var(--mark-danger-subtle);
+}
+
+.zen-floating-folder svg,
+.zen-toolbar-pill svg,
+.zen-floating-stats svg,
+.tree-context-menu svg {
+  shape-rendering: geometricPrecision;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.zen-tree-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.45rem;
+  background-color: var(--bg-card);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius);
+  margin: 2px 4px;
+  box-shadow: var(--shadow-sm);
+  animation: zenInlineFadeIn 0.12s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes zenInlineFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.zen-tree-inline-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  padding: 0.1rem 0.2rem;
+}
+
+.zen-tree-inline-input::placeholder {
+  color: var(--text-muted);
+  opacity: 0.75;
+}
+
+.zen-tree-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.btn-zen-tree-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: calc(var(--radius) - 1px);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.btn-zen-tree-inline:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.btn-zen-tree-inline.btn-zen-inline-check:hover {
+  color: var(--accent-primary);
+}
+
+.zen-tree-empty-state {
+  padding: 1rem 0.75rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.zen-tree-empty-text {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.zen-tree-empty-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-zen-empty-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.55rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius);
+  font-family: var(--font-ui);
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-zen-empty-action:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
 }
 
 /* Zen Shortcuts Modal Styles */

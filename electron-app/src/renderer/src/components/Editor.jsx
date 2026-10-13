@@ -1840,6 +1840,8 @@ export default function Editor({
           openedFolder={openedFolder}
           activeFilePath={filePath}
           onSelectFile={handleSwitchDoc}
+          onRefreshTree={onRefreshFolderTree}
+          showToast={showToast}
           isMouseActive={isMouseActive}
           language={preferences?.language}
         />
