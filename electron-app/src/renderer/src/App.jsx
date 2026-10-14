@@ -32,8 +32,15 @@ function App() {
           mode = 'light'
         }
 
+        let theme = 'puro'
+        if (parsed.theme === 'gaceta') {
+          theme = 'gaceta'
+        } else if (parsed.theme === 'puro' || parsed.theme === 'galera') {
+          theme = 'puro'
+        }
+
         return {
-          theme: 'puro',
+          theme,
           mode: ['light', 'dark', 'system'].includes(mode) ? mode : 'light',
           fontFamily: parsed.fontFamily || 'serif',
           fontSize: parsed.fontSize || '1.40rem',
@@ -140,7 +147,8 @@ function App() {
     const applyThemeAndMode = (theme, mode) => {
       const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
       const effectiveMode = mode === 'system' ? (isSystemDark ? 'dark' : 'light') : mode
-      const dataThemeValue = `${theme}-${effectiveMode}`
+      const safeTheme = theme === 'gaceta' ? 'gaceta' : 'puro'
+      const dataThemeValue = `${safeTheme}-${effectiveMode}`
       root.setAttribute('data-theme', dataThemeValue)
     }
 

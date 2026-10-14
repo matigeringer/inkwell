@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   CloseIcon,
   SunIcon,
@@ -12,7 +12,9 @@ import {
   SettingsIcon,
   TrashIcon,
   FolderTreeIcon,
-  BarChartIcon
+  BarChartIcon,
+  ChevronDownIcon,
+  CheckIcon
 } from './Icons'
 import { getTranslation } from '../i18n'
 import ConfirmModal from './ConfirmModal'
@@ -43,6 +45,20 @@ export default function ProfileModal({
   const [clearingHistory, setClearingHistory] = useState(false)
   const [historyClearedMsg, setHistoryClearedMsg] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState(null)
+  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false)
+  const themeDropdownRef = useRef(null)
+
+  // Cerrar el desplegable de temas al hacer clic fuera
+  useEffect(() => {
+    if (!isThemeDropdownOpen) return
+    const handleClickOutside = (e) => {
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(e.target)) {
+        setIsThemeDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isThemeDropdownOpen])
 
   // Cerrar modal con tecla Escape (o cerrar el diálogo de confirmación si está abierto)
   useEffect(() => {
@@ -50,7 +66,9 @@ export default function ProfileModal({
       if (e.key === 'Escape' && isOpen) {
         e.preventDefault()
         e.stopImmediatePropagation()
-        if (confirmDialog) {
+        if (isThemeDropdownOpen) {
+          setIsThemeDropdownOpen(false)
+        } else if (confirmDialog) {
           setConfirmDialog(null)
         } else {
           onClose()
@@ -59,7 +77,7 @@ export default function ProfileModal({
     }
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
-  }, [isOpen, onClose, confirmDialog])
+  }, [isOpen, onClose, confirmDialog, isThemeDropdownOpen])
 
   if (!isOpen) return null
 
@@ -123,20 +141,65 @@ export default function ProfileModal({
         ? 'var(--font-mono)'
         : 'var(--font-serif)'
 
-  const themeSpecimen = {
-    light: {
-      bg: '#efeee8',
-      sidebar: '#e4e3db',
-      text: '#1c1d1a',
-      accent: '#c2381b'
+  const themes = [
+    {
+      id: 'puro',
+      name:
+        t.preferences.appearance.themes?.puro?.name || (currentLang === 'en' ? 'Galley' : 'Galera'),
+      desc:
+        t.preferences.appearance.themes?.puro?.desc ||
+        (currentLang === 'en'
+          ? 'Warm proofing paper, carbon ink, and vermillion pencil'
+          : 'Papel cálido de imprenta, tinta carbón y lápiz bermellón')
     },
-    dark: {
-      bg: '#161814',
-      sidebar: '#111310',
-      text: '#e6e3d6',
-      accent: '#ee6342'
+    {
+      id: 'gaceta',
+      name:
+        t.preferences.appearance.themes?.gaceta?.name ||
+        (currentLang === 'en' ? 'Gazette' : 'Gaceta'),
+      desc:
+        t.preferences.appearance.themes?.gaceta?.desc ||
+        (currentLang === 'en'
+          ? 'Morning broadsheet in newsprint white, deep black, and grayscale'
+          : 'Prensa matutina en blanco papel, negros puros y escala de grises')
+    }
+  ]
+
+  const currentThemeId = preferences.theme === 'gaceta' ? 'gaceta' : 'puro'
+  const activeThemeObj = themes.find((th) => th.id === currentThemeId) || themes[0]
+
+  const themeSpecimens = {
+    puro: {
+      light: {
+        bg: '#efeee8',
+        sidebar: '#e4e3db',
+        text: '#1c1d1a',
+        accent: '#c2381b'
+      },
+      dark: {
+        bg: '#161814',
+        sidebar: '#111310',
+        text: '#e6e3d6',
+        accent: '#ee6342'
+      }
+    },
+    gaceta: {
+      light: {
+        bg: '#f4f4f2',
+        sidebar: '#eaeae8',
+        text: '#111213',
+        accent: '#111213'
+      },
+      dark: {
+        bg: '#121315',
+        sidebar: '#0d0e10',
+        text: '#f1f2f4',
+        accent: '#f1f2f4'
+      }
     }
   }
+
+  const themeSpecimen = themeSpecimens[currentThemeId] || themeSpecimens.puro
 
   const handleToggleHistory = () => {
     if (currentHistory) {
@@ -392,6 +455,70 @@ export default function ProfileModal({
              ================================================================= */}
             {activeTab === 'appearance' && (
               <div className="pref-tab-panel">
+                {/* Fila: Selector de Tema Visual (Desplegable) */}
+                <div className="pref-row pref-row-theme">
+                  <div className="pref-row-info">
+                    <span className="pref-row-title">
+                      {t.preferences.appearance.themeTitle || 'Tema visual'}
+                    </span>
+                    <span className="pref-row-desc">
+                      {t.preferences.appearance.themeDesc ||
+                        'Atmósfera cromática y diseño editorial del entorno'}
+                    </span>
+                  </div>
+                  <div className="pref-row-control">
+                    <div className="theme-dropdown-container" ref={themeDropdownRef}>
+                      <button
+                        type="button"
+                        className={`theme-dropdown-trigger ${isThemeDropdownOpen ? 'is-open' : ''}`}
+                        onClick={() => setIsThemeDropdownOpen((prev) => !prev)}
+                        aria-haspopup="listbox"
+                        aria-expanded={isThemeDropdownOpen}
+                        aria-label={
+                          t.preferences.appearance.themeDropdownLabel || 'Seleccionar tema visual'
+                        }
+                      >
+                        <span className="theme-trigger-name">{activeThemeObj.name}</span>
+                        <ChevronDownIcon
+                          size={14}
+                          className={`theme-dropdown-chevron ${isThemeDropdownOpen ? 'is-rotated' : ''}`}
+                        />
+                      </button>
+
+                      {isThemeDropdownOpen && (
+                        <div className="theme-dropdown-menu" role="listbox">
+                          <div className="theme-dropdown-list">
+                            {themes.map((th) => {
+                              const isSelected = currentThemeId === th.id
+                              return (
+                                <button
+                                  key={th.id}
+                                  type="button"
+                                  role="option"
+                                  aria-selected={isSelected}
+                                  className={`theme-dropdown-item ${isSelected ? 'is-selected' : ''}`}
+                                  onClick={() => {
+                                    onUpdatePreferences({ theme: th.id })
+                                    setIsThemeDropdownOpen(false)
+                                  }}
+                                >
+                                  <div className="theme-item-details">
+                                    <span className="theme-item-name">{th.name}</span>
+                                    <span className="theme-item-desc">{th.desc}</span>
+                                  </div>
+                                  <span className="theme-item-check">
+                                    {isSelected && <CheckIcon size={14} />}
+                                  </span>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 {/* Fila: Modo de apariencia */}
                 <div className="pref-row">
                   <div className="pref-row-info">

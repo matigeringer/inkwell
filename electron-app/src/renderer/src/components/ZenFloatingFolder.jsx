@@ -273,9 +273,7 @@ export default function ZenFloatingFolder({
           type="text"
           className="zen-tree-inline-input"
           placeholder={
-            creatingIn.type === 'file'
-              ? t.fileTree.filePlaceholder
-              : t.fileTree.folderPlaceholder
+            creatingIn.type === 'file' ? t.fileTree.filePlaceholder : t.fileTree.folderPlaceholder
           }
           value={creatingName}
           onChange={(e) => setCreatingName(e.target.value)}

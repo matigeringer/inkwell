@@ -27,14 +27,15 @@
 }
 
 /* ==========================================================================
-   PURO · Claro — "Prueba de imprenta"
-   Papel de galera, tinta carbón, lápiz bermellón del corrector
+   TEMA 1: GALERA (PURO) · Claro — "Prueba de imprenta"
+   Papel de galera cálido, tinta carbón, lápiz bermellón del corrector
    y azul no‑reproducible para marcas y selección.
    ========================================================================== */
 
 :root,
 [data-theme='light'],
-[data-theme='puro-light'] {
+[data-theme='puro-light'],
+[data-theme='galera-light'] {
   --bg-canvas: #efeee8;
   --bg-surface: #f7f6f1;
   --bg-sidebar: #e4e3db;
@@ -92,12 +93,13 @@
 }
 
 /* ==========================================================================
-   PURO · Oscuro — "Linotipia de noche"
-   Plancha de plomo entintada, papel de diario, bermellón avivado.
+   TEMA 1: GALERA (PURO) · Oscuro — "Linotipia de noche"
+   Plancha de plomo entintada, papel de galera en penumbra, bermellón vivo.
    ========================================================================== */
 
 [data-theme='dark'],
-[data-theme='puro-dark'] {
+[data-theme='puro-dark'],
+[data-theme='galera-dark'] {
   --bg-canvas: #161814;
   --bg-surface: #1e211c;
   --bg-sidebar: #111310;
@@ -151,6 +153,132 @@
   --shadow-lg: 5px 5px 0 rgba(0, 0, 0, 0.55);
 
   --grain-opacity: 0.07;
+}
+
+/* ==========================================================================
+   TEMA 2: GACETA · Claro — "Prensa matutina"
+   Inspirado en la estética de los grandes diarios y periódicos impresos:
+   papel de rotativa neutro, blanco prensa, tinta de impresión negra carbón,
+   filetes tipográficos y plecas en escala de grises sobria y rigurosa.
+   ========================================================================== */
+
+[data-theme='gaceta-light'] {
+  --bg-canvas: #f4f4f2;
+  --bg-surface: #fcfcfc;
+  --bg-sidebar: #eaeae8;
+  --bg-sidebar-hover: rgba(18, 19, 20, 0.05);
+  --bg-hover: rgba(18, 19, 20, 0.045);
+  --bg-active: rgba(18, 19, 20, 0.08);
+  --bg-card: #fcfcfc;
+  --bg-input: #e4e4e2;
+  --bg-overlay: rgba(18, 19, 20, 0.46);
+
+  --border-subtle: #dadad8;
+  --border-medium: #b8b8b6;
+  --border-focus: #111213;
+  --rule: #dcdcd9;
+  --rule-strong: #111213;
+
+  --text-primary: #111213;
+  --text-secondary: #424448;
+  --text-muted: #6b6e74;
+  --text-faint: #a6a8ad;
+
+  --accent-primary: #111213;
+  --accent-primary-hover: #2d2e31;
+  --accent-primary-subtle: rgba(17, 18, 19, 0.08);
+  --accent-text: #f4f4f2;
+
+  --accent-secondary: #575c65;
+  --accent-secondary-subtle: rgba(87, 92, 101, 0.12);
+
+  --selection: #dcdfe4;
+  --caret: #111213;
+  --mark-success: #2d5a37;
+  --mark-danger: #9c1c1c;
+  --mark-danger-subtle: rgba(156, 28, 28, 0.09);
+
+  /* Ficha de redacción: cabecera en tinta negra de prensa y plecas de columna */
+  --card-headline: #111213;
+  --card-ruling: rgba(17, 18, 19, 0.1);
+
+  --btn-bg: #111213;
+  --btn-text: #f8f8f7;
+  --btn-bg-hover: #2d2e31;
+  --btn-border: #111213;
+
+  --btn-secondary-bg: transparent;
+  --btn-secondary-border: #b8b8b6;
+  --btn-secondary-text: #111213;
+  --btn-secondary-hover: rgba(18, 19, 20, 0.05);
+
+  --shadow-sm: none;
+  --shadow-md: 3px 3px 0 rgba(17, 18, 19, 0.14);
+  --shadow-lg: 5px 5px 0 rgba(17, 18, 19, 0.18);
+
+  --grain-opacity: 0.04;
+}
+
+/* ==========================================================================
+   TEMA 2: GACETA · Oscuro — "Edición nocturna"
+   La rotativa en la noche: papel carbón grafito, tinta de plomo invertida,
+   blanco papel nítido y metales de imprenta en escala de grises y plata.
+   ========================================================================== */
+
+[data-theme='gaceta-dark'] {
+  --bg-canvas: #121315;
+  --bg-surface: #1a1b1e;
+  --bg-sidebar: #0d0e10;
+  --bg-sidebar-hover: rgba(240, 241, 243, 0.05);
+  --bg-hover: rgba(240, 241, 243, 0.045);
+  --bg-active: rgba(240, 241, 243, 0.08);
+  --bg-card: #1a1b1e;
+  --bg-input: #0d0e10;
+  --bg-overlay: rgba(0, 0, 0, 0.78);
+
+  --border-subtle: #27292e;
+  --border-medium: #3f424a;
+  --border-focus: #f1f2f4;
+  --rule: #27292e;
+  --rule-strong: #f1f2f4;
+
+  --text-primary: #f1f2f4;
+  --text-secondary: #b3b6bd;
+  --text-muted: #787c85;
+  --text-faint: #43464f;
+
+  --accent-primary: #f1f2f4;
+  --accent-primary-hover: #ffffff;
+  --accent-primary-subtle: rgba(241, 242, 244, 0.12);
+  --accent-text: #121315;
+
+  --accent-secondary: #9da2ab;
+  --accent-secondary-subtle: rgba(157, 162, 171, 0.12);
+
+  --selection: rgba(241, 242, 244, 0.22);
+  --caret: #f1f2f4;
+  --mark-success: #72b07e;
+  --mark-danger: #f87171;
+  --mark-danger-subtle: rgba(248, 113, 113, 0.12);
+
+  --card-headline: #f1f2f4;
+  --card-ruling: rgba(241, 242, 244, 0.08);
+
+  --btn-bg: #f1f2f4;
+  --btn-text: #121315;
+  --btn-bg-hover: #ffffff;
+  --btn-border: #f1f2f4;
+
+  --btn-secondary-bg: transparent;
+  --btn-secondary-border: #3f424a;
+  --btn-secondary-text: #f1f2f4;
+  --btn-secondary-hover: rgba(240, 241, 243, 0.06);
+
+  --shadow-sm: none;
+  --shadow-md: 3px 3px 0 rgba(0, 0, 0, 0.5);
+  --shadow-lg: 5px 5px 0 rgba(0, 0, 0, 0.65);
+
+  --grain-opacity: 0.05;
 }
 
 /* ==========================================================================

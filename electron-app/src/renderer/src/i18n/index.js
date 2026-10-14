@@ -250,6 +250,19 @@ export const translations = {
         language: 'General'
       },
       appearance: {
+        themeTitle: 'Tema visual',
+        themeDesc: 'Atmósfera cromática y diseño editorial del entorno',
+        themeDropdownLabel: 'Seleccionar tema visual',
+        themes: {
+          puro: {
+            name: 'Galera',
+            desc: 'Papel cálido de imprenta, tinta carbón y lápiz bermellón'
+          },
+          gaceta: {
+            name: 'Gaceta',
+            desc: 'Prensa matutina en blanco papel, negros puros y escala de grises'
+          }
+        },
         modeTitle: 'Modo de apariencia',
         lightName: 'Claro',
         darkName: 'Oscuro',
@@ -264,7 +277,8 @@ export const translations = {
         alignJustifyName: 'Justificado',
         alignCenterName: 'Centrado',
         paletteTitle: 'Paleta editorial',
-        paletteName: 'Puro — Galera editorial',
+        paletteName: 'Galera — Edición editorial',
+        paletteNameGaceta: 'Gaceta — Prensa de diario',
         exampleText:
           'En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor. Una olla de algo más vaca que carnero, salpicón las más noches, duelos y quebrantos los sábados, lantejas los viernes, algún palomino de añadidura los domingos, consumían las tres partes de su hacienda.'
       },
@@ -569,6 +583,19 @@ export const translations = {
         language: 'General'
       },
       appearance: {
+        themeTitle: 'Visual Theme',
+        themeDesc: 'Editorial atmosphere and interface color style',
+        themeDropdownLabel: 'Select visual theme',
+        themes: {
+          puro: {
+            name: 'Galley',
+            desc: 'Warm proofing paper, carbon ink, and vermillion pencil'
+          },
+          gaceta: {
+            name: 'Gazette',
+            desc: 'Morning broadsheet in newsprint white, deep black, and grayscale'
+          }
+        },
         modeTitle: 'Appearance Mode',
         lightName: 'Light',
         darkName: 'Dark',
@@ -583,7 +610,8 @@ export const translations = {
         alignJustifyName: 'Justified',
         alignCenterName: 'Centered',
         paletteTitle: 'Editorial Palette',
-        paletteName: 'Pure — Editorial galley',
+        paletteName: 'Galley — Editorial proof',
+        paletteNameGaceta: 'Gazette — Broadsheet newsprint',
         exampleText:
           'Call me Ishmael. Some years ago—never mind how long precisely—having little or no money in my purse, and nothing particular to interest me on shore, I thought I would sail about a little and see the watery part of the world. It is a way I have of driving off the spleen and regulating the circulation.'
       },
