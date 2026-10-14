@@ -1554,92 +1554,67 @@
   color: var(--accent-primary);
 }
 
-/* Zen Shortcuts Modal Styles */
-.zen-shortcuts-card {
-  max-width: 600px;
-  max-height: 85vh;
+/* ==========================================================================
+   Modal de Atajos de Teclado (Estilo Minimalista / Preferencias)
+   ========================================================================== */
+.modal-card-shortcuts {
+  max-width: 580px;
+  width: 100%;
 }
 
-.zen-shortcuts-body {
-  gap: 1.25rem;
-  padding: 1.25rem 1.5rem;
+.shortcuts-modal-body {
+  padding: 1.25rem 1.75rem 1.5rem 1.75rem;
   overflow-y: auto;
-}
-
-.shortcuts-section {
+  max-height: 65vh;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
 }
 
-.shortcuts-section-title {
-  font-family: var(--font-label);
-  font-size: 0.66rem;
-  font-weight: 500;
-  color: var(--accent-primary);
-  text-transform: uppercase;
-  letter-spacing: var(--label-tracking);
-  padding-bottom: 0.35rem;
-  border-bottom: 1px solid var(--rule-strong);
-}
-
-.shortcuts-list {
+.shortcuts-tab-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.shortcut-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.35rem 0.5rem;
-  border-radius: var(--radius);
-  transition: background-color 0.15s ease;
+.shortcuts-tab-panel .pref-row:last-child {
+  border-bottom: none;
 }
 
-.shortcut-row:hover {
-  background-color: var(--bg-hover);
-}
-
-.shortcut-desc {
-  font-size: 0.86rem;
-  color: var(--text-secondary);
-}
-
-.shortcut-keys {
-  display: flex;
+.shortcut-kbd-group {
+  display: inline-flex;
   align-items: center;
   gap: 0.25rem;
 }
 
-.shortcut-keys kbd,
+.shortcut-kbd,
 .zen-toolbar-pill kbd {
   font-family: var(--font-mono);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 500;
-  background-color: transparent;
+  background-color: var(--bg-input);
   color: var(--text-primary);
-  border: 1px solid var(--border-medium);
-  border-bottom-width: 2px;
-  padding: 1px 6px;
+  border: 1px solid var(--border-subtle);
+  padding: 0.2rem 0.5rem;
   border-radius: var(--radius);
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.03);
 }
 
-.shortcut-or {
+.shortcut-kbd-sep {
+  font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--text-muted);
-  margin: 0 0.2rem;
+  user-select: none;
+  margin: 0 0.05rem;
 }
 
-.markdown-hint {
-  font-family: var(--font-mono);
+.shortcut-kbd-or {
+  font-family: var(--font-ui);
   font-size: 0.74rem;
   color: var(--text-muted);
-  background-color: var(--bg-input);
-  border: 1px solid var(--border-subtle);
-  padding: 2px 6px;
-  border-radius: var(--radius);
+  margin: 0 0.35rem;
+  user-select: none;
 }
 
 /* ==========================================================================

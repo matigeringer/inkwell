@@ -199,41 +199,29 @@ export const translations = {
     },
     shortcuts: {
       title: 'Atajos de Teclado',
-      subtitle: 'Controla Fountain y el explorador sin usar el ratón',
       closeTitle: 'Cerrar (Esc)',
-      sections: {
-        workspace: 'Archivos y Espacio de Trabajo',
-        zen: 'Modo Zen y Escritura',
-        typography: 'Tipografía y Apariencia',
-        formatting: 'Formato de Texto'
+      tabs: {
+        zen: 'Modo Zen',
+        workspace: 'Espacio de Trabajo'
       },
       keys: {
         or: 'o',
         saveDoc: 'Guardar documento',
         saveCopy: 'Guardar copia como...',
-        exportDoc: 'Exportar documento (desplegar formatos)',
-        exportPdf: 'Exportar archivo de lectura a PDF',
+        versionHistory: 'Historial de versiones',
+        toggleTypewriter: 'Modo máquina de escribir',
+        toggleStats: 'Estadísticas de lectura',
+        toggleZen: 'Alternar Modo Zen',
+        exitZen: 'Salir del Modo Zen',
+        preferencesZen: 'Preferencias de escritura',
+        preferencesGeneral: 'Preferencias generales',
+        viewShortcuts: 'Guía de atajos',
+        fontSizeAdjust: 'Tamaño de texto (+ / -)',
+        newDoc: 'Nuevo documento',
         openMarkdown: 'Abrir archivo Markdown',
         openWorkspace: 'Abrir carpeta de trabajo',
         toggleSidebar: 'Alternar barra del explorador',
-        viewShortcuts: 'Ver esta ayuda de atajos',
-        versionHistory: 'Historial de versiones',
-        preferences: 'Abrir preferencias / Personalizar Zen',
-        toggleZen: 'Activar / Alternar Modo Zen',
-        toggleTypewriter: 'Alternar Modo Máquina de Escribir (Typewriter)',
-        exitZen: 'Salir del Modo Zen',
-        toggleStats: 'Mostrar / Ocultar estadísticas',
-        toggleTheme: 'Alternar Modo (Claro / Oscuro)',
-        toggleFont: 'Alternar Tipografía (Serif / Sans / Mono)',
-        toggleAlign: 'Alternar Alineación (Izquierda / Justificado / Centrado)',
-        increaseFontSize: 'Aumentar tamaño de texto',
-        decreaseFontSize: 'Reducir tamaño de texto',
-        resetFontSize: 'Restablecer tamaño estándar',
-        boldItalic: 'Negrita / Cursiva',
-        headings: 'Títulos (H1, H2, H3)',
-        headingsHint: '# , ## , ### al inicio',
-        quotes: 'Citas y Bloques',
-        quotesHint: '> al inicio'
+        exportDoc: 'Exportar documento'
       }
     },
     preferences: {
@@ -532,41 +520,29 @@ export const translations = {
     },
     shortcuts: {
       title: 'Keyboard Shortcuts',
-      subtitle: 'Navigate and control Fountain without touching the mouse',
       closeTitle: 'Close (Esc)',
-      sections: {
-        workspace: 'Files & Workspace',
-        zen: 'Zen Mode & Writing',
-        typography: 'Typography & Appearance',
-        formatting: 'Text Formatting'
+      tabs: {
+        zen: 'Zen Mode',
+        workspace: 'Workspace'
       },
       keys: {
         or: 'or',
         saveDoc: 'Save document',
         saveCopy: 'Save copy as...',
-        exportDoc: 'Export document (show formats)',
-        exportPdf: 'Export reading document to PDF',
+        versionHistory: 'Version history',
+        toggleTypewriter: 'Typewriter mode',
+        toggleStats: 'Reading statistics',
+        toggleZen: 'Toggle Zen Mode',
+        exitZen: 'Exit Zen Mode',
+        preferencesZen: 'Writing preferences',
+        preferencesGeneral: 'General preferences',
+        viewShortcuts: 'Shortcuts guide',
+        fontSizeAdjust: 'Adjust font size (+ / -)',
+        newDoc: 'New document',
         openMarkdown: 'Open Markdown file',
         openWorkspace: 'Open workspace folder',
         toggleSidebar: 'Toggle explorer sidebar',
-        viewShortcuts: 'View this shortcuts guide',
-        versionHistory: 'Version history',
-        preferences: 'Open preferences / Customize Zen',
-        toggleZen: 'Toggle Zen Mode',
-        toggleTypewriter: 'Toggle Typewriter Mode',
-        exitZen: 'Exit Zen Mode',
-        toggleStats: 'Show / Hide statistics',
-        toggleTheme: 'Toggle Theme (Light / Dark)',
-        toggleFont: 'Toggle Typography (Serif / Sans / Mono)',
-        toggleAlign: 'Toggle Alignment (Left / Justified / Centered)',
-        increaseFontSize: 'Increase font size',
-        decreaseFontSize: 'Decrease font size',
-        resetFontSize: 'Reset standard font size',
-        boldItalic: 'Bold / Italic',
-        headings: 'Headings (H1, H2, H3)',
-        headingsHint: '# , ## , ### at start',
-        quotes: 'Quotes & Blocks',
-        quotesHint: '> at start'
+        exportDoc: 'Export document'
       }
     },
     preferences: {

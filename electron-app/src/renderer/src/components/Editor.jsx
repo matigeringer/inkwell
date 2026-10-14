@@ -27,7 +27,9 @@ import {
   FileTextIcon,
   ChevronDownIcon,
   HistoryIcon,
-  MenuIcon
+  MenuIcon,
+  FeatherIcon,
+  FolderTreeIcon
 } from './Icons'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
@@ -97,7 +99,8 @@ export default function Editor({
   openedFolder,
   onRefreshFolderTree,
   onCloseFolder,
-  onOpenFolder
+  onOpenFolder,
+  onNewDoc
 }) {
   const currentLang = preferences?.language || 'es'
   const t = getTranslation(currentLang)
@@ -111,6 +114,7 @@ export default function Editor({
   const [isSidebarOpen, setIsSidebarOpen] = useState(Boolean(openedFolder))
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
+  const [shortcutsTab, setShortcutsTab] = useState('zen')
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
   const autoSaveTimerRef = useRef(null)
   const lastSnapshotTimeRef = useRef(0)
@@ -1255,7 +1259,7 @@ export default function Editor({
     }, 2400)
   }, [isZenMode])
 
-  // Atajos de teclado globales del editor
+  // Atajos de teclado del editor (diferenciando Modo Zen y Modo Normal)
   useEffect(() => {
     const handleKeyDown = (e) => {
       // Ocultar inmediatamente la barra flotante al escribir
@@ -1264,21 +1268,14 @@ export default function Editor({
 
       const isCtrlOrMeta = e.ctrlKey || e.metaKey
 
-      // 1. F11: Alternar Modo Zen / Pantalla Completa
-      if (e.key === 'F11') {
+      // 1. F11 o Ctrl+Shift+F: Alternar Modo Zen / Pantalla Completa
+      if (e.key === 'F11' || (isCtrlOrMeta && e.shiftKey && (e.key === 'f' || e.key === 'F'))) {
         e.preventDefault()
         toggleZenMode()
         return
       }
 
-      // 2. Ctrl+Shift+F: Alternar Modo Zen
-      if (isCtrlOrMeta && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
-        e.preventDefault()
-        toggleZenMode()
-        return
-      }
-
-      // 3. Escape: Cerrar modales, menú de acciones o salir de Modo Zen
+      // 2. Escape: Cerrar modales, menús o salir de Modo Zen
       if (e.key === 'Escape') {
         if (isShortcutsModalOpen) {
           e.preventDefault()
@@ -1312,134 +1309,127 @@ export default function Editor({
         }
       }
 
-      // 4. F1 o Ctrl+/: Ayuda de atajos Zen
+      // 3. F1 o Ctrl+/: Guía de atajos minimalista
       if (e.key === 'F1' || (isCtrlOrMeta && e.key === '/')) {
         e.preventDefault()
-        setIsShortcutsModalOpen((prev) => !prev)
+        setIsShortcutsModalOpen((prev) => {
+          if (!prev) {
+            setShortcutsTab(isZenMode ? 'zen' : 'workspace')
+          }
+          return !prev
+        })
         return
       }
 
-      // 5. Ctrl+H: Historial de Versiones
+      // 4. Ctrl+H: Historial de versiones (recuperación de texto)
       if (isCtrlOrMeta && !e.shiftKey && (e.key === 'h' || e.key === 'H')) {
         e.preventDefault()
         setIsHistoryModalOpen((prev) => !prev)
         return
       }
 
-      // 6. Ctrl+S: Guardar
+      // 5. Ctrl+S: Guardar documento
       if (isCtrlOrMeta && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
         handleSave()
         return
       }
 
-      // 6. Ctrl+Shift+S: Guardar como
+      // 6. Ctrl+Shift+S: Guardar copia como...
       if (isCtrlOrMeta && e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
         handleSaveAs()
         return
       }
 
-      // 7. Ctrl+Shift+E o Ctrl+P: Conmutar menú de exportación
-      if (
-        (isCtrlOrMeta && e.shiftKey && (e.key === 'e' || e.key === 'E')) ||
-        (isCtrlOrMeta && !e.shiftKey && (e.key === 'p' || e.key === 'P'))
-      ) {
-        e.preventDefault()
-        setActionsMenuOpen(true)
-        setExportMenuOpen((prev) => !prev)
-        return
-      }
-
-      // 7. Ctrl+O: Abrir archivo
-      if (isCtrlOrMeta && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {
-        e.preventDefault()
-        handleOpenFileDirectly()
-        return
-      }
-
-      // 8. Ctrl+Shift+O: Abrir carpeta
-      if (isCtrlOrMeta && e.shiftKey && (e.key === 'o' || e.key === 'O')) {
-        e.preventDefault()
-        if (onOpenFolder) onOpenFolder()
-        return
-      }
-
-      // 9. Ctrl+\ o Ctrl+B: Alternar barra lateral / explorador
-      if (
-        (isCtrlOrMeta && e.key === '\\') ||
-        (isCtrlOrMeta && !e.shiftKey && (e.key === 'b' || e.key === 'B'))
-      ) {
-        if (!isZenMode && openedFolder) {
-          e.preventDefault()
-          setIsSidebarOpen((prev) => !prev)
-          return
-        }
-      }
-
-      // 10. Ctrl+Shift+T: Alternar Tema
-      if (isCtrlOrMeta && e.shiftKey && (e.key === 't' || e.key === 'T')) {
-        e.preventDefault()
-        cycleTheme()
-        return
-      }
-
-      // 11. Ctrl+Shift+L: Alternar Tipografía
-      if (isCtrlOrMeta && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
-        e.preventDefault()
-        cycleFontFamily()
-        return
-      }
-
-      // 12. Ctrl+Shift+Y: Alternar Modo Máquina de Escribir (Typewriter Scrolling)
+      // 7. Ctrl+Shift+Y: Alternar Modo Máquina de Escribir (centrado de renglón activo)
       if (isCtrlOrMeta && e.shiftKey && (e.key === 'y' || e.key === 'Y')) {
         e.preventDefault()
         toggleTypewriterMode()
         return
       }
 
-      // 13. Ctrl+Shift+J: Alternar Alineación / Justificado
-      if (isCtrlOrMeta && e.shiftKey && (e.key === 'j' || e.key === 'J')) {
-        e.preventDefault()
-        cycleTextAlign()
-        return
-      }
-
-      // 14. Ctrl+Shift+C: Mostrar / Ocultar estadísticas HUD
+      // 8. Ctrl+Shift+C: Mostrar / Ocultar estadísticas HUD
       if (isCtrlOrMeta && e.shiftKey && (e.key === 'c' || e.key === 'C')) {
         e.preventDefault()
         setShowStatsHud((prev) => !prev)
         return
       }
 
-      // 15. Ctrl+= / Ctrl++: Aumentar tamaño de fuente
+      // 9. Ctrl+= / Ctrl++: Aumentar tamaño de fuente
       if (isCtrlOrMeta && (e.key === '=' || e.key === '+')) {
         e.preventDefault()
         adjustFontSize(1)
         return
       }
 
-      // 16. Ctrl+-: Disminuir tamaño de fuente
+      // 10. Ctrl+- / Ctrl+_: Disminuir tamaño de fuente
       if (isCtrlOrMeta && (e.key === '-' || e.key === '_')) {
         e.preventDefault()
         adjustFontSize(-1)
         return
       }
 
-      // 17. Ctrl+0: Restablecer tamaño de fuente
+      // 11. Ctrl+0: Restablecer tamaño de fuente
       if (isCtrlOrMeta && e.key === '0') {
         e.preventDefault()
         resetFontSize()
         return
       }
 
-      // 18. Ctrl+, : Abrir configuración (en Modo Zen abre directamente la pestaña Zen)
+      // 12. Ctrl+, : Abrir configuración (en Modo Zen va a pestaña de escritura/zen)
       if (isCtrlOrMeta && !e.shiftKey && (e.key === ',' || e.key === '<')) {
         e.preventDefault()
         if (onOpenProfile) {
-          onOpenProfile(isZenMode ? 'zen' : 'appearance')
+          onOpenProfile(isZenMode ? 'zen' : 'general')
         }
         return
+      }
+
+      // --- ATAJOS EXCLUSIVOS DEL MODO NORMAL (Desactivados en Modo Zen para evitar distracciones) ---
+      if (!isZenMode) {
+        // Ctrl+N: Nuevo documento
+        if (isCtrlOrMeta && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
+          if (onNewDoc) {
+            e.preventDefault()
+            onNewDoc()
+            return
+          }
+        }
+
+        // Ctrl+O: Abrir archivo directamente
+        if (isCtrlOrMeta && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+          e.preventDefault()
+          handleOpenFileDirectly()
+          return
+        }
+
+        // Ctrl+Shift+O: Abrir carpeta de trabajo
+        if (isCtrlOrMeta && e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+          e.preventDefault()
+          if (onOpenFolder) onOpenFolder()
+          return
+        }
+
+        // Ctrl+\: Alternar barra lateral del explorador (Ctrl+B queda 100% libre para Negrita estándar)
+        if (isCtrlOrMeta && !e.shiftKey && e.key === '\\') {
+          if (openedFolder) {
+            e.preventDefault()
+            setIsSidebarOpen((prev) => !prev)
+            return
+          }
+        }
+
+        // Ctrl+Shift+E o Ctrl+P: Conmutar menú de exportación
+        if (
+          (isCtrlOrMeta && e.shiftKey && (e.key === 'e' || e.key === 'E')) ||
+          (isCtrlOrMeta && !e.shiftKey && (e.key === 'p' || e.key === 'P'))
+        ) {
+          e.preventDefault()
+          setActionsMenuOpen(true)
+          setExportMenuOpen((prev) => !prev)
+          return
+        }
       }
     }
 
@@ -1459,14 +1449,11 @@ export default function Editor({
     toggleZenMode,
     handleSave,
     handleSaveAs,
-    handleExportPdf,
     handleOpenFileDirectly,
     onOpenFolder,
+    onNewDoc,
     onOpenProfile,
-    cycleTheme,
-    cycleFontFamily,
     toggleTypewriterMode,
-    cycleTextAlign,
     adjustFontSize,
     resetFontSize
   ])
@@ -1759,7 +1746,10 @@ export default function Editor({
             </button>
             <button
               className="zen-pill-btn zen-pill-icon-only"
-              onClick={() => setIsShortcutsModalOpen(true)}
+              onClick={() => {
+                setShortcutsTab('zen')
+                setIsShortcutsModalOpen(true)
+              }}
               title={t.editor.shortcutsBtnTitle}
               aria-label={t.editor.shortcutsBtnAria}
             >
@@ -1901,220 +1891,304 @@ export default function Editor({
         </div>
       )}
 
-      {/* Modal Guía de Atajos de Teclado Zen (F1 o Ctrl+/) */}
+      {/* Modal Guía de Atajos de Teclado (F1 o Ctrl+/) */}
       {isShortcutsModalOpen && (
         <div className="modal-backdrop" onClick={() => setIsShortcutsModalOpen(false)}>
           <div
-            className="modal-card zen-shortcuts-card"
+            className="modal-card modal-card-shortcuts"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
+            aria-modal="true"
             aria-labelledby="shortcuts-title"
           >
-            <header className="modal-header">
-              <div className="modal-title-group">
-                <div>
-                  <h2 id="shortcuts-title" className="modal-title">
-                    {t.shortcuts.title}
-                  </h2>
-                  <p className="modal-subtitle">{t.shortcuts.subtitle}</p>
-                </div>
+            <header className="modal-header-wide">
+              <div className="modal-header-title-bar">
+                <h2 id="shortcuts-title" className="modal-title">
+                  {t.shortcuts.title}
+                </h2>
+                <button
+                  className="btn-icon-subtle"
+                  onClick={() => setIsShortcutsModalOpen(false)}
+                  aria-label={t.shortcuts.closeTitle}
+                  title={`${t.shortcuts.closeTitle} (Esc)`}
+                >
+                  <CloseIcon size={18} />
+                </button>
               </div>
-              <button
-                className="btn-icon-subtle"
-                onClick={() => setIsShortcutsModalOpen(false)}
-                title={t.shortcuts.closeTitle}
-              >
-                <CloseIcon size={18} />
-              </button>
+
+              {/* Navegación segmentada: Modo Zen vs Espacio de Trabajo */}
+              <nav className="modal-segmented-nav" aria-label="Categorías de atajos">
+                <button
+                  type="button"
+                  className={`segmented-tab-btn ${shortcutsTab === 'zen' ? 'is-active' : ''}`}
+                  onClick={() => setShortcutsTab('zen')}
+                >
+                  <FeatherIcon size={15} />
+                  <span>{t.shortcuts.tabs.zen}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`segmented-tab-btn ${shortcutsTab === 'workspace' ? 'is-active' : ''}`}
+                  onClick={() => setShortcutsTab('workspace')}
+                >
+                  <FolderTreeIcon size={15} />
+                  <span>{t.shortcuts.tabs.workspace}</span>
+                </button>
+              </nav>
             </header>
 
-            <div className="modal-body zen-shortcuts-body">
-              {/* Sección Archivos y Espacio de Trabajo */}
-              <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">{t.shortcuts.sections.workspace}</h4>
-                <div className="shortcuts-list">
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.saveDoc}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>S</kbd>
+            <div className="modal-body modal-body-wide shortcuts-modal-body">
+              {shortcutsTab === 'zen' && (
+                <div className="shortcuts-tab-panel">
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.saveDoc}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">S</kbd>
+                      </div>
                     </div>
                   </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.saveCopy}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">
-                      {t.shortcuts.keys.exportDoc || t.shortcuts.keys.exportPdf}
-                    </span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>E</kbd>
-                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
-                      <kbd>Ctrl</kbd>+<kbd>P</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.openMarkdown}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>O</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.openWorkspace}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.toggleSidebar}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>\</kbd>
-                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
-                      <kbd>Ctrl</kbd>+<kbd>B</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.viewShortcuts}</span>
-                    <div className="shortcut-keys">
-                      <kbd>F1</kbd>
-                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
-                      <kbd>Ctrl</kbd>+<kbd>/</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">
-                      {t.shortcuts.keys.versionHistory ||
-                        (currentLang === 'en' ? 'Version history' : 'Historial de versiones')}
-                    </span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>H</kbd>
-                    </div>
-                  </div>
-                </div>
-              </section>
 
-              {/* Sección Modo Zen y Escritura */}
-              <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">{t.shortcuts.sections.zen}</h4>
-                <div className="shortcuts-list">
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.toggleZen}</span>
-                    <div className="shortcut-keys">
-                      <kbd>F11</kbd>
-                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.saveCopy}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">Shift</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">S</kbd>
+                      </div>
                     </div>
                   </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.toggleTypewriter}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Y</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.exitZen}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Esc</kbd>
-                      <span className="shortcut-or">{t.shortcuts.keys.or}</span>
-                      <kbd>F11</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.toggleStats}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>C</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">
-                      {t.shortcuts.keys.preferences ||
-                        (currentLang === 'en'
-                          ? 'Open preferences / Customize Zen'
-                          : 'Abrir preferencias / Personalizar Zen')}
-                    </span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>,</kbd>
-                    </div>
-                  </div>
-                </div>
-              </section>
 
-              {/* Sección Tipografía y Apariencia */}
-              <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">{t.shortcuts.sections.typography}</h4>
-                <div className="shortcuts-list">
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.toggleTheme}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd>
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.versionHistory}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">H</kbd>
+                      </div>
                     </div>
                   </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.toggleFont}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>L</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.toggleAlign}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>J</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.increaseFontSize}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>+</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.decreaseFontSize}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>-</kbd>
-                    </div>
-                  </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.resetFontSize}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>0</kbd>
-                    </div>
-                  </div>
-                </div>
-              </section>
 
-              {/* Sección Markdown Rápido */}
-              <section className="shortcuts-section">
-                <h4 className="shortcuts-section-title">{t.shortcuts.sections.formatting}</h4>
-                <div className="shortcuts-list">
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.boldItalic}</span>
-                    <div className="shortcut-keys">
-                      <kbd>Ctrl</kbd>+<kbd>B</kbd> / <kbd>Ctrl</kbd>+<kbd>I</kbd>
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.toggleTypewriter}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">Shift</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">Y</kbd>
+                      </div>
                     </div>
                   </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.headings}</span>
-                    <div className="shortcut-keys">
-                      <span className="markdown-hint">{t.shortcuts.keys.headingsHint}</span>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.toggleStats}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">Shift</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">C</kbd>
+                      </div>
                     </div>
                   </div>
-                  <div className="shortcut-row">
-                    <span className="shortcut-desc">{t.shortcuts.keys.quotes}</span>
-                    <div className="shortcut-keys">
-                      <span className="markdown-hint">{t.shortcuts.keys.quotesHint}</span>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.exitZen}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Esc</kbd>
+                        <span className="shortcut-kbd-or">{t.shortcuts.keys.or}</span>
+                        <kbd className="shortcut-kbd">F11</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.preferencesZen}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">,</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.fontSizeAdjust}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">+</kbd>
+                        <span className="shortcut-kbd-sep">/</span>
+                        <kbd className="shortcut-kbd">-</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.viewShortcuts}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">F1</kbd>
+                        <span className="shortcut-kbd-or">{t.shortcuts.keys.or}</span>
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">/</kbd>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </section>
+              )}
+
+              {shortcutsTab === 'workspace' && (
+                <div className="shortcuts-tab-panel">
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.newDoc}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">N</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.openMarkdown}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">O</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.openWorkspace}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">Shift</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">O</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.toggleSidebar}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">\</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.exportDoc}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">Shift</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">E</kbd>
+                        <span className="shortcut-kbd-or">{t.shortcuts.keys.or}</span>
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">P</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.toggleZen}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">F11</kbd>
+                        <span className="shortcut-kbd-or">{t.shortcuts.keys.or}</span>
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">Shift</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">F</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.versionHistory}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">H</kbd>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pref-row">
+                    <div className="pref-row-info">
+                      <span className="pref-row-title">{t.shortcuts.keys.preferencesGeneral}</span>
+                    </div>
+                    <div className="pref-row-control">
+                      <div className="shortcut-kbd-group">
+                        <kbd className="shortcut-kbd">Ctrl</kbd>
+                        <span className="shortcut-kbd-sep">+</span>
+                        <kbd className="shortcut-kbd">,</kbd>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
-
-            <footer className="modal-footer">
-              <button className="btn-done" onClick={() => setIsShortcutsModalOpen(false)}>
-                {t.common.understood}
-              </button>
-            </footer>
           </div>
         </div>
       )}

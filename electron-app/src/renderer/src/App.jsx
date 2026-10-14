@@ -351,6 +351,7 @@ function App() {
           onRefreshFolderTree={handleRefreshFolderTree}
           onCloseFolder={handleCloseFolder}
           onOpenFolder={handleOpenFolder}
+          onNewDoc={handleCreate}
         />
         <ProfileModal
           isOpen={isProfileOpen}
