@@ -36,9 +36,6 @@
   flex-direction: column;
   justify-content: space-between;
   padding: 2rem 1.35rem 1.25rem 1.5rem;
-  transition:
-    background-color 0.25s ease,
-    border-color 0.25s ease;
 }
 
 .sidebar-top {
@@ -443,9 +440,7 @@
   user-select: none;
   z-index: 10;
   overflow: visible;
-  transition:
-    opacity 0.3s ease,
-    background-color 0.25s ease;
+  transition: opacity 0.3s ease;
 }
 
 .header-left {
@@ -1989,7 +1984,6 @@
   overflow-y: auto;
   background-color: var(--bg-canvas);
   cursor: text;
-  transition: background-color 0.25s ease;
 }
 
 .editor-canvas {
@@ -2356,9 +2350,7 @@
   font-family: var(--font-mono);
   font-size: 0.7rem;
   color: var(--text-muted);
-  transition:
-    opacity 0.3s ease,
-    background-color 0.25s ease;
+  transition: opacity 0.3s ease;
 }
 
 .footer-stats {

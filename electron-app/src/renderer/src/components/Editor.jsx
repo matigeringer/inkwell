@@ -985,8 +985,6 @@ export default function Editor({
     [filePath, fileName, editor, getMarkdownContent, showToast, currentLang, t]
   )
 
-  // Alias retrocompatible
-  const handleExportPdf = useCallback(() => handleExport('pdf'), [handleExport])
 
   // Cambiar de documento de forma fluida desde el explorador
   const handleSwitchDoc = useCallback(
@@ -1386,6 +1384,20 @@ export default function Editor({
         return
       }
 
+      // 13. Ctrl+Shift+T: Alternar Tema (Claro / Oscuro)
+      if (isCtrlOrMeta && e.shiftKey && (e.key === 't' || e.key === 'T')) {
+        e.preventDefault()
+        cycleTheme()
+        return
+      }
+
+      // 14. Ctrl+Shift+L: Alternar tipografía (Serif -> Sans -> Mono)
+      if (isCtrlOrMeta && e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+        e.preventDefault()
+        cycleFontFamily()
+        return
+      }
+
       // --- ATAJOS EXCLUSIVOS DEL MODO NORMAL (Desactivados en Modo Zen para evitar distracciones) ---
       if (!isZenMode) {
         // Ctrl+N: Nuevo documento
@@ -1455,7 +1467,9 @@ export default function Editor({
     onOpenProfile,
     toggleTypewriterMode,
     adjustFontSize,
-    resetFontSize
+    resetFontSize,
+    cycleTheme,
+    cycleFontFamily
   ])
 
   // Enfocar al hacer click en el lienzo fuera del texto

@@ -12,6 +12,24 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 
+// Inicializar tema inmediatamente antes de montar para evitar FOUC o animaciones iniciales
+try {
+  const saved = localStorage.getItem('fountain_preferences')
+  if (saved) {
+    const parsed = JSON.parse(saved)
+    let mode = parsed.mode || 'light'
+    if (parsed.theme === 'dark') mode = 'dark'
+    else if (parsed.theme === 'light') mode = 'light'
+    if (mode === 'system') {
+      mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+    }
+    const theme = parsed.theme === 'gaceta' ? 'gaceta' : 'puro'
+    document.documentElement.setAttribute('data-theme', `${theme}-${mode}`)
+  }
+} catch {
+  // Ignorar error al leer preferencias iniciales
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
