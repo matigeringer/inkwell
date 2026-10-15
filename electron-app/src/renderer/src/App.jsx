@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback } from 'react'
+import { flushSync } from 'react-dom'
 import Editor from './components/Editor'
 import ProfileModal from './components/ProfileModal'
 import FileTree from './components/FileTree'
@@ -118,7 +119,52 @@ function App() {
     }
   }, [])
 
-  // Sincronizar tema, modo, idioma, corrector y variables CSS en el DOM
+  // Ejecutar cambios de tema con View Transitions API sincronizada
+  const withThemeTransition = useCallback((callback) => {
+    if (
+      typeof document !== 'undefined' &&
+      typeof document.startViewTransition === 'function' &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      document.startViewTransition(() => {
+        flushSync(callback)
+      })
+    } else {
+      callback()
+    }
+  }, [])
+
+  // 1. Sincronizar tema, modo y variables tipográficas en el DOM antes del pintado
+  useLayoutEffect(() => {
+    const root = document.documentElement
+
+    const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    const effectiveMode =
+      preferences.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : preferences.mode
+    const safeTheme = preferences.theme === 'gaceta' ? 'gaceta' : 'puro'
+    const dataThemeValue = `${safeTheme}-${effectiveMode}`
+    root.setAttribute('data-theme', dataThemeValue)
+
+    // Aplicar fuente del editor
+    let fontValue = 'var(--font-serif)'
+    if (preferences.fontFamily === 'sans') fontValue = 'var(--font-ui)'
+    if (preferences.fontFamily === 'mono') fontValue = 'var(--font-mono)'
+    root.style.setProperty('--font-editor', fontValue)
+
+    // Aplicar tamaño de fuente del editor
+    root.style.setProperty('--font-size-editor', preferences.fontSize || '1.40rem')
+
+    // Aplicar alineación de texto del editor
+    root.style.setProperty('--text-align-editor', preferences.textAlign || 'left')
+  }, [
+    preferences.theme,
+    preferences.mode,
+    preferences.fontFamily,
+    preferences.fontSize,
+    preferences.textAlign
+  ])
+
+  // Sincronizar persistencia, idioma, corrector y listener de tema del sistema
   useEffect(() => {
     try {
       localStorage.setItem('fountain_preferences', JSON.stringify(preferences))
@@ -143,57 +189,55 @@ function App() {
         })
     }
 
-    // 1. Aplicar Tema y Modo efectivo al DOM
-    const applyThemeAndMode = (theme, mode) => {
-      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      const effectiveMode = mode === 'system' ? (isSystemDark ? 'dark' : 'light') : mode
-      const safeTheme = theme === 'gaceta' ? 'gaceta' : 'puro'
-      const dataThemeValue = `${safeTheme}-${effectiveMode}`
-      root.setAttribute('data-theme', dataThemeValue)
-    }
-
-    applyThemeAndMode(preferences.theme, preferences.mode)
-
     // Listener para cambios de tema en el sistema si el modo está en 'system'
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     const handleSystemThemeChange = () => {
       if (preferences.mode === 'system') {
-        applyThemeAndMode(preferences.theme, 'system')
+        withThemeTransition(() => {
+          const rootEl = document.documentElement
+          const isSystemDark = mediaQuery.matches
+          const effectiveMode = isSystemDark ? 'dark' : 'light'
+          const safeTheme = preferences.theme === 'gaceta' ? 'gaceta' : 'puro'
+          rootEl.setAttribute('data-theme', `${safeTheme}-${effectiveMode}`)
+        })
       }
     }
     mediaQuery.addEventListener('change', handleSystemThemeChange)
 
-    // 2. Aplicar fuente del editor
-    let fontValue = 'var(--font-serif)'
-    if (preferences.fontFamily === 'sans') fontValue = 'var(--font-ui)'
-    if (preferences.fontFamily === 'mono') fontValue = 'var(--font-mono)'
-    root.style.setProperty('--font-editor', fontValue)
-
-    // 3. Aplicar tamaño de fuente del editor
-    root.style.setProperty('--font-size-editor', preferences.fontSize || '1.40rem')
-
-    // 4. Aplicar alineación de texto del editor
-    root.style.setProperty('--text-align-editor', preferences.textAlign || 'left')
-
     return () => {
       mediaQuery.removeEventListener('change', handleSystemThemeChange)
     }
-  }, [preferences])
+  }, [preferences, withThemeTransition])
 
-  const handleUpdatePreferences = (updates) => {
-    setPreferences((prev) => ({ ...prev, ...updates }))
-  }
+  const handleUpdatePreferences = useCallback(
+    (updates) => {
+      const isThemeChange =
+        (updates.mode !== undefined && updates.mode !== preferences.mode) ||
+        (updates.theme !== undefined && updates.theme !== preferences.theme)
+
+      if (isThemeChange) {
+        withThemeTransition(() => {
+          setPreferences((prev) => ({ ...prev, ...updates }))
+        })
+      } else {
+        setPreferences((prev) => ({ ...prev, ...updates }))
+      }
+    },
+    [preferences.mode, preferences.theme, withThemeTransition]
+  )
 
   // Alternar modo rápido (Claro <-> Oscuro) dentro del tema activo sin cambiar nunca el tema
-  const handleQuickThemeToggle = () => {
-    setPreferences((prev) => {
-      const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-      const currentEffectiveMode =
-        prev.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : prev.mode
-      const nextMode = currentEffectiveMode === 'dark' ? 'light' : 'dark'
-      return { ...prev, mode: nextMode }
+  const handleQuickThemeToggle = useCallback(() => {
+    withThemeTransition(() => {
+      setPreferences((prev) => {
+        const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        const currentEffectiveMode =
+          prev.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : prev.mode
+        const nextMode = currentEffectiveMode === 'dark' ? 'light' : 'dark'
+        return { ...prev, mode: nextMode }
+      })
     })
-  }
+  }, [withThemeTransition])
 
   // Alternar idioma rápido (ES <-> EN)
   const handleQuickLanguageToggle = () => {
