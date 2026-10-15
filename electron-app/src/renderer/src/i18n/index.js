@@ -121,7 +121,7 @@ export const translations = {
       shortcutsBtnTitle: 'Guía de atajos de teclado (F1 o Ctrl+/)',
       shortcutsBtnAria: 'Guía de atajos',
       placeholder:
-        'Empezá a escribir tu manuscrito o usá Markdown (# Título, *cursiva*, **negrita**, > cita)...',
+        'Empezá a escribir...',
       defaultDocName: 'documento.md',
       toastSaved: 'Documento guardado con éxito',
       toastZenEnabled: 'Modo Zen activado • F11 o Esc para salir',
