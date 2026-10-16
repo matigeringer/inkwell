@@ -29,7 +29,9 @@ import {
   HistoryIcon,
   MenuIcon,
   FeatherIcon,
-  FolderTreeIcon
+  FolderTreeIcon,
+  FolderIcon,
+  PlusIcon
 } from './Icons'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
@@ -92,11 +94,14 @@ const FONT_SIZES_SCALE = [
 
 export default function Editor({
   initialDoc,
+  onSelectFile,
   onBack,
   preferences,
   onUpdatePreferences,
   onOpenProfile,
   openedFolder,
+  openedFolders = [],
+  onSwitchFolder,
   onRefreshFolderTree,
   onCloseFolder,
   onOpenFolder,
@@ -112,6 +117,7 @@ export default function Editor({
   const [errorMessage, setErrorMessage] = useState('')
   const [isZenMode, setIsZenMode] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(Boolean(openedFolder))
+  const [isManuscriptDropdownOpen, setIsManuscriptDropdownOpen] = useState(false)
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [shortcutsTab, setShortcutsTab] = useState('zen')
@@ -128,6 +134,7 @@ export default function Editor({
   const [isExporting, setIsExporting] = useState(false)
   const actionsMenuRef = useRef(null)
   const exportDropdownRef = useRef(null)
+  const manuscriptDropdownRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const typewriterModeRef = useRef(Boolean(preferences?.typewriterMode))
   const typewriterPositionRef = useRef(preferences?.typewriterPosition || 'center')
@@ -138,11 +145,18 @@ export default function Editor({
   const isMouseDownRef = useRef(false)
   const [, setTick] = useState(0) // Forzar re-render en cambios para estadísticas
 
-  // Cerrar menú de acciones o de exportación al hacer clic afuera o presionar Escape
+  // Cerrar menú de acciones, exportación o desplegable de manuscritos al hacer clic afuera o presionar Escape
   useEffect(() => {
-    if (!actionsMenuOpen && !exportMenuOpen) return
+    if (!actionsMenuOpen && !exportMenuOpen && !isManuscriptDropdownOpen) return
 
     const handleClickOutside = (e) => {
+      if (
+        isManuscriptDropdownOpen &&
+        manuscriptDropdownRef.current &&
+        !manuscriptDropdownRef.current.contains(e.target)
+      ) {
+        setIsManuscriptDropdownOpen(false)
+      }
       if (
         exportMenuOpen &&
         exportDropdownRef.current &&
@@ -158,7 +172,9 @@ export default function Editor({
 
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        if (exportMenuOpen) {
+        if (isManuscriptDropdownOpen) {
+          setIsManuscriptDropdownOpen(false)
+        } else if (exportMenuOpen) {
           setExportMenuOpen(false)
         } else if (actionsMenuOpen) {
           setActionsMenuOpen(false)
@@ -172,7 +188,7 @@ export default function Editor({
       document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
     }
-  }, [actionsMenuOpen, exportMenuOpen])
+  }, [actionsMenuOpen, exportMenuOpen, isManuscriptDropdownOpen])
 
   // Sincronizar refs de modo máquina de escribir
   useEffect(() => {
@@ -986,17 +1002,83 @@ export default function Editor({
   )
 
 
-  // Cambiar de documento de forma fluida desde el explorador
+  // Cambiar de carpeta (manuscrito) desde el desplegable rápido guardando primero el archivo actual
+  const handleSelectFolderFromDropdown = useCallback(
+    async (targetFolderPath) => {
+      if (targetFolderPath === openedFolder?.path) {
+        setIsManuscriptDropdownOpen(false)
+        return
+      }
+
+      if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
+        try {
+          await window.api.saveFile({
+            content: getMarkdownContent(),
+            filePath,
+            defaultName: fileName
+          })
+          setSaveStatus('saved')
+        } catch (err) {
+          console.warn('No se pudo autoguardar antes de cambiar de carpeta:', err)
+        }
+      }
+
+      setIsManuscriptDropdownOpen(false)
+      setIsSidebarOpen(true)
+      onSwitchFolder?.(targetFolderPath)
+    },
+    [openedFolder?.path, saveStatus, filePath, fileName, getMarkdownContent, onSwitchFolder]
+  )
+
+  // Abrir una nueva carpeta (manuscrito) desde el desplegable rápido
+  const handleOpenFolderFromDropdown = useCallback(async () => {
+    if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
+      try {
+        await window.api.saveFile({
+          content: getMarkdownContent(),
+          filePath,
+          defaultName: fileName
+        })
+        setSaveStatus('saved')
+      } catch {}
+    }
+
+    setIsManuscriptDropdownOpen(false)
+    if (onOpenFolder) {
+      const newFolder = await onOpenFolder()
+      if (newFolder?.path) {
+        setIsSidebarOpen(true)
+        onSwitchFolder?.(newFolder.path)
+      }
+    }
+  }, [saveStatus, filePath, fileName, getMarkdownContent, onOpenFolder, onSwitchFolder])
+
+  // Volver a portada guardando cambios del manuscrito activo
+  const handleBack = useCallback(() => {
+    const currentMarkdown = getMarkdownContent()
+    if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
+      window.api
+        .saveFile({ content: currentMarkdown, filePath, defaultName: fileName })
+        .catch(() => {})
+    } else if (!filePath && initialDoc?.id) {
+      try {
+        localStorage.setItem(`fountain_draft_${initialDoc.id}`, currentMarkdown)
+      } catch {}
+    }
+
+    onBack?.()
+  }, [initialDoc?.id, getMarkdownContent, saveStatus, filePath, fileName, onBack])
+
+  // Cambiar o abrir documento desde el árbol de carpetas o Zen
   const handleSwitchDoc = useCallback(
     async (targetFilePath) => {
       if (targetFilePath === filePath) return
 
-      // Si el documento actual tiene ruta y cambios sin guardar, auto-guardar
+      const currentMarkdown = getMarkdownContent()
       if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
         try {
-          const markdownContent = getMarkdownContent()
           await window.api.saveFile({
-            content: markdownContent,
+            content: currentMarkdown,
             filePath,
             defaultName: fileName
           })
@@ -1005,31 +1087,11 @@ export default function Editor({
         }
       }
 
-      if (!window.api?.readFile) return
-      try {
-        const res = await window.api.readFile(targetFilePath)
-        if (res && res.success) {
-          setFilePath(res.filePath)
-          setFileName(res.fileName)
-          setSaveStatus('saved')
-          if (editor) {
-            editor.commands.setContent(res.content || '', false)
-          }
-          showToast(currentLang === 'en' ? `Opened: ${res.fileName}` : `Abierto: ${res.fileName}`)
-        } else {
-          showToast(
-            res.error || (currentLang === 'en' ? 'Error opening file' : 'Error al abrir archivo'),
-            'error'
-          )
-        }
-      } catch (err) {
-        showToast(
-          err.message || (currentLang === 'en' ? 'Error reading file' : 'Error al leer archivo'),
-          'error'
-        )
+      if (onSelectFile) {
+        onSelectFile(targetFilePath, openedFolder?.path)
       }
     },
-    [filePath, fileName, saveStatus, editor, getMarkdownContent, showToast, currentLang]
+    [filePath, getMarkdownContent, saveStatus, fileName, onSelectFile, openedFolder?.path]
   )
 
   // Abrir archivo individual directamente con diálogo
@@ -1038,13 +1100,18 @@ export default function Editor({
     try {
       const res = await window.api.openFileDialog()
       if (res && res.success) {
-        setFilePath(res.filePath)
-        setFileName(res.fileName)
-        setSaveStatus('saved')
-        if (editor) {
-          editor.commands.setContent(res.content || '', false)
+        const currentMarkdown = getMarkdownContent()
+        if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
+          await window.api.saveFile({
+            content: currentMarkdown,
+            filePath,
+            defaultName: fileName
+          })
         }
-        showToast(currentLang === 'en' ? `Opened: ${res.fileName}` : `Abierto: ${res.fileName}`)
+
+        if (onSelectFile) {
+          onSelectFile(res.filePath)
+        }
       }
     } catch (err) {
       showToast(
@@ -1052,7 +1119,7 @@ export default function Editor({
         'error'
       )
     }
-  }, [editor, showToast, currentLang])
+  }, [getMarkdownContent, saveStatus, filePath, fileName, onSelectFile, showToast, currentLang])
 
   // Sincronizar y alternar Modo Zen con Pantalla Completa
   const toggleZenMode = useCallback(
@@ -1275,6 +1342,11 @@ export default function Editor({
 
       // 2. Escape: Cerrar modales, menús o salir de Modo Zen
       if (e.key === 'Escape') {
+        if (isManuscriptDropdownOpen) {
+          e.preventDefault()
+          setIsManuscriptDropdownOpen(false)
+          return
+        }
         if (isShortcutsModalOpen) {
           e.preventDefault()
           setIsShortcutsModalOpen(false)
@@ -1400,6 +1472,18 @@ export default function Editor({
 
       // --- ATAJOS EXCLUSIVOS DEL MODO NORMAL (Desactivados en Modo Zen para evitar distracciones) ---
       if (!isZenMode) {
+        // Ctrl+Tab / Ctrl+Shift+Tab: Cambiar de carpeta/manuscrito abierto
+        if (isCtrlOrMeta && e.key === 'Tab') {
+          e.preventDefault()
+          if (openedFolders.length > 1) {
+            const currentIndex = openedFolders.findIndex((f) => f.path === openedFolder?.path)
+            const delta = e.shiftKey ? -1 : 1
+            const nextIndex = (currentIndex + delta + openedFolders.length) % openedFolders.length
+            handleSelectFolderFromDropdown(openedFolders[nextIndex].path)
+          }
+          return
+        }
+
         // Ctrl+N: Nuevo documento
         if (isCtrlOrMeta && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
           if (onNewDoc) {
@@ -1423,13 +1507,13 @@ export default function Editor({
           return
         }
 
-        // Ctrl+\: Alternar barra lateral del explorador (Ctrl+B queda 100% libre para Negrita estándar)
+        // Ctrl+\: Alternar barra lateral del explorador
         if (isCtrlOrMeta && !e.shiftKey && e.key === '\\') {
+          e.preventDefault()
           if (openedFolder) {
-            e.preventDefault()
             setIsSidebarOpen((prev) => !prev)
-            return
           }
+          return
         }
 
         // Ctrl+Shift+E o Ctrl+P: Conmutar menú de exportación
@@ -1454,6 +1538,9 @@ export default function Editor({
     isZenMode,
     isShortcutsModalOpen,
     isHistoryModalOpen,
+    isManuscriptDropdownOpen,
+    openedFolders,
+    handleSelectFolderFromDropdown,
     showStatsHud,
     actionsMenuOpen,
     exportMenuOpen,
@@ -1496,7 +1583,7 @@ export default function Editor({
         <div className="header-left">
           <button
             className="btn-header-back"
-            onClick={onBack}
+            onClick={handleBack}
             title={t.editor.homeBtnTitle}
             aria-label={t.editor.homeBtn}
           >
@@ -1504,8 +1591,10 @@ export default function Editor({
             <span>{t.editor.homeBtn}</span>
           </button>
 
+          {/* Botón dedicado para alternar el índice / barra lateral */}
           {openedFolder && (
             <button
+              type="button"
               className={`btn-icon-sober ${isSidebarOpen ? 'active' : ''}`}
               onClick={() => setIsSidebarOpen((prev) => !prev)}
               title={isSidebarOpen ? t.editor.hideSidebar : t.editor.showSidebar}
@@ -1514,6 +1603,95 @@ export default function Editor({
               <SidebarIcon size={16} />
             </button>
           )}
+
+          {/* Grupo de Navegación: Carpeta y Flecha Desplegable para cambiar de manuscrito */}
+          <div
+            className={`header-folder-nav-group ${isManuscriptDropdownOpen ? 'is-open' : ''}`}
+            ref={manuscriptDropdownRef}
+          >
+            <button
+              type="button"
+              className={`btn-header-folder ${isManuscriptDropdownOpen ? 'active' : ''}`}
+              onClick={() => setIsManuscriptDropdownOpen((prev) => !prev)}
+              title={t.editor.switchManuscript || 'Cambiar manuscrito'}
+              aria-label={t.editor.switchManuscript || 'Cambiar manuscrito'}
+              aria-expanded={isManuscriptDropdownOpen}
+              aria-haspopup="true"
+            >
+              <FolderIcon size={16} className="header-folder-icon" />
+              {openedFolder && <span className="header-folder-name">{openedFolder.name}</span>}
+            </button>
+
+            <button
+              type="button"
+              className={`btn-header-arrow ${isManuscriptDropdownOpen ? 'is-active' : ''}`}
+              onClick={() => setIsManuscriptDropdownOpen((prev) => !prev)}
+              title={t.editor.switchManuscript || 'Cambiar manuscrito'}
+              aria-label={t.editor.switchManuscript || 'Cambiar manuscrito'}
+              aria-expanded={isManuscriptDropdownOpen}
+              aria-haspopup="true"
+            >
+              <ChevronDownIcon
+                size={13}
+                className={`header-arrow-chevron ${isManuscriptDropdownOpen ? 'is-open' : ''}`}
+              />
+            </button>
+
+            {/* Menú Desplegable Rápido de Carpetas / Manuscritos */}
+            {isManuscriptDropdownOpen && (
+              <div className="manuscripts-quick-dropdown" role="menu">
+                {openedFolders.length > 0 && (
+                  <div className="quick-dropdown-list">
+                    {openedFolders.map((folder) => {
+                      const isActive = folder.path === openedFolder?.path
+                      return (
+                        <div
+                          key={folder.path}
+                          className={`quick-dropdown-item ${isActive ? 'is-active' : ''}`}
+                        >
+                          <button
+                            type="button"
+                            className="quick-dropdown-item-btn"
+                            onClick={() => handleSelectFolderFromDropdown(folder.path)}
+                          >
+                            <FolderIcon size={14} className="dropdown-item-icon" />
+                            <span className="dropdown-item-name" title={folder.path}>
+                              {folder.name}
+                            </span>
+                          </button>
+                          {openedFolders.length > 1 && onCloseFolder && (
+                            <button
+                              type="button"
+                              className="btn-dropdown-item-close"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onCloseFolder(folder.path)
+                              }}
+                              title={t.fileTree.closeFolder}
+                              aria-label={t.fileTree.closeFolder}
+                            >
+                              <CloseIcon size={12} />
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                <div className="quick-dropdown-footer">
+                  <button
+                    type="button"
+                    className="quick-dropdown-new-btn"
+                    onClick={handleOpenFolderFromDropdown}
+                  >
+                    <PlusIcon size={13} />
+                    <span>{t.home.openFolder}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
 
           <div className="doc-meta-header">
             <span className="doc-title-text" title={filePath || fileName}>
@@ -2221,14 +2399,15 @@ export default function Editor({
 
       {/* Disposición dividida para panel lateral y lienzo */}
       <div className="editor-workspace-layout">
-        {openedFolder && isSidebarOpen && !isZenMode && (
+        {isSidebarOpen && !isZenMode && openedFolder && (
           <aside className="editor-sidebar-panel">
             <FileTree
+              key={openedFolder.path}
               openedFolder={openedFolder}
               activeFilePath={filePath}
               onSelectFile={handleSwitchDoc}
-              onRefreshTree={onRefreshFolderTree}
-              onCloseFolder={onCloseFolder}
+              onRefreshTree={() => onRefreshFolderTree?.(openedFolder.path)}
+              onCloseFolder={() => onCloseFolder?.(openedFolder.path)}
               showToast={showToast}
               language={preferences?.language}
             />
