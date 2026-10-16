@@ -247,10 +247,6 @@ export const translations = {
           puro: {
             name: 'Galera',
             desc: 'Papel cálido de imprenta, tinta carbón y lápiz bermellón'
-          },
-          gaceta: {
-            name: 'Gaceta',
-            desc: 'Prensa matutina en blanco papel, negros puros y escala de grises'
           }
         },
         modeTitle: 'Modo de apariencia',
@@ -570,10 +566,6 @@ export const translations = {
           puro: {
             name: 'Galley',
             desc: 'Warm proofing paper, carbon ink, and vermillion pencil'
-          },
-          gaceta: {
-            name: 'Gazette',
-            desc: 'Morning broadsheet in newsprint white, deep black, and grayscale'
           }
         },
         modeTitle: 'Appearance Mode',

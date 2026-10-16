@@ -33,12 +33,7 @@ function App() {
           mode = 'light'
         }
 
-        let theme = 'puro'
-        if (parsed.theme === 'gaceta') {
-          theme = 'gaceta'
-        } else if (parsed.theme === 'puro' || parsed.theme === 'galera') {
-          theme = 'puro'
-        }
+        const theme = 'puro'
 
         return {
           theme,
@@ -141,7 +136,7 @@ function App() {
     const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     const effectiveMode =
       preferences.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : preferences.mode
-    const safeTheme = preferences.theme === 'gaceta' ? 'gaceta' : 'puro'
+    const safeTheme = 'puro'
     const dataThemeValue = `${safeTheme}-${effectiveMode}`
     root.setAttribute('data-theme', dataThemeValue)
 
@@ -197,7 +192,7 @@ function App() {
           const rootEl = document.documentElement
           const isSystemDark = mediaQuery.matches
           const effectiveMode = isSystemDark ? 'dark' : 'light'
-          const safeTheme = preferences.theme === 'gaceta' ? 'gaceta' : 'puro'
+          const safeTheme = 'puro'
           rootEl.setAttribute('data-theme', `${safeTheme}-${effectiveMode}`)
         })
       }

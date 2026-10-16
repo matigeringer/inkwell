@@ -23,7 +23,7 @@ try {
     if (mode === 'system') {
       mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     }
-    const theme = parsed.theme === 'gaceta' ? 'gaceta' : 'puro'
+    const theme = 'puro'
     document.documentElement.setAttribute('data-theme', `${theme}-${mode}`)
   }
 } catch {
