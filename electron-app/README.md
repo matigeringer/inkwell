@@ -1,6 +1,6 @@
-# electron-app
+# Inkwell
 
-An Electron application with React
+Cuaderno de manuscritos Markdown minimalista y sin distracciones.
 
 ## Recommended IDE Setup
 

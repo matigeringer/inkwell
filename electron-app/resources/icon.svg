@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Fondo plano mate estilo Galera Oscuro / Carbón de la app (#161814) -->
+  <rect width="1024" height="1024" rx="220" fill="#161814" />
+  <!-- Tipografía "Ink" con el naranja exacto de la app (#ee6342) y Segoe UI Black -->
+  <text
+    x="145"
+    y="645"
+    fill="#ee6342"
+    font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif"
+    font-size="430"
+    font-weight="850"
+    letter-spacing="-16"
+  >Ink</text>
+  <!-- Barra vertical de cursor en el tono crema exacto de la app (#e6e3d6) -->
+  <rect x="782" y="304" width="34" height="376" rx="4" fill="#e6e3d6" />
+</svg>

@@ -1,7 +1,7 @@
 export const translations = {
   es: {
     common: {
-      appName: 'Fountain',
+      appName: 'Inkwell',
       appSubtitle: 'cuaderno de manuscritos',
       cancel: 'Cancelar',
       save: 'Guardar',
@@ -24,7 +24,7 @@ export const translations = {
       newDocument: 'Nuevo documento',
       openFile: 'Abrir archivo',
       openFolder: 'Abrir carpeta',
-      colophon: 'Fountain — cuaderno de manuscritos',
+      colophon: 'Inkwell — cuaderno de manuscritos',
       newDocShortcut: 'Ctrl N',
       openFileShortcut: 'Ctrl O',
       openFolderShortcut: 'Ctrl ⇧ O',
@@ -328,7 +328,7 @@ export const translations = {
   },
   en: {
     common: {
-      appName: 'Fountain',
+      appName: 'Inkwell',
       appSubtitle: 'manuscript notebook',
       cancel: 'Cancel',
       save: 'Save',
@@ -351,7 +351,7 @@ export const translations = {
       newDocument: 'New document',
       openFile: 'Open file',
       openFolder: 'Open folder',
-      colophon: 'Fountain — manuscript notebook',
+      colophon: 'Inkwell — manuscript notebook',
       newDocShortcut: 'Ctrl N',
       openFileShortcut: 'Ctrl O',
       openFolderShortcut: 'Ctrl ⇧ O',

@@ -3,6 +3,9 @@ import { join, basename, extname } from 'path'
 import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import iconIco from '../../resources/icon.ico?asset'
+
+const appIcon = process.platform === 'win32' ? iconIco : icon
 import { exportDocumentToPdf } from './pdfExporter'
 import { exportDocument } from './documentExporter'
 import {
@@ -94,19 +97,24 @@ async function buildDirectoryTree(dirPath, currentDepth = 0, maxDepth = 8) {
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
+    title: 'Inkwell',
     width: 1050,
     height: 720,
     minWidth: 700,
     minHeight: 500,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform === 'darwin' ? {} : { icon: appIcon }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       spellcheck: true
     }
   })
+
+  if (process.platform === 'win32') {
+    mainWindow.setIcon(appIcon)
+  }
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -225,7 +233,10 @@ function createWindow() {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.electron')
+  electronApp.setAppUserModelId('com.inkwell.app')
+  if (process.platform === 'darwin' && app.dock) {
+    app.dock.setIcon(icon)
+  }
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
