@@ -118,6 +118,10 @@ export default function Editor({
   const [isZenMode, setIsZenMode] = useState(false)
   const [isSidebarOpen, setIsSidebarOpen] = useState(Boolean(openedFolder))
   const [isManuscriptDropdownOpen, setIsManuscriptDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    setIsSidebarOpen(Boolean(openedFolder))
+  }, [openedFolder?.path])
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [shortcutsTab, setShortcutsTab] = useState('zen')
@@ -1609,18 +1613,20 @@ export default function Editor({
             className={`header-folder-nav-group ${isManuscriptDropdownOpen ? 'is-open' : ''}`}
             ref={manuscriptDropdownRef}
           >
-            <button
-              type="button"
-              className={`btn-header-folder ${isManuscriptDropdownOpen ? 'active' : ''}`}
-              onClick={() => setIsManuscriptDropdownOpen((prev) => !prev)}
-              title={t.editor.switchManuscript || 'Cambiar manuscrito'}
-              aria-label={t.editor.switchManuscript || 'Cambiar manuscrito'}
-              aria-expanded={isManuscriptDropdownOpen}
-              aria-haspopup="true"
-            >
-              <FolderIcon size={16} className="header-folder-icon" />
-              {openedFolder && <span className="header-folder-name">{openedFolder.name}</span>}
-            </button>
+            {openedFolder && (
+              <button
+                type="button"
+                className={`btn-header-folder ${isManuscriptDropdownOpen ? 'active' : ''}`}
+                onClick={() => setIsManuscriptDropdownOpen((prev) => !prev)}
+                title={t.editor.switchManuscript || 'Cambiar manuscrito'}
+                aria-label={t.editor.switchManuscript || 'Cambiar manuscrito'}
+                aria-expanded={isManuscriptDropdownOpen}
+                aria-haspopup="true"
+              >
+                <FolderIcon size={16} className="header-folder-icon" />
+                <span className="header-folder-name">{openedFolder.name}</span>
+              </button>
+            )}
 
             <button
               type="button"

@@ -743,6 +743,11 @@
   transition: all 0.15s ease;
 }
 
+.btn-header-arrow:first-child {
+  padding: 0 0.45rem;
+  border-radius: var(--radius);
+}
+
 .btn-header-arrow:hover,
 .btn-header-arrow.is-active {
   color: var(--accent-primary);

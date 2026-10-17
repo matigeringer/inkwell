@@ -325,6 +325,7 @@ function App() {
       filePath: null,
       content: ''
     })
+    setActiveFolderPath(null)
     setView('editor')
   }, [preferences.language])
 
@@ -454,6 +455,8 @@ function App() {
         if (matchingFolder) {
           setActiveFolderPath(matchingFolder.path)
           setLastFileByFolder((prev) => ({ ...prev, [matchingFolder.path]: res.filePath }))
+        } else {
+          setActiveFolderPath(null)
         }
         setView('editor')
       }
@@ -481,6 +484,8 @@ function App() {
           if (ownerFolder) {
             setActiveFolderPath(ownerFolder.path)
             setLastFileByFolder((prev) => ({ ...prev, [ownerFolder.path]: res.filePath }))
+          } else {
+            setActiveFolderPath(null)
           }
           setView('editor')
         }
@@ -580,8 +585,9 @@ function App() {
     preferences.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : preferences.mode
   const isEffectiveDark = effectiveMode === 'dark'
 
-  const activeFolder =
-    openedFolders.find((f) => f.path === activeFolderPath) || openedFolders[0] || null
+  const activeFolder = activeFolderPath
+    ? openedFolders.find((f) => f.path === activeFolderPath) || null
+    : null
 
   if (view === 'editor') {
     return (
