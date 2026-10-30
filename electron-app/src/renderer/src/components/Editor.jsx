@@ -101,6 +101,8 @@ export default function Editor({
   onOpenProfile,
   openedFolder,
   openedFolders = [],
+  looseFiles = [],
+  onSavedFile,
   onSwitchFolder,
   onRefreshFolderTree,
   onCloseFolder,
@@ -834,6 +836,7 @@ export default function Editor({
       if (res.success) {
         setFilePath(res.filePath)
         setFileName(res.fileName)
+        onSavedFile?.(res.filePath, res.fileName, markdownContent)
         setSaveStatus('saved')
         showToast(currentLang === 'en' ? `Saved: ${res.fileName}` : `Guardado: ${res.fileName}`)
         saveHistorySnapshot({
@@ -898,6 +901,7 @@ export default function Editor({
       if (res.success) {
         setFilePath(res.filePath)
         setFileName(res.fileName)
+        onSavedFile?.(res.filePath, res.fileName, markdownContent)
         setSaveStatus('saved')
         showToast(
           currentLang === 'en' ? `Saved as: ${res.fileName}` : `Guardado como: ${res.fileName}`
@@ -1006,6 +1010,30 @@ export default function Editor({
   )
 
 
+  const saveBeforeSwitch = useCallback(async () => {
+    const content = getMarkdownContent()
+    if (!filePath && initialDoc?.id) {
+      try {
+        localStorage.setItem(`fountain_draft_${initialDoc.id}`, content)
+        return true
+      } catch {
+        showToast(currentLang === 'en' ? 'Could not save draft' : 'No se pudo guardar el borrador', 'error')
+        return false
+      }
+    }
+    if (filePath && saveStatus !== 'saved' && window.api?.saveFile) {
+      try {
+        const result = await window.api.saveFile({ content, filePath, defaultName: fileName })
+        if (!result?.success) throw new Error(result?.error || 'Save failed')
+        setSaveStatus('saved')
+      } catch (err) {
+        showToast(err.message || (currentLang === 'en' ? 'Could not save file' : 'No se pudo guardar el archivo'), 'error')
+        return false
+      }
+    }
+    return true
+  }, [getMarkdownContent, filePath, initialDoc?.id, saveStatus, fileName, showToast, currentLang])
+
   // Cambiar de carpeta (manuscrito) desde el desplegable rápido guardando primero el archivo actual
   const handleSelectFolderFromDropdown = useCallback(
     async (targetFolderPath) => {
@@ -1014,48 +1042,28 @@ export default function Editor({
         return
       }
 
-      if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
-        try {
-          await window.api.saveFile({
-            content: getMarkdownContent(),
-            filePath,
-            defaultName: fileName
-          })
-          setSaveStatus('saved')
-        } catch (err) {
-          console.warn('No se pudo autoguardar antes de cambiar de carpeta:', err)
-        }
-      }
+      if (!(await saveBeforeSwitch())) return
 
       setIsManuscriptDropdownOpen(false)
       setIsSidebarOpen(true)
       onSwitchFolder?.(targetFolderPath)
     },
-    [openedFolder?.path, saveStatus, filePath, fileName, getMarkdownContent, onSwitchFolder]
+    [openedFolder?.path, saveBeforeSwitch, onSwitchFolder]
   )
 
   // Abrir una nueva carpeta (manuscrito) desde el desplegable rápido
   const handleOpenFolderFromDropdown = useCallback(async () => {
-    if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
-      try {
-        await window.api.saveFile({
-          content: getMarkdownContent(),
-          filePath,
-          defaultName: fileName
-        })
-        setSaveStatus('saved')
-      } catch {}
-    }
+    if (!(await saveBeforeSwitch())) return
 
     setIsManuscriptDropdownOpen(false)
     if (onOpenFolder) {
       const newFolder = await onOpenFolder()
       if (newFolder?.path) {
         setIsSidebarOpen(true)
-        onSwitchFolder?.(newFolder.path)
+        onSwitchFolder?.(newFolder.path, newFolder)
       }
     }
-  }, [saveStatus, filePath, fileName, getMarkdownContent, onOpenFolder, onSwitchFolder])
+  }, [saveBeforeSwitch, onOpenFolder, onSwitchFolder])
 
   // Volver a portada guardando cambios del manuscrito activo
   const handleBack = useCallback(() => {
@@ -1075,27 +1083,17 @@ export default function Editor({
 
   // Cambiar o abrir documento desde el árbol de carpetas o Zen
   const handleSwitchDoc = useCallback(
-    async (targetFilePath) => {
+    async (targetFilePath, folderPath = openedFolder?.path) => {
       if (targetFilePath === filePath) return
 
-      const currentMarkdown = getMarkdownContent()
-      if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
-        try {
-          await window.api.saveFile({
-            content: currentMarkdown,
-            filePath,
-            defaultName: fileName
-          })
-        } catch (err) {
-          console.warn('No se pudo autoguardar antes de cambiar:', err)
-        }
-      }
+      if (!(await saveBeforeSwitch())) return
 
       if (onSelectFile) {
-        onSelectFile(targetFilePath, openedFolder?.path)
+        const opened = await onSelectFile(targetFilePath, folderPath)
+        if (opened === false) showToast(currentLang === 'en' ? 'Could not open file' : 'No se pudo abrir el archivo', 'error')
       }
     },
-    [filePath, getMarkdownContent, saveStatus, fileName, onSelectFile, openedFolder?.path]
+    [filePath, saveBeforeSwitch, onSelectFile, openedFolder?.path, showToast, currentLang]
   )
 
   // Abrir archivo individual directamente con diálogo
@@ -1104,14 +1102,7 @@ export default function Editor({
     try {
       const res = await window.api.openFileDialog()
       if (res && res.success) {
-        const currentMarkdown = getMarkdownContent()
-        if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
-          await window.api.saveFile({
-            content: currentMarkdown,
-            filePath,
-            defaultName: fileName
-          })
-        }
+        if (!(await saveBeforeSwitch())) return
 
         if (onSelectFile) {
           onSelectFile(res.filePath)
@@ -1123,7 +1114,7 @@ export default function Editor({
         'error'
       )
     }
-  }, [getMarkdownContent, saveStatus, filePath, fileName, onSelectFile, showToast, currentLang])
+  }, [saveBeforeSwitch, onSelectFile, showToast, currentLang])
 
   // Sincronizar y alternar Modo Zen con Pantalla Completa
   const toggleZenMode = useCallback(
@@ -1613,7 +1604,7 @@ export default function Editor({
             className={`header-folder-nav-group ${isManuscriptDropdownOpen ? 'is-open' : ''}`}
             ref={manuscriptDropdownRef}
           >
-            {openedFolder && (
+            {(openedFolder || filePath) && (
               <button
                 type="button"
                 className={`btn-header-folder ${isManuscriptDropdownOpen ? 'active' : ''}`}
@@ -1623,8 +1614,8 @@ export default function Editor({
                 aria-expanded={isManuscriptDropdownOpen}
                 aria-haspopup="true"
               >
-                <FolderIcon size={16} className="header-folder-icon" />
-                <span className="header-folder-name">{openedFolder.name}</span>
+                {openedFolder ? <FolderIcon size={16} className="header-folder-icon" /> : <FileTextIcon size={16} className="header-folder-icon" />}
+                <span className="header-folder-name">{openedFolder?.name || fileName}</span>
               </button>
             )}
 
@@ -1646,8 +1637,19 @@ export default function Editor({
             {/* Menú Desplegable Rápido de Carpetas / Manuscritos */}
             {isManuscriptDropdownOpen && (
               <div className="manuscripts-quick-dropdown" role="menu">
-                {openedFolders.length > 0 && (
+                {(openedFolders.length > 0 || looseFiles.length > 0) && (
                   <div className="quick-dropdown-list">
+                    {looseFiles.map((path) => (
+                      <div key={path} className={`quick-dropdown-item ${!openedFolder && filePath === path ? 'is-active' : ''}`}>
+                        <button type="button" className="quick-dropdown-item-btn" onClick={() => {
+                          setIsManuscriptDropdownOpen(false)
+                          handleSwitchDoc(path, null)
+                        }}>
+                          <FileTextIcon size={14} className="dropdown-item-icon" />
+                          <span className="dropdown-item-name" title={path}>{path.split(/[\\/]/).pop()}</span>
+                        </button>
+                      </div>
+                    ))}
                     {openedFolders.map((folder) => {
                       const isActive = folder.path === openedFolder?.path
                       return (
@@ -1686,12 +1688,19 @@ export default function Editor({
                 )}
 
                 <div className="quick-dropdown-footer">
+                  <button type="button" className="quick-dropdown-new-btn" onClick={() => {
+                    setIsManuscriptDropdownOpen(false)
+                    handleOpenFileDirectly()
+                  }}>
+                    <FileTextIcon size={13} />
+                    <span>{t.home.openFile}</span>
+                  </button>
                   <button
                     type="button"
                     className="quick-dropdown-new-btn"
                     onClick={handleOpenFolderFromDropdown}
                   >
-                    <PlusIcon size={13} />
+                    <FolderIcon size={13} />
                     <span>{t.home.openFolder}</span>
                   </button>
                 </div>

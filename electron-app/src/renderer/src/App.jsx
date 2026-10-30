@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import Editor from './components/Editor'
 import ProfileModal from './components/ProfileModal'
@@ -39,11 +39,52 @@ function fileExistsInTree(items, targetPath) {
   return false
 }
 
+function folderContainsFile(folderPath, filePath) {
+  if (!folderPath || !filePath) return false
+  const folder = folderPath.replace(/\\/g, '/').replace(/\/+$/, '')
+  return filePath.replace(/\\/g, '/').startsWith(`${folder}/`)
+}
+
 function App() {
+  const [showAddMenu, setShowAddMenu] = useState(false)
+  const addMenuRef = useRef(null)
+
+  useEffect(() => {
+    if (!showAddMenu) return
+    const handleOutsideClick = (event) => {
+      if (!addMenuRef.current?.contains(event.target)) setShowAddMenu(false)
+    }
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setShowAddMenu(false)
+    }
+    document.addEventListener('pointerdown', handleOutsideClick)
+    document.addEventListener('keydown', handleEscape)
+    return () => {
+      document.removeEventListener('pointerdown', handleOutsideClick)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [showAddMenu])
   const [view, setView] = useState('home') // 'home' | 'editor'
   const [activeDoc, setActiveDoc] = useState(null)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [openedFolders, setOpenedFolders] = useState([])
+  const [looseFiles, setLooseFiles] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('fountain_loose_files') || '[]')
+      return Array.isArray(saved) ? saved.filter((path) => typeof path === 'string' && path) : []
+    } catch {
+      return []
+    }
+  })
+  const [looseFileError, setLooseFileError] = useState(null)
+
+  useEffect(() => {
+    localStorage.setItem('fountain_loose_files', JSON.stringify(looseFiles))
+  }, [looseFiles])
+
+  const rememberLooseFile = useCallback((path) => {
+    if (path) setLooseFiles((files) => files.includes(path) ? files : [...files, path])
+  }, [])
   const [activeFolderPath, setActiveFolderPath] = useState(null)
   const [lastFileByFolder, setLastFileByFolder] = useState({})
 
@@ -450,20 +491,22 @@ function App() {
           content: res.content
         })
         const matchingFolder = openedFolders.find(
-          (f) => res.filePath && res.filePath.startsWith(f.path)
+          (f) => folderContainsFile(f.path, res.filePath)
         )
         if (matchingFolder) {
           setActiveFolderPath(matchingFolder.path)
           setLastFileByFolder((prev) => ({ ...prev, [matchingFolder.path]: res.filePath }))
         } else {
           setActiveFolderPath(null)
+          rememberLooseFile(res.filePath)
         }
+        setLooseFileError(null)
         setView('editor')
       }
     } catch (err) {
       console.error('Error al abrir archivo:', err)
     }
-  }, [openedFolders])
+  }, [openedFolders, rememberLooseFile])
 
   // Seleccionar archivo desde el árbol o Zen
   const handleSelectFile = useCallback(
@@ -480,32 +523,40 @@ function App() {
           })
           const ownerFolder =
             (folderPath && openedFolders.find((f) => f.path === folderPath)) ||
-            openedFolders.find((f) => res.filePath && res.filePath.startsWith(f.path))
+            openedFolders.find((f) => folderContainsFile(f.path, res.filePath))
           if (ownerFolder) {
             setActiveFolderPath(ownerFolder.path)
             setLastFileByFolder((prev) => ({ ...prev, [ownerFolder.path]: res.filePath }))
           } else {
             setActiveFolderPath(null)
+            rememberLooseFile(res.filePath)
           }
+          setLooseFileError(null)
           setView('editor')
+          return true
+        } else {
+          setLooseFileError(filePath)
+          return false
         }
       } catch (err) {
+        setLooseFileError(filePath)
         console.error('Error al abrir archivo seleccionado:', err)
+        return false
       }
     },
-    [openedFolders]
+    [openedFolders, rememberLooseFile]
   )
 
   // Cambiar carpeta/manuscrito activo desde el desplegable del editor
   const handleSwitchFolder = useCallback(
-    async (targetFolderPath) => {
-      const targetFolder = openedFolders.find((f) => f.path === targetFolderPath)
+    async (targetFolderPath, newFolder = null) => {
+      const targetFolder = newFolder || openedFolders.find((f) => f.path === targetFolderPath)
       if (!targetFolder) return
 
       setActiveFolderPath(targetFolder.path)
 
       // Si el archivo actual ya pertenece a esta carpeta, no hace falta recargar otro
-      if (activeDoc?.filePath && activeDoc.filePath.startsWith(targetFolder.path)) {
+      if (activeDoc?.filePath && folderContainsFile(targetFolder.path, activeDoc.filePath)) {
         return
       }
 
@@ -602,6 +653,11 @@ function App() {
           onOpenProfile={handleOpenProfile}
           openedFolder={activeFolder}
           openedFolders={openedFolders}
+          looseFiles={looseFiles}
+          onSavedFile={(path, name, content) => {
+            setActiveDoc((doc) => ({ ...doc, filePath: path, fileName: name, content }))
+            if (!openedFolders.some((folder) => folderContainsFile(folder.path, path))) rememberLooseFile(path)
+          }}
           onSwitchFolder={handleSwitchFolder}
           onRefreshFolderTree={handleRefreshFolderTree}
           onCloseFolder={handleCloseFolder}
@@ -635,18 +691,24 @@ function App() {
           <div className="sidebar-manuscripts-wrapper">
             <div className="sidebar-section-label">
               <span className="label-caps">{t.sidebar.manuscripts}</span>
-              <button
-                type="button"
-                className="btn-sidebar-add-folder"
-                onClick={handleOpenFolder}
-                title={t.home.openFolderTitle}
-                aria-label={t.home.openFolder}
-              >
-                <PlusIcon size={13} />
-              </button>
+              <div className="sidebar-add-wrap" ref={addMenuRef}>
+                <button type="button" className="btn-sidebar-add-folder" onClick={() => setShowAddMenu((open) => !open)} aria-label={currentLang === 'en' ? 'Add file or folder' : 'Añadir archivo o carpeta'} aria-expanded={showAddMenu}>
+                  <PlusIcon size={13} />
+                </button>
+                {showAddMenu && <div className="sidebar-add-menu">
+                  <button type="button" onClick={() => { setShowAddMenu(false); handleOpenFile() }}>{t.home.openFile}</button>
+                  <button type="button" onClick={() => { setShowAddMenu(false); handleOpenFolder() }}>{t.home.openFolder}</button>
+                </div>}
+              </div>
             </div>
             <ManuscriptsZone
               openedFolders={openedFolders}
+              looseFiles={looseFiles}
+              looseFileError={looseFileError}
+              onRemoveLooseFile={(path) => {
+                setLooseFiles((files) => files.filter((file) => file !== path))
+                setLooseFileError((error) => error === path ? null : error)
+              }}
               activeFilePath={activeDoc?.filePath || null}
               onSelectFile={handleSelectFile}
               onRefreshFolderTree={handleRefreshFolderTree}

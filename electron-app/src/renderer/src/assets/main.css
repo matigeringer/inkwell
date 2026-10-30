@@ -4854,3 +4854,16 @@
     height: 28px;
   }
 }
+
+.loose-files { margin-bottom: 0.75rem; }
+.loose-file-row { display: flex; align-items: center; border-radius: 4px; }
+.loose-file-row:hover, .loose-file-row.is-active { background: var(--bg-hover, rgba(128, 128, 128, 0.12)); }
+.loose-file-open, .loose-file-remove { border: 0; background: transparent; color: var(--text-primary); cursor: pointer; }
+.loose-file-open { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; padding: 0.4rem 0.35rem; text-align: left; }
+.loose-file-open span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.loose-file-remove { padding: 0.35rem; color: var(--text-muted); }
+.loose-file-error { margin: 0.2rem 0.35rem 0.5rem; color: var(--text-muted); font-size: 0.75rem; }
+.sidebar-add-wrap { position: relative; order: 1; }
+.sidebar-add-menu { position: absolute; z-index: 20; right: 0; top: 100%; min-width: 160px; padding: 4px; background: var(--bg-primary); border: 1px solid var(--border-medium); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.sidebar-add-menu button { display: block; width: 100%; border: 0; background: transparent; color: var(--text-primary); text-align: left; padding: 8px; cursor: pointer; }
+.sidebar-add-menu button:hover, .sidebar-add-menu button:focus-visible { background: var(--bg-hover); }
