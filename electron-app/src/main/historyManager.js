@@ -2,6 +2,12 @@ import { app } from 'electron'
 import { promises as fs } from 'fs'
 import { join } from 'path'
 import crypto from 'crypto'
+import { atomicWrite, createQueue } from './storage'
+import { validateContent } from './fileService'
+
+const serialize = createQueue()
+const snapshotFile = (name) => typeof name === 'string' && /^\d+_[a-z0-9-]+\.md$/.test(name)
+const historyLimit = (value) => Math.min(500, Math.max(5, Math.floor(Number(value) || 50)))
 
 /**
  * Obtiene la ruta del directorio base para el historial de documentos
@@ -14,7 +20,8 @@ function getHistoryBaseDir() {
  * Genera un identificador seguro para el sistema de archivos a partir de docKey
  */
 function getDocHash(docKey) {
-  if (!docKey) return 'unknown_doc'
+  if (typeof docKey !== 'string' || !docKey || docKey.length > 4096)
+    throw new Error('Identificador de historial inválido')
   return crypto.createHash('sha256').update(String(docKey)).digest('hex').slice(0, 20)
 }
 
@@ -32,10 +39,50 @@ function getDocHistoryDir(docKey) {
 async function readDocMeta(docDir) {
   const metaPath = join(docDir, 'meta.json')
   try {
-    const raw = await fs.readFile(metaPath, 'utf-8')
-    return JSON.parse(raw)
-  } catch {
-    return null
+    const meta = JSON.parse(await fs.readFile(metaPath, 'utf-8'))
+    if (
+      !Array.isArray(meta.snapshots) ||
+      !meta.snapshots.every(
+        (item) =>
+          snapshotFile(item.file) &&
+          item.file === `${item.id}.md` &&
+          Number.isFinite(item.timestamp)
+      )
+    ) {
+      throw new Error('Índice de historial inválido')
+    }
+    return meta
+  } catch (error) {
+    if (error.code && error.code !== 'ENOENT') throw error
+    let entries
+    try {
+      entries = await fs.readdir(docDir)
+    } catch (readError) {
+      if (readError.code === 'ENOENT') return null
+      throw readError
+    }
+    if (error.code !== 'ENOENT') {
+      await fs.copyFile(metaPath, join(docDir, `meta.corrupt.${crypto.randomUUID()}.json`))
+    }
+    const snapshots = []
+    for (const file of entries.filter(snapshotFile)) {
+      const content = await fs.readFile(join(docDir, file), 'utf8')
+      const id = file.slice(0, -3)
+      snapshots.push({
+        id,
+        file,
+        timestamp: Number(id.split('_')[0]),
+        trigger: 'recovered',
+        words: content.trim() ? content.trim().split(/\s+/).length : 0,
+        characters: content.length,
+        preview: content.slice(0, 160).replace(/[\r\n]+/g, ' ')
+      })
+    }
+    if (!snapshots.length && error.code === 'ENOENT') return null
+    snapshots.sort((a, b) => b.timestamp - a.timestamp)
+    const meta = { docName: 'document.md', filePath: null, snapshots, recovered: true }
+    await writeDocMeta(docDir, meta)
+    return meta
   }
 }
 
@@ -44,13 +91,13 @@ async function readDocMeta(docDir) {
  */
 async function writeDocMeta(docDir, meta) {
   const metaPath = join(docDir, 'meta.json')
-  await fs.writeFile(metaPath, JSON.stringify(meta, null, 2), 'utf-8')
+  await atomicWrite(metaPath, JSON.stringify(meta, null, 2))
 }
 
 /**
  * Guarda una nueva instantánea temporal en el historial
  */
-export async function saveSnapshot({
+async function _saveSnapshot({
   docKey,
   docName,
   filePath,
@@ -65,6 +112,7 @@ export async function saveSnapshot({
       return { success: false, error: 'docKey no especificado' }
     }
 
+    validateContent(content)
     const docDir = getDocHistoryDir(docKey)
     await fs.mkdir(docDir, { recursive: true })
 
@@ -96,12 +144,12 @@ export async function saveSnapshot({
       }
     }
 
-    const snapshotId = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}`
+    const snapshotId = `${Date.now()}_${crypto.randomUUID()}`
     const snapshotFileName = `${snapshotId}.md`
     const snapshotFilePath = join(docDir, snapshotFileName)
 
     // Guardar archivo con el contenido Markdown íntegro
-    await fs.writeFile(snapshotFilePath, content, 'utf-8')
+    await atomicWrite(snapshotFilePath, content)
 
     // Generar un extracto breve para vista previa rápida
     const preview = content
@@ -123,11 +171,12 @@ export async function saveSnapshot({
     meta.snapshots.unshift(newSnapshot)
 
     // Poda FIFO si excede maxEntries
-    const limit = Math.max(5, Number(maxEntries) || 50)
+    const limit = historyLimit(maxEntries)
     if (meta.snapshots.length > limit) {
       const toRemove = meta.snapshots.slice(limit)
       meta.snapshots = meta.snapshots.slice(0, limit)
 
+      await writeDocMeta(docDir, meta)
       for (const item of toRemove) {
         try {
           await fs.unlink(join(docDir, item.file))
@@ -153,7 +202,7 @@ export async function saveSnapshot({
 /**
  * Obtiene la lista de instantáneas de un documento
  */
-export async function getSnapshots(docKey) {
+async function _getSnapshots(docKey) {
   try {
     if (!docKey) return { success: true, snapshots: [] }
 
@@ -179,7 +228,7 @@ export async function getSnapshots(docKey) {
 /**
  * Obtiene el contenido completo de una instantánea específica
  */
-export async function getSnapshotContent({ docKey, snapshotId }) {
+async function _getSnapshotContent({ docKey, snapshotId }) {
   try {
     if (!docKey || !snapshotId) {
       return { success: false, error: 'Parámetros insuficientes' }
@@ -214,7 +263,7 @@ export async function getSnapshotContent({ docKey, snapshotId }) {
 /**
  * Elimina una instantánea específica del historial
  */
-export async function deleteSnapshot({ docKey, snapshotId }) {
+async function _deleteSnapshot({ docKey, snapshotId }) {
   try {
     if (!docKey || !snapshotId) {
       return { success: false, error: 'Parámetros insuficientes' }
@@ -230,6 +279,7 @@ export async function deleteSnapshot({ docKey, snapshotId }) {
     const targetIndex = meta.snapshots.findIndex((s) => s.id === snapshotId)
     if (targetIndex !== -1) {
       const [removed] = meta.snapshots.splice(targetIndex, 1)
+      await writeDocMeta(docDir, meta)
       try {
         await fs.unlink(join(docDir, removed.file))
       } catch {
@@ -248,7 +298,7 @@ export async function deleteSnapshot({ docKey, snapshotId }) {
 /**
  * Borra todo el historial de un documento
  */
-export async function clearDocHistory(docKey) {
+async function _clearDocHistory(docKey) {
   try {
     if (!docKey) return { success: true }
     const docDir = getDocHistoryDir(docKey)
@@ -263,7 +313,7 @@ export async function clearDocHistory(docKey) {
 /**
  * Borra todo el historial de la aplicación
  */
-export async function clearAllHistory() {
+async function _clearAllHistory() {
   try {
     const baseDir = getHistoryBaseDir()
     await fs.rm(baseDir, { recursive: true, force: true })
@@ -277,10 +327,10 @@ export async function clearAllHistory() {
 /**
  * Poda el historial de todos los documentos para ajustarse a un nuevo límite máximo
  */
-export async function pruneAllHistory(maxEntries) {
+async function _pruneAllHistory(maxEntries) {
   try {
     const baseDir = getHistoryBaseDir()
-    const limit = Math.max(5, Number(maxEntries) || 50)
+    const limit = historyLimit(maxEntries)
 
     try {
       await fs.access(baseDir)
@@ -296,6 +346,7 @@ export async function pruneAllHistory(maxEntries) {
         if (meta && Array.isArray(meta.snapshots) && meta.snapshots.length > limit) {
           const toRemove = meta.snapshots.slice(limit)
           meta.snapshots = meta.snapshots.slice(0, limit)
+          await writeDocMeta(docDir, meta)
           for (const item of toRemove) {
             try {
               await fs.unlink(join(docDir, item.file))
@@ -313,3 +364,73 @@ export async function pruneAllHistory(maxEntries) {
     return { success: false, error: error.message }
   }
 }
+
+async function _moveDocHistory({ fromKey, toKey, docName, filePath }) {
+  try {
+    if (fromKey === toKey) return { success: true }
+    const source = getDocHistoryDir(fromKey)
+    const destination = getDocHistoryDir(toKey)
+    const sourceMeta = await readDocMeta(source)
+    if (!sourceMeta) return { success: true }
+    await fs.mkdir(destination, { recursive: true })
+    const targetMeta = (await readDocMeta(destination)) || { snapshots: [] }
+    for (const snapshot of sourceMeta.snapshots) {
+      if (!targetMeta.snapshots.some((item) => item.id === snapshot.id)) {
+        await fs.copyFile(join(source, snapshot.file), join(destination, snapshot.file))
+        targetMeta.snapshots.push(snapshot)
+      }
+    }
+    targetMeta.snapshots.sort((a, b) => b.timestamp - a.timestamp)
+    Object.assign(targetMeta, { docKey: toKey, docName, filePath })
+    await writeDocMeta(destination, targetMeta)
+    // Preserve the source history as a recovery copy; do not erase it during a path change.
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: error.message }
+  }
+}
+
+export const saveSnapshot = (...args) => serialize(() => _saveSnapshot(...args))
+
+export const getSnapshots = (...args) => serialize(() => _getSnapshots(...args))
+
+export const getSnapshotContent = (...args) => serialize(() => _getSnapshotContent(...args))
+
+export const deleteSnapshot = (...args) => serialize(() => _deleteSnapshot(...args))
+
+export const clearDocHistory = (...args) => serialize(() => _clearDocHistory(...args))
+
+export const clearAllHistory = (...args) => serialize(() => _clearAllHistory(...args))
+
+export const pruneAllHistory = (...args) => serialize(() => _pruneAllHistory(...args))
+
+export const moveDocHistory = (...args) => serialize(() => _moveDocHistory(...args))
+
+export const moveHistoryPaths = (fromPath, toPath) =>
+  serialize(async () => {
+    const base = getHistoryBaseDir()
+    let entries
+    try {
+      entries = await fs.readdir(base, { withFileTypes: true })
+    } catch (error) {
+      if (error.code === 'ENOENT') return { success: true }
+      throw error
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue
+      const meta = await readDocMeta(join(base, entry.name))
+      const key = meta?.docKey || meta?.filePath
+      if (typeof key !== 'string') continue
+      if (key === fromPath || key.startsWith(fromPath + '/') || key.startsWith(fromPath + '\\')) {
+        const next = toPath + key.slice(fromPath.length)
+        const result = await _moveDocHistory({
+          fromKey: key,
+          toKey: next,
+          docName: next.split(/[\\/]/).pop(),
+          filePath: next
+        })
+        if (!result.success) return result
+      }
+    }
+    return { success: true }
+  })

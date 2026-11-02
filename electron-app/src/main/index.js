@@ -1,6 +1,18 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, Menu, MenuItem, session, nativeTheme } from 'electron'
-import { join, basename, extname } from 'path'
-import { promises as fs } from 'fs'
+import {
+  app,
+  shell,
+  BrowserWindow,
+  ipcMain,
+  dialog,
+  Menu,
+  MenuItem,
+  session,
+  nativeTheme
+} from 'electron'
+import { join } from 'path'
+import { pathToFileURL } from 'node:url'
+import { FileService, validateContent, validateName } from './fileService'
+import { isTrustedSender, isSafeExternalUrl } from './ipcSecurity'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
@@ -15,7 +27,9 @@ import {
   deleteSnapshot,
   clearDocHistory,
   clearAllHistory,
-  pruneAllHistory
+  pruneAllHistory,
+  moveDocHistory,
+  moveHistoryPaths
 } from './historyManager'
 
 // Idioma activo de la aplicación ('es' | 'en') y soporte de corrección ortográfica
@@ -30,71 +44,46 @@ function applySpellCheckerLanguages(lang) {
   }
 }
 
-// Desactivar sandbox para entornos Linux con particiones montadas con nosuid
-app.commandLine.appendSwitch('no-sandbox')
-
 // Conservar los datos existentes al separar el nombre visible del identificador npm.
 app.setPath('userData', join(app.getPath('appData'), 'inkwell'))
 
-const IGNORED_NAMES = new Set([
-  'node_modules',
-  'dist',
-  'out',
-  'build',
-  '.git',
-  '.vscode',
-  '.idea',
-  '.system_generated',
-  '$RECYCLE.BIN'
-])
-const VALID_EXTENSIONS = new Set(['.md', '.markdown', '.mdown', '.mkd', '.txt'])
+// Only one process owns the document queues and conflict baselines.
+if (!app.requestSingleInstanceLock()) app.exit(0)
 
-/**
- * Lee recursivamente el árbol de archivos y subcarpetas para el explorador
- */
-async function buildDirectoryTree(dirPath, currentDepth = 0, maxDepth = 8) {
-  if (currentDepth > maxDepth) return []
-  try {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true })
-    const children = []
-
-    for (const entry of entries) {
-      if (entry.name.startsWith('.') || IGNORED_NAMES.has(entry.name)) {
-        continue
-      }
-
-      const fullPath = join(dirPath, entry.name)
-
-      if (entry.isDirectory()) {
-        const subChildren = await buildDirectoryTree(fullPath, currentDepth + 1, maxDepth)
-        children.push({
-          name: entry.name,
-          path: fullPath,
-          isDirectory: true,
-          children: subChildren
-        })
-      } else if (entry.isFile()) {
-        const ext = extname(entry.name).toLowerCase()
-        if (VALID_EXTENSIONS.has(ext)) {
-          children.push({
-            name: entry.name,
-            path: fullPath,
-            isDirectory: false
-          })
-        }
-      }
-    }
-
-    // Ordenar: primero carpetas (a-z), luego archivos (a-z)
-    return children.sort((a, b) => {
-      if (a.isDirectory && !b.isDirectory) return -1
-      if (!a.isDirectory && b.isDirectory) return 1
-      return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-    })
-  } catch (err) {
-    console.error(`Error al leer directorio ${dirPath}:`, err)
-    return []
+const trustedWindows = new Set()
+const closeRequests = new Map()
+const closeReady = new Set()
+const rendererUrl =
+  is.dev && process.env.ELECTRON_RENDERER_URL
+    ? process.env.ELECTRON_RENDERER_URL
+    : pathToFileURL(join(__dirname, '../renderer/index.html')).href
+let fileService
+let quitting = false
+app.on('before-quit', () => {
+  quitting = true
+})
+app.on('second-instance', () => {
+  const win = BrowserWindow.getAllWindows().find((window) => trustedWindows.has(window.webContents))
+  if (win) {
+    if (win.isMinimized()) win.restore()
+    win.focus()
   }
+})
+
+function trusted(event) {
+  return isTrustedSender(event, trustedWindows, rendererUrl)
+}
+
+function handle(channel, listener) {
+  ipcMain.handle(channel, async (event, ...args) => {
+    try {
+      if (!trusted(event)) throw new Error('Remitente IPC no autorizado')
+      return await listener(event, ...args)
+    } catch (error) {
+      console.error(`${channel}:`, error.message)
+      return { success: false, error: error.message }
+    }
+  })
 }
 
 function createWindow() {
@@ -111,14 +100,33 @@ function createWindow() {
     ...(process.platform === 'darwin' ? {} : { icon: appIcon }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false,
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
       spellcheck: true
     }
   })
 
-  if (process.platform === 'win32') {
-    mainWindow.setIcon(appIcon)
-  }
+  const contents = mainWindow.webContents
+  trustedWindows.add(contents)
+  let closeApproved = false
+  mainWindow.on('close', (event) => {
+    if (closeApproved || !closeReady.has(contents)) return
+    event.preventDefault()
+    if (closeRequests.has(mainWindow.webContents)) return
+    closeRequests.set(mainWindow.webContents, () => {
+      closeApproved = true
+      mainWindow.close()
+      if (quitting) app.quit()
+    })
+    mainWindow.webContents.send('window:request-close')
+  })
+  mainWindow.on('closed', () => {
+    trustedWindows.delete(contents)
+    closeReady.delete(contents)
+    closeRequests.delete(contents)
+  })
+  if (process.platform === 'win32') mainWindow.setIcon(appIcon)
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
@@ -219,9 +227,12 @@ function createWindow() {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    if (isSafeExternalUrl(details.url)) shell.openExternal(details.url).catch(console.error)
     return { action: 'deny' }
   })
+
+  mainWindow.webContents.on('will-navigate', (event) => event.preventDefault())
+  mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault())
 
   // HMR for renderer base on electron-vite cli.
   // Load the remote URL for development or the local html file for production.
@@ -235,7 +246,15 @@ function createWindow() {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  fileService = new FileService(join(app.getPath('userData'), 'authorized-paths.json'), (path) =>
+    shell.trashItem(path)
+  )
+  await fileService.initialize()
+  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false)
+  )
+  session.defaultSession.setPermissionCheckHandler(() => false)
   // Set app user model id for windows
   electronApp.setAppUserModelId('com.inkwell.app')
   if (process.platform === 'darwin' && app.dock) {
@@ -253,7 +272,7 @@ app.whenReady().then(() => {
   applySpellCheckerLanguages(currentAppLanguage)
 
   // Manejadores IPC para Corrector Ortográfico e Idioma
-  ipcMain.handle('spellcheck:set-config', async (_event, { language, enabled } = {}) => {
+  handle('spellcheck:set-config', async (_event, { language, enabled } = {}) => {
     try {
       if (language) {
         currentAppLanguage = language === 'en' ? 'en' : 'es'
@@ -274,7 +293,7 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('spellcheck:get-config', async () => {
+  handle('spellcheck:get-config', async () => {
     try {
       return {
         success: true,
@@ -288,292 +307,107 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.handle('app:set-language', async (_event, lang) => {
+  handle('app:set-language', async (_event, lang) => {
     currentAppLanguage = lang === 'en' ? 'en' : 'es'
     applySpellCheckerLanguages(currentAppLanguage)
     return { success: true, currentAppLanguage }
   })
 
-  // Manejadores IPC para Carpetas y Espacios de Trabajo
-  ipcMain.handle('folder:open', async (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      const isEn = currentAppLanguage === 'en'
-      const result = await dialog.showOpenDialog(win, {
-        title: isEn ? 'Open workspace folder' : 'Abrir carpeta de trabajo',
-        properties: ['openDirectory', 'createDirectory']
-      })
+  handle('folder:open', async (event) => {
+    const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+      title: currentAppLanguage === 'en' ? 'Open workspace folder' : 'Abrir carpeta de trabajo',
+      properties: ['openDirectory', 'createDirectory']
+    })
+    if (result.canceled || !result.filePaths.length) return { canceled: true }
+    const folderPath = await fileService.grantDirectory(result.filePaths[0])
+    return fileService.readTree(folderPath)
+  })
+  handle('folder:read-tree', (_event, path) => fileService.readTree(path))
+  handle('folder:create', (_event, { parentPath, folderName } = {}) =>
+    fileService.create(parentPath, folderName, true)
+  )
+  handle('file:open-dialog', async (event) => {
+    const result = await dialog.showOpenDialog(BrowserWindow.fromWebContents(event.sender), {
+      title: currentAppLanguage === 'en' ? 'Open document' : 'Abrir documento',
+      properties: ['openFile'],
+      filters: [{ name: 'Markdown / Text', extensions: ['md', 'markdown', 'mdown', 'mkd', 'txt'] }]
+    })
+    if (result.canceled || !result.filePaths.length) return { canceled: true }
+    return fileService.readFile(await fileService.grantFile(result.filePaths[0]))
+  })
+  handle('file:read', (_event, path) => fileService.readFile(path))
+  handle('file:create', (_event, { parentPath, fileName, content = '' } = {}) =>
+    fileService.create(parentPath, fileName, false, content)
+  )
 
-      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
-        return { canceled: true }
-      }
+  const saveWithDialog = async (event, { content, defaultName } = {}) => {
+    validateContent(content)
+    const result = await dialog.showSaveDialog(BrowserWindow.fromWebContents(event.sender), {
+      title: currentAppLanguage === 'en' ? 'Save document' : 'Guardar documento',
+      defaultPath: validateName(defaultName || 'documento.md'),
+      filters: [{ name: 'Markdown', extensions: ['md', 'markdown', 'txt'] }]
+    })
+    if (result.canceled || !result.filePath) return { canceled: true }
+    const target = await fileService.grantFile(result.filePath)
+    return fileService.saveFile(target, content, { selected: true })
+  }
+  handle('file:save', (event, data = {}) =>
+    data.filePath ? fileService.saveFile(data.filePath, data.content) : saveWithDialog(event, data)
+  )
+  handle('file:save-as', saveWithDialog)
 
-      const folderPath = result.filePaths[0]
-      const tree = await buildDirectoryTree(folderPath)
-      return {
-        success: true,
-        folderPath,
-        folderName: basename(folderPath),
-        tree
-      }
-    } catch (error) {
-      console.error('Error al abrir carpeta:', error)
-      return { success: false, error: error.message }
+  const prepareExport = async (data) => {
+    if (!data || typeof data !== 'object') throw new Error('Exportación inválida')
+    const prepared = { ...data }
+    if (prepared.filePath) await fileService.authorize(prepared.filePath)
+    if (prepared.content == null && prepared.filePath) {
+      prepared.content = (
+        await fileService.readFile(prepared.filePath, { remember: false })
+      ).content
     }
-  })
-
-  ipcMain.handle('folder:read-tree', async (_event, folderPath) => {
+    validateContent(prepared.content ?? '')
+    // Export from Markdown only: never execute HTML supplied by a renderer.
+    delete prepared.htmlContent
+    return prepared
+  }
+  handle('file:export-pdf', async (event, data) =>
+    exportDocumentToPdf(event, await prepareExport(data), currentAppLanguage)
+  )
+  handle('file:export', async (event, data) =>
+    exportDocument(event, await prepareExport(data), currentAppLanguage)
+  )
+  handle('item:rename', async (_event, { oldPath, newName } = {}) => {
+    const result = await fileService.rename(oldPath, newName)
     try {
-      if (!folderPath) return { success: false, error: 'Ruta no especificada' }
-      const tree = await buildDirectoryTree(folderPath)
-      return {
-        success: true,
-        folderPath,
-        folderName: basename(folderPath),
-        tree
-      }
+      const history = await moveHistoryPaths(result.oldPath, result.newPath)
+      if (!history.success) result.warning = history.error
     } catch (error) {
-      console.error('Error al leer árbol de carpeta:', error)
-      return { success: false, error: error.message }
+      result.warning = error.message
     }
+    return result
+  })
+  handle('item:delete', (_event, targetPath) => fileService.delete(targetPath))
+  handle('item:show-in-folder', async (_event, path) => {
+    shell.showItemInFolder(await fileService.authorize(path))
+    return { success: true }
+  })
+  handle('window:confirm-close', (event, approved) => {
+    const close = closeRequests.get(event.sender)
+    closeRequests.delete(event.sender)
+    if (approved === true && close) close()
+    else quitting = false
+    return { success: true }
   })
 
-  ipcMain.handle('folder:create', async (_event, { parentPath, folderName } = {}) => {
-    try {
-      if (!parentPath || !folderName) {
-        return { success: false, error: 'Faltan parámetros para crear la carpeta' }
-      }
-      const safeName = folderName.trim()
-      const targetPath = join(parentPath, safeName)
-
-      await fs.mkdir(targetPath, { recursive: true })
-      return {
-        success: true,
-        folderPath: targetPath,
-        folderName: safeName
-      }
-    } catch (error) {
-      console.error('Error al crear carpeta:', error)
-      return { success: false, error: error.message }
-    }
-  })
-
-  // Manejadores IPC para Archivos individuales
-  ipcMain.handle('file:open-dialog', async (event) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      const isEn = currentAppLanguage === 'en'
-      const result = await dialog.showOpenDialog(win, {
-        title: isEn ? 'Open Markdown document' : 'Abrir documento Markdown',
-        properties: ['openFile'],
-        filters: [
-          {
-            name: isEn
-              ? 'Markdown Documents (*.md, *.markdown, *.txt)'
-              : 'Documentos Markdown (*.md, *.markdown, *.txt)',
-            extensions: ['md', 'markdown', 'mdown', 'mkd', 'txt']
-          },
-          { name: isEn ? 'All files (*.*)' : 'Todos los archivos (*.*)', extensions: ['*'] }
-        ]
-      })
-
-      if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
-        return { canceled: true }
-      }
-
-      const filePath = result.filePaths[0]
-      const content = await fs.readFile(filePath, 'utf-8')
-      return {
-        success: true,
-        filePath,
-        fileName: basename(filePath),
-        content
-      }
-    } catch (error) {
-      console.error('Error al abrir archivo:', error)
-      return { success: false, error: error.message }
-    }
-  })
-
-  ipcMain.handle('file:read', async (_event, filePath) => {
-    try {
-      if (!filePath) return { success: false, error: 'Ruta no especificada' }
-      const content = await fs.readFile(filePath, 'utf-8')
-      return {
-        success: true,
-        filePath,
-        fileName: basename(filePath),
-        content
-      }
-    } catch (error) {
-      console.error('Error al leer archivo:', error)
-      return { success: false, error: error.message }
-    }
-  })
-
-  ipcMain.handle('file:create', async (_event, { parentPath, fileName, content = '' } = {}) => {
-    try {
-      if (!parentPath || !fileName) {
-        return { success: false, error: 'Faltan parámetros para crear el archivo' }
-      }
-
-      let safeName = fileName.trim()
-      if (!safeName.includes('.')) {
-        safeName += '.md'
-      }
-
-      const targetPath = join(parentPath, safeName)
-
-      try {
-        await fs.access(targetPath)
-        return { success: false, error: `Ya existe un elemento llamado "${safeName}"` }
-      } catch {
-        // No existe, continuamos
-      }
-
-      await fs.writeFile(targetPath, content, 'utf-8')
-      return {
-        success: true,
-        filePath: targetPath,
-        fileName: safeName
-      }
-    } catch (error) {
-      console.error('Error al crear archivo:', error)
-      return { success: false, error: error.message }
-    }
-  })
-
-  ipcMain.handle('file:save', async (event, { content, filePath, defaultName } = {}) => {
-    try {
-      let targetPath = filePath
-      if (!targetPath) {
-        const win = BrowserWindow.fromWebContents(event.sender)
-        const isEn = currentAppLanguage === 'en'
-        const defaultDocName = defaultName || (isEn ? 'document.md' : 'documento.md')
-        const result = await dialog.showSaveDialog(win, {
-          title: isEn ? 'Save Markdown document' : 'Guardar documento Markdown',
-          defaultPath: defaultDocName,
-          filters: [
-            { name: isEn ? 'Markdown (*.md)' : 'Markdown (*.md)', extensions: ['md', 'markdown'] },
-            { name: isEn ? 'All files (*.*)' : 'Todos los archivos (*.*)', extensions: ['*'] }
-          ]
-        })
-
-        if (result.canceled || !result.filePath) {
-          return { canceled: true }
-        }
-        targetPath = result.filePath
-      }
-
-      await fs.writeFile(targetPath, content ?? '', 'utf-8')
-      return {
-        success: true,
-        filePath: targetPath,
-        fileName: basename(targetPath)
-      }
-    } catch (error) {
-      console.error('Error al guardar archivo:', error)
-      return {
-        success: false,
-        error: error.message
-      }
-    }
-  })
-
-  ipcMain.handle('file:save-as', async (event, { content, defaultName } = {}) => {
-    try {
-      const win = BrowserWindow.fromWebContents(event.sender)
-      const isEn = currentAppLanguage === 'en'
-      const defaultDocName = defaultName || (isEn ? 'document.md' : 'documento.md')
-      const result = await dialog.showSaveDialog(win, {
-        title: isEn ? 'Save Markdown document as...' : 'Guardar documento Markdown como...',
-        defaultPath: defaultDocName,
-        filters: [
-          { name: isEn ? 'Markdown (*.md)' : 'Markdown (*.md)', extensions: ['md', 'markdown'] },
-          { name: isEn ? 'All files (*.*)' : 'Todos los archivos (*.*)', extensions: ['*'] }
-        ]
-      })
-
-      if (result.canceled || !result.filePath) {
-        return { canceled: true }
-      }
-
-      await fs.writeFile(result.filePath, content ?? '', 'utf-8')
-      return {
-        success: true,
-        filePath: result.filePath,
-        fileName: basename(result.filePath)
-      }
-    } catch (error) {
-      console.error('Error al guardar archivo como:', error)
-      return {
-        success: false,
-        error: error.message
-      }
-    }
-  })
-
-  // Exportar documento de lectura a PDF o formatos múltiples
-  ipcMain.handle('file:export-pdf', async (event, data) => {
-    return exportDocumentToPdf(event, data, currentAppLanguage)
-  })
-
-  ipcMain.handle('file:export', async (event, data) => {
-    return exportDocument(event, data, currentAppLanguage)
-  })
-
-  // Renombrar y Eliminar (comunes para archivos y carpetas)
-  ipcMain.handle('item:rename', async (_event, { oldPath, newName } = {}) => {
-    try {
-      if (!oldPath || !newName) {
-        return { success: false, error: 'Faltan parámetros para renombrar' }
-      }
-
-      const parentDir = join(oldPath, '..')
-      const newPath = join(parentDir, newName.trim())
-
-      await fs.rename(oldPath, newPath)
-      return {
-        success: true,
-        oldPath,
-        newPath,
-        newName: basename(newPath)
-      }
-    } catch (error) {
-      console.error('Error al renombrar elemento:', error)
-      return { success: false, error: error.message }
-    }
-  })
-
-  ipcMain.handle('item:delete', async (_event, targetPath) => {
-    try {
-      if (!targetPath) return { success: false, error: 'Ruta no especificada' }
-      try {
-        await shell.trashItem(targetPath)
-      } catch {
-        await fs.rm(targetPath, { recursive: true, force: true })
-      }
-      return { success: true, targetPath }
-    } catch (error) {
-      console.error('Error al eliminar elemento:', error)
-      return { success: false, error: error.message }
-    }
-  })
-
-  ipcMain.handle('item:show-in-folder', async (_event, targetPath) => {
-    try {
-      if (targetPath) {
-        shell.showItemInFolder(targetPath)
-        return { success: true }
-      }
-      return { success: false }
-    } catch (error) {
-      return { success: false, error: error.message }
-    }
+  ipcMain.on('window:close-ready', (event, ready) => {
+    if (!trusted(event)) return
+    if (ready === true) closeReady.add(event.sender)
+    else closeReady.delete(event.sender)
   })
 
   // Mantener el fondo y las decoraciones nativas en el mismo tema que el contenido.
   ipcMain.on('window:set-theme', (event, mode) => {
+    if (!trusted(event)) return
     if (mode !== 'light' && mode !== 'dark' && mode !== 'system') return
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return
@@ -582,7 +416,7 @@ app.whenReady().then(() => {
   })
 
   // Manejadores IPC para control de Pantalla Completa (Modo Zen)
-  ipcMain.handle('window:set-fullscreen', (event, flag) => {
+  handle('window:set-fullscreen', (event, flag) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) {
       win.setFullScreen(Boolean(flag))
@@ -591,7 +425,7 @@ app.whenReady().then(() => {
     return false
   })
 
-  ipcMain.handle('window:toggle-fullscreen', (event) => {
+  handle('window:toggle-fullscreen', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (win) {
       const nextState = !win.isFullScreen()
@@ -601,37 +435,38 @@ app.whenReady().then(() => {
     return false
   })
 
-  ipcMain.handle('window:is-fullscreen', (event) => {
+  handle('window:is-fullscreen', (event) => {
     const win = BrowserWindow.fromWebContents(event.sender)
     return win ? win.isFullScreen() : false
   })
 
   // Manejadores IPC para Historial Temporal de Versiones
-  ipcMain.handle('history:save-snapshot', async (_event, data) => {
+  handle('history:move', (_event, data) => moveDocHistory(data))
+  handle('history:save-snapshot', async (_event, data) => {
     return saveSnapshot(data)
   })
 
-  ipcMain.handle('history:get-snapshots', async (_event, docKey) => {
+  handle('history:get-snapshots', async (_event, docKey) => {
     return getSnapshots(docKey)
   })
 
-  ipcMain.handle('history:get-snapshot-content', async (_event, data) => {
+  handle('history:get-snapshot-content', async (_event, data) => {
     return getSnapshotContent(data)
   })
 
-  ipcMain.handle('history:delete-snapshot', async (_event, data) => {
+  handle('history:delete-snapshot', async (_event, data) => {
     return deleteSnapshot(data)
   })
 
-  ipcMain.handle('history:clear', async (_event, docKey) => {
+  handle('history:clear', async (_event, docKey) => {
     return clearDocHistory(docKey)
   })
 
-  ipcMain.handle('history:clear-all', async () => {
+  handle('history:clear-all', async () => {
     return clearAllHistory()
   })
 
-  ipcMain.handle('history:prune-all', async (_event, maxEntries) => {
+  handle('history:prune-all', async (_event, maxEntries) => {
     return pruneAllHistory(maxEntries)
   })
 

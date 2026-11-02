@@ -1,8 +1,24 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { electronAPI } from '@electron-toolkit/preload'
 
 // Custom APIs for renderer
 const api = {
+  onRequestClose: (callback) => {
+    const listener = () => {
+      Promise.resolve()
+        .then(callback)
+        .then(
+          (approved) => ipcRenderer.invoke('window:confirm-close', approved === true),
+          () => ipcRenderer.invoke('window:confirm-close', false)
+        )
+        .catch((error) => console.warn('Close acknowledgement:', error.message))
+    }
+    ipcRenderer.on('window:request-close', listener)
+    ipcRenderer.send('window:close-ready', true)
+    return () => {
+      ipcRenderer.removeListener('window:request-close', listener)
+      ipcRenderer.send('window:close-ready', false)
+    }
+  },
   // Archivos
   saveFile: (data) => ipcRenderer.invoke('file:save', data),
   saveFileAs: (data) => ipcRenderer.invoke('file:save-as', data),
@@ -39,6 +55,7 @@ const api = {
   setAppLanguage: (lang) => ipcRenderer.invoke('app:set-language', lang),
 
   // Historial Temporal de Versiones
+  historyMove: (data) => ipcRenderer.invoke('history:move', data),
   historySaveSnapshot: (data) => ipcRenderer.invoke('history:save-snapshot', data),
   historyGetSnapshots: (docKey) => ipcRenderer.invoke('history:get-snapshots', docKey),
   historyGetSnapshotContent: (data) => ipcRenderer.invoke('history:get-snapshot-content', data),
@@ -48,17 +65,4 @@ const api = {
   historyPruneAll: (maxEntries) => ipcRenderer.invoke('history:prune-all', maxEntries)
 }
 
-// Use `contextBridge` APIs to expose Electron APIs to
-// renderer only if context isolation is enabled, otherwise
-// just add to the DOM global.
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('electron', electronAPI)
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  window.electron = electronAPI
-  window.api = api
-}
+contextBridge.exposeInMainWorld('api', api)
