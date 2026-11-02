@@ -5,13 +5,13 @@
   "version": "1.0.0",
   "description": "Inkwell — Cuaderno de manuscritos Markdown",
   "main": "./out/main/index.js",
-  "author": "example.com",
-  "homepage": "https://electron-vite.org",
+  "author": "Inkwell",
+  "homepage": "https://gitlab.com/ada-arg/fountain",
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
-    "start": "electron-vite preview --noSandbox",
-    "dev": "electron-vite dev --noSandbox",
+    "start": "electron-vite preview",
+    "dev": "electron-vite dev",
     "build": "electron-vite build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "npm run build && electron-builder --dir",
@@ -20,7 +20,6 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
-    "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@fontsource-variable/newsreader": "^5.3.0",
     "@fontsource-variable/schibsted-grotesk": "^5.3.0",
@@ -34,23 +33,27 @@
     "@tiptap/starter-kit": "^3.30.5",
     "docx": "^9.8.1",
     "jszip": "^3.10.1",
-    "markdown-it": "^14.1.0",
+    "markdown-it": "^14.3.3",
     "tiptap-markdown": "^0.9.0"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^2.1.0",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@vitejs/plugin-react": "^5.1.1",
-    "electron": "^39.2.6",
+    "electron": "^45.2.1",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "jsdom": "^26.1.0",
     "prettier": "^3.7.4",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
-    "vite": "^7.2.6"
+    "vite": "^7.3.7"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
