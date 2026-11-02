@@ -18,3 +18,7 @@ npm run test:electron  # prueba nativa con perfil temporal (Linux)
 ```
 
 La [guía de la aplicación](electron-app/README.md) describe arquitectura, recuperación, conflictos, exportación y empaquetado. El [informe de implementación](IMPLEMENTACION_AUDITORIA.md) registra las correcciones de la auditoría y sus límites de verificación.
+
+## Licencia
+
+Este proyecto se distribuye bajo la [Licencia Pública General de GNU, versión 3](LICENSE) (GPL-3.0-only).

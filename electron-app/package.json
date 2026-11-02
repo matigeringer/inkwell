@@ -4,6 +4,7 @@
   "desktopName": "com.inkwell.app.desktop",
   "version": "1.0.0",
   "description": "Inkwell — Cuaderno de manuscritos Markdown",
+  "license": "GPL-3.0-only",
   "main": "./out/main/index.js",
   "author": "Inkwell",
   "homepage": "https://gitlab.com/ada-arg/fountain",
