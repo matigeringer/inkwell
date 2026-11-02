@@ -1,0 +1,23 @@
+image: node:22-bookworm-slim
+
+stages:
+  - test
+
+variables:
+  npm_config_cache: "$CI_PROJECT_DIR/.cache/npm"
+
+cache:
+  key:
+    files:
+      - electron-app/package-lock.json
+  paths:
+    - .cache/npm/
+
+quality:
+  stage: test
+  script:
+    - cd electron-app
+    - npm ci --prefer-offline
+    - npm run check
+    - npm audit --omit=dev --audit-level=low
+    - npm audit --audit-level=high
