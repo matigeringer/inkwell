@@ -1,3 +1,4 @@
+import useModalFocus from '../hooks/useModalFocus'
 import { useEffect } from 'react'
 import { CloseIcon } from './Icons'
 
@@ -11,6 +12,7 @@ export default function ConfirmModal({
   onConfirm,
   onClose
 }) {
+  const dialogRef = useModalFocus(isOpen)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -34,6 +36,8 @@ export default function ConfirmModal({
       <div
         className="modal-card confirm-modal-card"
         onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-modal-title"

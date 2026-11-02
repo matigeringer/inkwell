@@ -1088,4 +1088,3 @@ export function ColumnsIcon({ className = '', size = 18, ...props }) {
     </svg>
   )
 }
-

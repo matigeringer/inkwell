@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import useModalFocus from '../hooks/useModalFocus'
+import { useState, useEffect, useRef } from 'react'
 import {
   CloseIcon,
   HistoryIcon,
@@ -11,200 +12,7 @@ import {
   ChevronDownIcon
 } from './Icons'
 import { getTranslation } from '../i18n'
-
-/**
- * Calcula las diferencias por palabras dentro de un bloque de texto
- * usando Longest Common Subsequence (LCS) sobre tokens.
- */
-function diffWords(leftStr, rightStr) {
-  if (leftStr === rightStr) {
-    return {
-      leftTokens: [{ text: leftStr, type: 'same' }],
-      rightTokens: [{ text: rightStr, type: 'same' }]
-    }
-  }
-
-  if (!leftStr) {
-    return {
-      leftTokens: [],
-      rightTokens: rightStr ? [{ text: rightStr, type: 'added' }] : []
-    }
-  }
-
-  if (!rightStr) {
-    return {
-      leftTokens: leftStr ? [{ text: leftStr, type: 'removed' }] : [],
-      rightTokens: []
-    }
-  }
-
-  const a = leftStr.split(/(\s+)/)
-  const b = rightStr.split(/(\s+)/)
-
-  // Si el bloque es demasiado largo, marcar el párrafo completo para mantener fluidez instantánea
-  if (a.length * b.length > 250000) {
-    return {
-      leftTokens: [{ text: leftStr, type: 'removed' }],
-      rightTokens: [{ text: rightStr, type: 'added' }]
-    }
-  }
-
-  const n = a.length
-  const m = b.length
-  const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1))
-
-  for (let i = n - 1; i >= 0; i--) {
-    for (let j = m - 1; j >= 0; j--) {
-      if (a[i] === b[j]) {
-        dp[i][j] = dp[i + 1][j + 1] + 1
-      } else {
-        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1])
-      }
-    }
-  }
-
-  const leftRaw = []
-  const rightRaw = []
-  let i = 0
-  let j = 0
-
-  while (i < n && j < m) {
-    if (a[i] === b[j]) {
-      leftRaw.push({ text: a[i], type: 'same' })
-      rightRaw.push({ text: b[j], type: 'same' })
-      i++
-      j++
-    } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      leftRaw.push({ text: a[i], type: 'removed' })
-      i++
-    } else {
-      rightRaw.push({ text: b[j], type: 'added' })
-      j++
-    }
-  }
-
-  while (i < n) {
-    leftRaw.push({ text: a[i], type: 'removed' })
-    i++
-  }
-
-  while (j < m) {
-    rightRaw.push({ text: b[j], type: 'added' })
-    j++
-  }
-
-  const mergeTokens = (tokens) => {
-    const merged = []
-    for (const tok of tokens) {
-      if (!tok.text) continue
-      const prev = merged[merged.length - 1]
-      if (prev && prev.type === tok.type) {
-        prev.text += tok.text
-      } else {
-        merged.push({ ...tok })
-      }
-    }
-    return merged
-  }
-
-  return {
-    leftTokens: mergeTokens(leftRaw),
-    rightTokens: mergeTokens(rightRaw)
-  }
-}
-
-/**
- * Compara dos documentos completos línea por línea y refina por palabras
- * en los párrafos modificados para la vista "Lado a lado".
- */
-function computeSideBySideDiff(leftText = '', rightText = '') {
-  const normLeft = leftText.replace(/\r\n/g, '\n')
-  const normRight = rightText.replace(/\r\n/g, '\n')
-
-  if (normLeft === normRight) {
-    return {
-      hasChanges: false,
-      leftTokens: normLeft ? [{ text: normLeft, type: 'same' }] : [],
-      rightTokens: normRight ? [{ text: normRight, type: 'same' }] : []
-    }
-  }
-
-  const leftLines = normLeft.split('\n')
-  const rightLines = normRight.split('\n')
-  const n = leftLines.length
-  const m = rightLines.length
-
-  const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1))
-  for (let i = n - 1; i >= 0; i--) {
-    for (let j = m - 1; j >= 0; j--) {
-      if (leftLines[i] === rightLines[j]) {
-        dp[i][j] = dp[i + 1][j + 1] + 1
-      } else {
-        dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1])
-      }
-    }
-  }
-
-  const leftResult = []
-  const rightResult = []
-  let i = 0
-  let j = 0
-
-  const pushTokens = (target, tokens, addNewline) => {
-    for (const t of tokens) {
-      target.push(t)
-    }
-    if (addNewline) {
-      target.push({ text: '\n', type: 'same' })
-    }
-  }
-
-  while (i < n || j < m) {
-    if (i < n && j < m && leftLines[i] === rightLines[j]) {
-      pushTokens(leftResult, [{ text: leftLines[i], type: 'same' }], i < n - 1)
-      pushTokens(rightResult, [{ text: rightLines[j], type: 'same' }], j < m - 1)
-      i++
-      j++
-    } else {
-      const removedChunk = []
-      const addedChunk = []
-
-      while (i < n && (j >= m || dp[i + 1][j] >= dp[i][j + 1])) {
-        if (j < m && leftLines[i] === rightLines[j]) break
-        removedChunk.push({ line: leftLines[i], isLast: i === n - 1 })
-        i++
-      }
-
-      while (j < m && (i >= n || dp[i][j + 1] > dp[i + 1][j])) {
-        if (i < n && leftLines[i] === rightLines[j]) break
-        addedChunk.push({ line: rightLines[j], isLast: j === m - 1 })
-        j++
-      }
-
-      const pairCount = Math.max(removedChunk.length, addedChunk.length)
-      for (let k = 0; k < pairCount; k++) {
-        const rem = removedChunk[k]
-        const add = addedChunk[k]
-
-        if (rem && add) {
-          const { leftTokens, rightTokens } = diffWords(rem.line, add.line)
-          pushTokens(leftResult, leftTokens, !rem.isLast)
-          pushTokens(rightResult, rightTokens, !add.isLast)
-        } else if (rem) {
-          pushTokens(leftResult, [{ text: rem.line, type: 'removed' }], !rem.isLast)
-        } else if (add) {
-          pushTokens(rightResult, [{ text: add.line, type: 'added' }], !add.isLast)
-        }
-      }
-    }
-  }
-
-  return {
-    hasChanges: true,
-    leftTokens: leftResult,
-    rightTokens: rightResult
-  }
-}
+import useHistoryDiff from '../hooks/useHistoryDiff'
 
 function countWords(text = '') {
   const trimmed = text.trim()
@@ -220,12 +28,17 @@ export default function HistoryModal({
   preferences,
   showToast
 }) {
+  const dialogRef = useModalFocus(isOpen)
   const [snapshots, setSnapshots] = useState([])
   const [selectedSnapshotId, setSelectedSnapshotId] = useState(null)
-  const [previewContent, setPreviewContent] = useState('')
+  const [preview, setPreview] = useState(null)
+  const previewReady =
+    preview?.docKey === docKey && preview?.id === selectedSnapshotId && !preview.error
+  const previewContent = previewReady ? preview.content : ''
+  const [isRestoring, setIsRestoring] = useState(false)
   const [viewMode, setViewMode] = useState('reading') // 'reading' | 'compare'
   const [compareTargetId, setCompareTargetId] = useState('current') // 'current' | snapshotId
-  const [compareTargetContent, setCompareTargetContent] = useState('')
+  const [comparison, setComparison] = useState(null)
   const [isCompareDropdownOpen, setIsCompareDropdownOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
 
@@ -277,7 +90,7 @@ export default function HistoryModal({
             })
           } else {
             setSelectedSnapshotId(null)
-            setPreviewContent('')
+            setPreview(null)
           }
         }
       })
@@ -302,12 +115,13 @@ export default function HistoryModal({
     window.api
       .historyGetSnapshotContent({ docKey, snapshotId: selectedSnapshotId })
       .then((res) => {
-        if (isMounted && res && res.success) {
-          setPreviewContent(res.content || '')
+        if (!res?.success) throw new Error(res?.error || 'No se pudo cargar la versión')
+        if (isMounted) {
+          setPreview({ docKey, id: selectedSnapshotId, content: res.content ?? '' })
         }
       })
       .catch((err) => {
-        console.error('Error al cargar contenido de la snapshot:', err)
+        if (isMounted) setPreview({ docKey, id: selectedSnapshotId, error: err.message })
       })
 
     return () => {
@@ -331,7 +145,7 @@ export default function HistoryModal({
       .historyGetSnapshotContent({ docKey, snapshotId: effectiveCompareTargetId })
       .then((res) => {
         if (isMounted && res && res.success) {
-          setCompareTargetContent(res.content || '')
+          setComparison({ docKey, id: effectiveCompareTargetId, content: res.content ?? '' })
         }
       })
       .catch((err) => {
@@ -378,12 +192,17 @@ export default function HistoryModal({
   }, [isOpen, onClose, snapshots, selectedSnapshotId, isCompareDropdownOpen])
 
   const effectiveTargetContent =
-    effectiveCompareTargetId === 'current' ? currentContent : compareTargetContent
+    effectiveCompareTargetId === 'current'
+      ? currentContent
+      : comparison?.docKey === docKey && comparison.id === effectiveCompareTargetId
+        ? comparison.content
+        : ''
 
-  const diffResult = useMemo(() => {
-    if (viewMode !== 'compare') return null
-    return computeSideBySideDiff(previewContent, effectiveTargetContent)
-  }, [viewMode, previewContent, effectiveTargetContent])
+  const diffResult = useHistoryDiff(
+    previewContent,
+    effectiveTargetContent,
+    isOpen && viewMode === 'compare' && previewReady
+  )
 
   if (!isOpen) return null
 
@@ -485,11 +304,16 @@ export default function HistoryModal({
   }
 
   // Restaurar la versión seleccionada
-  const handleRestore = () => {
-    if (!selectedSnapshot) return
-    if (onRestoreVersion) {
-      onRestoreVersion(previewContent, selectedSnapshot)
-      onClose()
+  const handleRestore = async () => {
+    if (!selectedSnapshot || !previewReady || isRestoring) return
+    setIsRestoring(true)
+    try {
+      const restored = await onRestoreVersion?.(previewContent, selectedSnapshot)
+      if (restored !== false) onClose()
+    } catch (error) {
+      showToast?.(error.message, 'error')
+    } finally {
+      setIsRestoring(false)
     }
   }
 
@@ -526,6 +350,8 @@ export default function HistoryModal({
       <div
         className="modal-card modal-card-wide history-modal-card"
         onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="history-modal-title"
@@ -652,14 +478,18 @@ export default function HistoryModal({
                                 }}
                               >
                                 <div className="theme-item-details">
-                                  <span className="theme-item-name">{t.history.currentVersion}</span>
+                                  <span className="theme-item-name">
+                                    {t.history.currentVersion}
+                                  </span>
                                   <span className="theme-item-desc">
                                     {t.history.currentVersionDesc} · {currentWords}{' '}
                                     {t.history.wordsShort}
                                   </span>
                                 </div>
                                 <span className="theme-item-check">
-                                  {effectiveCompareTargetId === 'current' && <CheckIcon size={14} />}
+                                  {effectiveCompareTargetId === 'current' && (
+                                    <CheckIcon size={14} />
+                                  )}
                                 </span>
                               </button>
 
@@ -709,6 +539,7 @@ export default function HistoryModal({
                       type="button"
                       className="btn-sober-secondary btn-history-action"
                       onClick={handleCopyContent}
+                      disabled={!previewReady}
                       title={t.history.copyTitle}
                     >
                       {isCopied ? <CheckIcon size={14} /> : <CopyIcon size={14} />}
@@ -719,6 +550,7 @@ export default function HistoryModal({
                       type="button"
                       className="btn-sober-primary btn-history-action"
                       onClick={handleRestore}
+                      disabled={!previewReady || isRestoring}
                       title={t.history.restoreTitle}
                     >
                       <ArrowLeftIcon size={14} />
@@ -822,7 +654,11 @@ export default function HistoryModal({
                         fontSize: preferences?.fontSize || '1.40rem'
                       }}
                     >
-                      {previewContent ? (
+                      {preview?.error && preview.id === selectedSnapshotId ? (
+                        <p role="alert">{preview.error}</p>
+                      ) : !previewReady ? (
+                        <p role="status">{currentLang === 'en' ? 'Loading…' : 'Cargando…'}</p>
+                      ) : previewContent ? (
                         previewContent
                       ) : (
                         <span className="history-empty-text">{t.history.emptyDocument}</span>

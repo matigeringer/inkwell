@@ -4457,7 +4457,6 @@
   }
 }
 
-
 /* Profile Modal Purge Box */
 .history-purge-box {
   display: flex;
@@ -4855,15 +4854,122 @@
   }
 }
 
-.loose-files { margin-bottom: 0.75rem; }
-.loose-file-row { display: flex; align-items: center; border-radius: 4px; }
-.loose-file-row:hover, .loose-file-row.is-active { background: var(--bg-hover, rgba(128, 128, 128, 0.12)); }
-.loose-file-open, .loose-file-remove { border: 0; background: transparent; color: var(--text-primary); cursor: pointer; }
-.loose-file-open { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; padding: 0.4rem 0.35rem; text-align: left; }
-.loose-file-open span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.loose-file-remove { padding: 0.35rem; color: var(--text-muted); }
-.loose-file-error { margin: 0.2rem 0.35rem 0.5rem; color: var(--text-muted); font-size: 0.75rem; }
-.sidebar-add-wrap { position: relative; order: 1; }
-.sidebar-add-menu { position: absolute; z-index: 20; right: 0; top: 100%; min-width: 160px; padding: 4px; background: var(--bg-primary); border: 1px solid var(--border-medium); border-radius: var(--radius); box-shadow: 0 4px 12px rgba(0,0,0,.15); }
-.sidebar-add-menu button { display: block; width: 100%; border: 0; background: transparent; color: var(--text-primary); text-align: left; padding: 8px; cursor: pointer; }
-.sidebar-add-menu button:hover, .sidebar-add-menu button:focus-visible { background: var(--bg-hover); }
+.loose-files {
+  margin-bottom: 0.75rem;
+}
+.loose-file-row {
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+}
+.loose-file-row:hover,
+.loose-file-row.is-active {
+  background: var(--bg-hover, rgba(128, 128, 128, 0.12));
+}
+.loose-file-open,
+.loose-file-remove {
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.loose-file-open {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.35rem;
+  text-align: left;
+}
+.loose-file-open span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loose-file-remove {
+  padding: 0.35rem;
+  color: var(--text-muted);
+}
+.loose-file-error {
+  margin: 0.2rem 0.35rem 0.5rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+.sidebar-add-wrap {
+  position: relative;
+  order: 1;
+}
+.sidebar-add-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: 100%;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.sidebar-add-menu button {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  text-align: left;
+  padding: 8px;
+  cursor: pointer;
+}
+.sidebar-add-menu button:hover,
+.sidebar-add-menu button:focus-visible {
+  background: var(--bg-hover);
+}
+/* Documents with syntax outside the rich-text schema retain an editable source view. */
+.fountain-source-editor {
+  display: block;
+  width: 100%;
+  min-height: 65vh;
+  resize: vertical;
+  border: 0;
+  outline-offset: 6px;
+  padding: 1rem 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-family: var(--font-mono);
+  line-height: 1.7;
+  tab-size: 2;
+}
+
+.source-editor-notice,
+.tree-load-warning {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  padding: 0.75rem;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
+.recovered-drafts {
+  margin: 1.5rem 0;
+}
+
+.app-notice {
+  position: fixed;
+  z-index: 200;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  max-width: min(34rem, calc(100vw - 2rem));
+  padding: 1rem;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  color: var(--text-primary);
+  background: var(--bg-primary, #efeee8);
+}

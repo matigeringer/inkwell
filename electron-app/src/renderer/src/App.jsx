@@ -2,7 +2,6 @@ import { useState, useEffect, useLayoutEffect, useCallback, useRef } from 'react
 import { flushSync } from 'react-dom'
 import Editor from './components/Editor'
 import ProfileModal from './components/ProfileModal'
-import FileTree from './components/FileTree'
 import ManuscriptsZone from './components/ManuscriptsZone'
 import {
   PlusIcon,
@@ -13,6 +12,8 @@ import {
   FileTextIcon
 } from './components/Icons'
 import { getTranslation } from './i18n'
+import { listDrafts } from './lib/drafts'
+import { loadPreferences, normalizePreferences } from './lib/preferences'
 
 function findFirstFileInTree(items) {
   if (!Array.isArray(items)) return null
@@ -46,6 +47,16 @@ function folderContainsFile(folderPath, filePath) {
 }
 
 function App() {
+  const [notice, setNotice] = useState('')
+  const showToast = useCallback((message) => setNotice(message), [])
+  const noticeElement = notice && (
+    <div role="alert" className="app-notice">
+      <span>{notice}</span>
+      <button type="button" onClick={() => setNotice('')} aria-label="Cerrar">
+        ×
+      </button>
+    </div>
+  )
   const [showAddMenu, setShowAddMenu] = useState(false)
   const addMenuRef = useRef(null)
 
@@ -64,8 +75,18 @@ function App() {
       document.removeEventListener('keydown', handleEscape)
     }
   }, [showAddMenu])
+  const [drafts, setDrafts] = useState(() => listDrafts())
+  const treeRequests = useRef(new Map())
+  useEffect(() => {
+    const refresh = () => setDrafts(listDrafts())
+    window.addEventListener('fountain-drafts-changed', refresh)
+    return () => window.removeEventListener('fountain-drafts-changed', refresh)
+  }, [])
   const [view, setView] = useState('home') // 'home' | 'editor'
   const [activeDoc, setActiveDoc] = useState(null)
+  useEffect(() => {
+    if (view === 'home') return window.api?.onRequestClose?.(() => true)
+  }, [view])
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [openedFolders, setOpenedFolders] = useState([])
   const [looseFiles, setLooseFiles] = useState(() => {
@@ -79,76 +100,21 @@ function App() {
   const [looseFileError, setLooseFileError] = useState(null)
 
   useEffect(() => {
-    localStorage.setItem('fountain_loose_files', JSON.stringify(looseFiles))
-  }, [looseFiles])
+    try {
+      localStorage.setItem('fountain_loose_files', JSON.stringify(looseFiles))
+    } catch (error) {
+      queueMicrotask(() => showToast(error.message))
+    }
+  }, [looseFiles, showToast])
 
   const rememberLooseFile = useCallback((path) => {
-    if (path) setLooseFiles((files) => files.includes(path) ? files : [...files, path])
+    if (path) setLooseFiles((files) => (files.includes(path) ? files : [...files, path]))
   }, [])
   const [activeFolderPath, setActiveFolderPath] = useState(null)
   const [lastFileByFolder, setLastFileByFolder] = useState({})
 
   // Preferencias con persistencia en localStorage
-  const [preferences, setPreferences] = useState(() => {
-    try {
-      const saved = localStorage.getItem('fountain_preferences')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        let mode = parsed.mode || 'light'
-
-        if (parsed.theme === 'dark') {
-          mode = 'dark'
-        } else if (parsed.theme === 'light') {
-          mode = 'light'
-        }
-
-        const theme = 'puro'
-
-        return {
-          theme,
-          mode: ['light', 'dark', 'system'].includes(mode) ? mode : 'light',
-          fontFamily: parsed.fontFamily || 'serif',
-          fontSize: parsed.fontSize || '1.40rem',
-          textAlign: parsed.textAlign || 'left',
-          typewriterMode: Boolean(parsed.typewriterMode),
-          typewriterPosition: parsed.typewriterPosition === 'eye' ? 'eye' : 'center',
-          typewriterBehavior: parsed.typewriterBehavior === 'strict' ? 'strict' : 'deadzone',
-          language: parsed.language === 'en' ? 'en' : 'es',
-          spellcheckEnabled: parsed.spellcheckEnabled !== false,
-          autoSaveEnabled: parsed.autoSaveEnabled !== false,
-          autoSaveDelay: Number(parsed.autoSaveDelay) || 2500,
-          historyEnabled: parsed.historyEnabled !== false,
-          historyMaxEntries: Number(parsed.historyMaxEntries) || 50,
-          historySnapshotInterval: Number(parsed.historySnapshotInterval) || 120000,
-          zenShowToolbar: parsed.zenShowToolbar !== false,
-          zenShowStats: parsed.zenShowStats !== false,
-          zenShowFolder: parsed.zenShowFolder !== false
-        }
-      }
-    } catch {
-      // Ignorar error de parsing
-    }
-    return {
-      theme: 'puro',
-      mode: 'light', // 'light' | 'dark' | 'system'
-      fontFamily: 'serif', // 'serif' | 'sans' | 'mono'
-      fontSize: '1.40rem',
-      textAlign: 'left', // 'left' | 'justify' | 'center'
-      typewriterMode: false, // boolean: centrado vertical continuo
-      typewriterPosition: 'center', // 'center' (50% medio) | 'eye' (38% tercio superior / línea de ojos)
-      typewriterBehavior: 'deadzone', // 'deadzone' | 'strict'
-      language: 'es', // 'es' | 'en'
-      spellcheckEnabled: true, // boolean: corrector ortográfico activo
-      autoSaveEnabled: true, // boolean: guardado automático tras pausa
-      autoSaveDelay: 2500, // ms: tiempo de inactividad para auto-guardar
-      historyEnabled: true, // boolean: instantáneas de historial temporal activas
-      historyMaxEntries: 50, // número de versiones retenidas por documento
-      historySnapshotInterval: 120000, // ms: intervalo mínimo entre snapshots automáticas (2 min)
-      zenShowToolbar: true, // boolean: barra de herramientas flotante en modo zen
-      zenShowStats: true, // boolean: barra de estadísticas flotante en modo zen
-      zenShowFolder: true // boolean: navegador de carpetas flotante en modo zen
-    }
-  })
+  const [preferences, setPreferences] = useState(loadPreferences)
 
   const [profileInitialTab, setProfileInitialTab] = useState('general')
 
@@ -173,7 +139,9 @@ function App() {
           savedPaths = parsed.filter(Boolean)
         }
       }
-    } catch {}
+    } catch (error) {
+      console.warn('No se pudo persistir el estado:', error)
+    }
 
     if (savedPaths.length === 0) {
       const legacyLast = localStorage.getItem('fountain_last_folder')
@@ -195,11 +163,22 @@ function App() {
               ? {
                   path: res.folderPath,
                   name: res.folderName,
-                  tree: res.tree
+                  tree: res.tree,
+                  warnings: res.warnings
                 }
-              : null
+              : {
+                  path: folderPath,
+                  name: folderPath.split(/[\\/]/).pop(),
+                  tree: [],
+                  error: res?.error || 'Carpeta no disponible'
+                }
           )
-          .catch(() => null)
+          .catch((error) => ({
+            path: folderPath,
+            name: folderPath.split(/[\\/]/).pop(),
+            tree: [],
+            error: error.message
+          }))
       )
     ).then((results) => {
       const validFolders = results.filter(Boolean)
@@ -269,8 +248,8 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem('fountain_preferences', JSON.stringify(preferences))
-    } catch {
-      // Ignorar error de almacenamiento
+    } catch (error) {
+      queueMicrotask(() => showToast(error.message))
     }
 
     const root = document.documentElement
@@ -309,7 +288,7 @@ function App() {
     return () => {
       mediaQuery.removeEventListener('change', handleSystemThemeChange)
     }
-  }, [preferences, withThemeTransition])
+  }, [preferences, withThemeTransition, showToast])
 
   const handleUpdatePreferences = useCallback(
     (updates) => {
@@ -319,10 +298,10 @@ function App() {
 
       if (isThemeChange) {
         withThemeTransition(() => {
-          setPreferences((prev) => ({ ...prev, ...updates }))
+          setPreferences((prev) => normalizePreferences({ ...prev, ...updates }))
         })
       } else {
-        setPreferences((prev) => ({ ...prev, ...updates }))
+        setPreferences((prev) => normalizePreferences({ ...prev, ...updates }))
       }
     },
     [preferences.mode, preferences.theme, withThemeTransition]
@@ -353,7 +332,9 @@ function App() {
     if (activeFolderPath) {
       try {
         localStorage.setItem('fountain_active_folder', activeFolderPath)
-      } catch {}
+      } catch (error) {
+        console.warn('No se pudo persistir el estado:', error)
+      }
     } else {
       localStorage.removeItem('fountain_active_folder')
     }
@@ -361,7 +342,7 @@ function App() {
 
   const handleCreate = useCallback(() => {
     const defaultDocName = preferences.language === 'en' ? 'document.md' : 'documento.md'
-    const newId = Date.now().toString()
+    const newId = crypto.randomUUID()
     setActiveDoc({
       id: newId,
       fileName: defaultDocName,
@@ -381,7 +362,8 @@ function App() {
         const folderObj = {
           path: res.folderPath,
           name: res.folderName,
-          tree: res.tree
+          tree: res.tree,
+          warnings: res.warnings
         }
         setOpenedFolders((prev) => {
           const exists = prev.some((f) => f.path === res.folderPath)
@@ -389,22 +371,24 @@ function App() {
             ? prev.map((f) => (f.path === res.folderPath ? folderObj : f))
             : [...prev, folderObj]
           try {
-            localStorage.setItem(
-              'fountain_opened_folders',
-              JSON.stringify(next.map((f) => f.path))
-            )
+            localStorage.setItem('fountain_opened_folders', JSON.stringify(next.map((f) => f.path)))
             localStorage.setItem('fountain_last_folder', res.folderPath)
-          } catch {}
+          } catch (error) {
+            console.warn('No se pudo persistir el estado:', error)
+          }
           return next
         })
         setActiveFolderPath(res.folderPath)
         return folderObj
+      } else if (res && !res.canceled) {
+        showToast(res.error || 'No se pudo abrir la carpeta')
       }
     } catch (err) {
+      showToast(err.message)
       console.error('Error al abrir carpeta:', err)
     }
     return null
-  }, [])
+  }, [showToast])
 
   // Actualizar árbol de archivos de una carpeta específica o de todas las abiertas
   const handleRefreshFolderTree = useCallback(
@@ -416,20 +400,39 @@ function App() {
       if (pathsToRefresh.length === 0) return
 
       try {
+        const requests = new Map(
+          pathsToRefresh.map((path) => {
+            const id = (treeRequests.current.get(path) || 0) + 1
+            treeRequests.current.set(path, id)
+            return [path, id]
+          })
+        )
         const results = await Promise.all(
           pathsToRefresh.map((fp) =>
             window.api
               .readFolderTree(fp)
               .then((res) =>
                 res && res.success
-                  ? { path: res.folderPath, name: res.folderName, tree: res.tree }
-                  : null
+                  ? {
+                      path: res.folderPath,
+                      name: res.folderName,
+                      tree: res.tree,
+                      warnings: res.warnings
+                    }
+                  : {
+                      path: fp,
+                      name: fp.split(/[\\/]/).pop(),
+                      tree: [],
+                      error: res?.error || 'Carpeta no disponible'
+                    }
               )
               .catch(() => null)
           )
         )
         const updatedMap = new Map()
-        results.filter(Boolean).forEach((f) => updatedMap.set(f.path, f))
+        results
+          .filter((f) => f && requests.get(f.path) === treeRequests.current.get(f.path))
+          .forEach((f) => updatedMap.set(f.path, f))
 
         if (updatedMap.size > 0) {
           setOpenedFolders((prev) =>
@@ -455,16 +458,15 @@ function App() {
         const next = prev.filter((f) => f.path !== pathToClose)
         try {
           if (next.length > 0) {
-            localStorage.setItem(
-              'fountain_opened_folders',
-              JSON.stringify(next.map((f) => f.path))
-            )
+            localStorage.setItem('fountain_opened_folders', JSON.stringify(next.map((f) => f.path)))
             localStorage.setItem('fountain_last_folder', next[next.length - 1].path)
           } else {
             localStorage.removeItem('fountain_opened_folders')
             localStorage.removeItem('fountain_last_folder')
           }
-        } catch {}
+        } catch (error) {
+          console.warn('No se pudo persistir el estado:', error)
+        }
 
         if (activeFolderPath === pathToClose) {
           if (next.length > 0) {
@@ -492,9 +494,7 @@ function App() {
           filePath: res.filePath,
           content: res.content
         })
-        const matchingFolder = openedFolders.find(
-          (f) => folderContainsFile(f.path, res.filePath)
-        )
+        const matchingFolder = openedFolders.find((f) => folderContainsFile(f.path, res.filePath))
         if (matchingFolder) {
           setActiveFolderPath(matchingFolder.path)
           setLastFileByFolder((prev) => ({ ...prev, [matchingFolder.path]: res.filePath }))
@@ -504,11 +504,14 @@ function App() {
         }
         setLooseFileError(null)
         setView('editor')
+      } else if (res && !res.canceled) {
+        showToast(res.error || 'No se pudo abrir el archivo')
       }
     } catch (err) {
+      showToast(err.message)
       console.error('Error al abrir archivo:', err)
     }
-  }, [openedFolders, rememberLooseFile])
+  }, [openedFolders, rememberLooseFile, showToast])
 
   // Seleccionar archivo desde el árbol o Zen
   const handleSelectFile = useCallback(
@@ -537,6 +540,7 @@ function App() {
           setView('editor')
           return true
         } else {
+          showToast(res?.error || 'No se pudo abrir el archivo')
           setLooseFileError(filePath)
           return false
         }
@@ -546,8 +550,65 @@ function App() {
         return false
       }
     },
-    [openedFolders, rememberLooseFile]
+    [openedFolders, rememberLooseFile, showToast]
   )
+
+  const handleItemRenamed = useCallback((result) => {
+    const update = (path) =>
+      path === result.oldPath || folderContainsFile(result.oldPath, path)
+        ? result.newPath + path.slice(result.oldPath.length)
+        : path
+    const updateTree = (items) =>
+      items.map((item) => ({
+        ...item,
+        path: update(item.path),
+        name: item.path === result.oldPath ? result.newName : item.name,
+        ...(item.children ? { children: updateTree(item.children) } : {})
+      }))
+    setLooseFiles((files) => files.map(update))
+    setActiveDoc((doc) =>
+      doc?.filePath
+        ? {
+            ...doc,
+            filePath: update(doc.filePath),
+            fileName: update(doc.filePath).split(/[\\/]/).pop()
+          }
+        : doc
+    )
+    setActiveFolderPath((path) => (path ? update(path) : path))
+    setLastFileByFolder((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).map(([folder, file]) => [update(folder), update(file)])
+      )
+    )
+    setOpenedFolders((folders) => {
+      const next = folders.map((folder) => ({
+        ...folder,
+        path: update(folder.path),
+        name: folder.path === result.oldPath ? result.newName : folder.name,
+        tree: updateTree(folder.tree)
+      }))
+      localStorage.setItem(
+        'fountain_opened_folders',
+        JSON.stringify(next.map((folder) => folder.path))
+      )
+      return next
+    })
+  }, [])
+  const handleItemDeleted = useCallback(({ targetPath }) => {
+    const removed = (path) => path === targetPath || folderContainsFile(targetPath, path)
+    setLooseFiles((files) => files.filter((path) => !removed(path)))
+    setActiveDoc((doc) => (doc?.filePath && removed(doc.filePath) ? null : doc))
+    setOpenedFolders((folders) => {
+      const next = folders.filter((folder) => !removed(folder.path))
+      localStorage.setItem(
+        'fountain_opened_folders',
+        JSON.stringify(next.map((folder) => folder.path))
+      )
+      return next
+    })
+    setActiveFolderPath((path) => (path && removed(path) ? null : path))
+  }, [])
 
   // Cambiar carpeta/manuscrito activo desde el desplegable del editor
   const handleSwitchFolder = useCallback(
@@ -645,6 +706,7 @@ function App() {
   if (view === 'editor') {
     return (
       <>
+        {noticeElement}
         <Editor
           key={activeDoc?.id || 'doc'}
           initialDoc={activeDoc}
@@ -658,13 +720,16 @@ function App() {
           looseFiles={looseFiles}
           onSavedFile={(path, name, content) => {
             setActiveDoc((doc) => ({ ...doc, filePath: path, fileName: name, content }))
-            if (!openedFolders.some((folder) => folderContainsFile(folder.path, path))) rememberLooseFile(path)
+            if (!openedFolders.some((folder) => folderContainsFile(folder.path, path)))
+              rememberLooseFile(path)
           }}
           onSwitchFolder={handleSwitchFolder}
           onRefreshFolderTree={handleRefreshFolderTree}
           onCloseFolder={handleCloseFolder}
           onOpenFolder={handleOpenFolder}
           onNewDoc={handleCreate}
+          onItemRenamed={handleItemRenamed}
+          onItemDeleted={handleItemDeleted}
         />
         <ProfileModal
           isOpen={isProfileOpen}
@@ -679,6 +744,7 @@ function App() {
 
   return (
     <div className="app-container">
+      {noticeElement}
       {/* Barra lateral */}
       <aside className="sidebar">
         <div className="sidebar-top">
@@ -694,25 +760,54 @@ function App() {
             <div className="sidebar-section-label">
               <span className="label-caps">{t.sidebar.manuscripts}</span>
               <div className="sidebar-add-wrap" ref={addMenuRef}>
-                <button type="button" className="btn-sidebar-add-folder" onClick={() => setShowAddMenu((open) => !open)} aria-label={currentLang === 'en' ? 'Add file or folder' : 'Añadir archivo o carpeta'} aria-expanded={showAddMenu}>
+                <button
+                  type="button"
+                  className="btn-sidebar-add-folder"
+                  onClick={() => setShowAddMenu((open) => !open)}
+                  aria-label={
+                    currentLang === 'en' ? 'Add file or folder' : 'Añadir archivo o carpeta'
+                  }
+                  aria-expanded={showAddMenu}
+                >
                   <PlusIcon size={13} />
                 </button>
-                {showAddMenu && <div className="sidebar-add-menu">
-                  <button type="button" onClick={() => { setShowAddMenu(false); handleOpenFile() }}>{t.home.openFile}</button>
-                  <button type="button" onClick={() => { setShowAddMenu(false); handleOpenFolder() }}>{t.home.openFolder}</button>
-                </div>}
+                {showAddMenu && (
+                  <div className="sidebar-add-menu">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddMenu(false)
+                        handleOpenFile()
+                      }}
+                    >
+                      {t.home.openFile}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddMenu(false)
+                        handleOpenFolder()
+                      }}
+                    >
+                      {t.home.openFolder}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <ManuscriptsZone
               openedFolders={openedFolders}
               looseFiles={looseFiles}
               looseFileError={looseFileError}
+              showToast={showToast}
               onRemoveLooseFile={(path) => {
                 setLooseFiles((files) => files.filter((file) => file !== path))
-                setLooseFileError((error) => error === path ? null : error)
+                setLooseFileError((error) => (error === path ? null : error))
               }}
               activeFilePath={activeDoc?.filePath || null}
               onSelectFile={handleSelectFile}
+              onItemRenamed={handleItemRenamed}
+              onItemDeleted={handleItemDeleted}
               onRefreshFolderTree={handleRefreshFolderTree}
               onCloseFolder={handleCloseFolder}
               language={preferences.language}
@@ -766,6 +861,32 @@ function App() {
             </h2>
             <p className="welcome-subtitle">{t.home.welcomeSubtitle}</p>
           </div>
+
+          {drafts.length > 0 && (
+            <section
+              className="recovered-drafts"
+              aria-label={currentLang === 'en' ? 'Drafts' : 'Borradores'}
+            >
+              <h3>{currentLang === 'en' ? 'Recover a draft' : 'Recuperar un borrador'}</h3>
+              {drafts.map((draft) => (
+                <button
+                  type="button"
+                  key={draft.id}
+                  className="welcome-action-card"
+                  onClick={() => {
+                    setActiveDoc(draft)
+                    setActiveFolderPath(null)
+                    setView('editor')
+                  }}
+                >
+                  <FileTextIcon size={15} />
+                  <span>
+                    {draft.fileName} — {draft.content.slice(0, 60)}
+                  </span>
+                </button>
+              ))}
+            </section>
+          )}
 
           <span className="label-caps welcome-index-label">{t.home.contents}</span>
           <div className="welcome-actions">

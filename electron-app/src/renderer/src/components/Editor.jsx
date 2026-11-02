@@ -5,7 +5,6 @@ import { Markdown } from 'tiptap-markdown'
 import Placeholder from '@tiptap/extension-placeholder'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
-import Link from '@tiptap/extension-link'
 import {
   ArrowLeftIcon,
   SaveIcon,
@@ -30,13 +29,15 @@ import {
   MenuIcon,
   FeatherIcon,
   FolderTreeIcon,
-  FolderIcon,
-  PlusIcon
+  FolderIcon
 } from './Icons'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
 import ZenFloatingFolder from './ZenFloatingFolder'
 import { getTranslation } from '../i18n'
+import useDocumentPersistence from '../hooks/useDocumentPersistence'
+import { saveDraft } from '../lib/drafts'
+import { needsSourceEditor } from '../lib/markdownSupport'
 
 const EXPORT_OPTIONS = [
   {
@@ -107,34 +108,65 @@ export default function Editor({
   onRefreshFolderTree,
   onCloseFolder,
   onOpenFolder,
-  onNewDoc
+  onNewDoc,
+  onItemRenamed,
+  onItemDeleted
 }) {
   const currentLang = preferences?.language || 'es'
   const t = getTranslation(currentLang)
   const defaultDocName = currentLang === 'en' ? 'document.md' : 'documento.md'
 
-  const [filePath, setFilePath] = useState(initialDoc?.filePath || null)
-  const [fileName, setFileName] = useState(initialDoc?.fileName || defaultDocName)
-  const [saveStatus, setSaveStatus] = useState('unsaved') // 'unsaved' | 'saving' | 'saved' | 'error'
-  const [errorMessage, setErrorMessage] = useState('')
+  const [toast, setToast] = useState(null)
+  const toastTimeoutRef = useRef(null)
+  const showToast = useCallback((message, type = 'info') => {
+    clearTimeout(toastTimeoutRef.current)
+    setToast({ message, type, id: Date.now() })
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 3500)
+  }, [])
+  useEffect(() => () => clearTimeout(toastTimeoutRef.current), [])
+  const persistedCallbackRef = useRef(null)
+  const onPersist = useCallback((result) => persistedCallbackRef.current?.(result), [])
+  const {
+    session,
+    filePath,
+    fileName,
+    saveStatus,
+    errorMessage,
+    saveBeforeSwitch,
+    handleSave,
+    handleSaveAs,
+    cancelAutoSave
+  } = useDocumentPersistence({
+    initialDoc: { ...initialDoc, fileName: initialDoc?.fileName || defaultDocName },
+    preferences,
+    onSavedFile,
+    onPersist,
+    showToast
+  })
+  const [isSourceMode, setIsSourceMode] = useState(
+    () => needsSourceEditor(initialDoc?.content) || /\.txt$/i.test(initialDoc?.fileName || '')
+  )
+  const transitionRef = useRef(false)
   const [isZenMode, setIsZenMode] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(Boolean(openedFolder))
+  const [sidebarHiddenFor, setSidebarHiddenFor] = useState(null)
+  const isSidebarOpen = Boolean(openedFolder) && sidebarHiddenFor !== openedFolder.path
+  const setIsSidebarOpen = useCallback(
+    (value) => {
+      const next = typeof value === 'function' ? value(isSidebarOpen) : value
+      setSidebarHiddenFor(next ? null : openedFolder?.path)
+    },
+    [isSidebarOpen, openedFolder?.path]
+  )
   const [isManuscriptDropdownOpen, setIsManuscriptDropdownOpen] = useState(false)
 
-  useEffect(() => {
-    setIsSidebarOpen(Boolean(openedFolder))
-  }, [openedFolder?.path])
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
   const [shortcutsTab, setShortcutsTab] = useState('zen')
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false)
-  const autoSaveTimerRef = useRef(null)
   const lastSnapshotTimeRef = useRef(0)
   const lastSnapshotWordsRef = useRef(0)
   const [isMouseActive, setIsMouseActive] = useState(false)
   const mouseTimerRef = useRef(null)
-  const [toast, setToast] = useState(null)
-  const toastTimeoutRef = useRef(null)
   const [actionsMenuOpen, setActionsMenuOpen] = useState(false)
   const [exportMenuOpen, setExportMenuOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
@@ -408,6 +440,7 @@ export default function Editor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
+        link: { openOnClick: false, autolink: true, HTMLAttributes: { class: 'fountain-link' } },
         heading: {
           levels: [1, 2, 3, 4, 5, 6]
         },
@@ -460,21 +493,9 @@ export default function Editor({
         HTMLAttributes: {
           class: 'fountain-task-item'
         }
-      }),
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        HTMLAttributes: {
-          class: 'fountain-link'
-        }
       })
     ],
-    content:
-      initialDoc?.content ||
-      (!initialDoc?.filePath && initialDoc?.id && typeof localStorage !== 'undefined'
-        ? localStorage.getItem(`fountain_draft_${initialDoc.id}`) || ''
-        : '') ||
-      '',
+    content: session.state.content,
     autofocus: 'end',
     editorProps: {
       attributes: {
@@ -551,22 +572,9 @@ export default function Editor({
       }
     },
     onUpdate: ({ editor: ed }) => {
-      setSaveStatus('unsaved')
+      if (isSourceMode) return
+      session.change(ed.storage.markdown.getMarkdown())
       setTick((t) => t + 1)
-
-      // Auto-guardado con debounce tras inactividad si está configurado
-      if (preferences?.autoSaveEnabled !== false) {
-        if (autoSaveTimerRef.current) {
-          clearTimeout(autoSaveTimerRef.current)
-        }
-        const delay = preferences?.autoSaveDelay || 2500
-        autoSaveTimerRef.current = setTimeout(() => {
-          const currentMarkdown = ed.storage.markdown.getMarkdown()
-          if (executeAutoSaveRef.current) {
-            executeAutoSaveRef.current(currentMarkdown)
-          }
-        }, delay)
-      }
 
       if (typewriterModeRef.current) {
         // Reacople automático y desplazamiento suave en la línea activa al escribir o dar saltos de línea (Enter / word-wrap)
@@ -620,28 +628,17 @@ export default function Editor({
     }
   }, [editor, preferences?.spellcheckEnabled, preferences?.language])
 
-  // Mostrar mensaje efímero discreto (Toast)
-  const showToast = useCallback((message, type = 'info') => {
-    if (toastTimeoutRef.current) {
-      clearTimeout(toastTimeoutRef.current)
-    }
-    setToast({ message, type, id: Date.now() })
-    toastTimeoutRef.current = setTimeout(() => {
-      setToast(null)
-    }, 2200)
-  }, [])
-
   // Obtener contenido en formato Markdown
   const getMarkdownContent = useCallback(() => {
-    if (!editor) return initialDoc?.content || ''
+    if (isSourceMode || !editor) return session.state.content
     return editor.storage.markdown.getMarkdown()
-  }, [editor, initialDoc?.content])
+  }, [editor, session, isSourceMode])
 
   // Guardar instantánea en el historial temporal
   const saveHistorySnapshot = useCallback(
     async ({ trigger = 'auto', forcedContent = null, customFilePath = null } = {}) => {
       if (!window.api?.historySaveSnapshot || preferences?.historyEnabled === false) {
-        return
+        return { success: true }
       }
 
       const content = forcedContent !== null ? forcedContent : getMarkdownContent()
@@ -678,8 +675,11 @@ export default function Editor({
           lastSnapshotTimeRef.current = Date.now()
           lastSnapshotWordsRef.current = wordsCount
         }
+        if (!res?.success) throw new Error(res?.error || 'No se pudo guardar el historial')
+        return res
       } catch (err) {
-        console.warn('Error al guardar snapshot de historial:', err)
+        showToast(err.message, 'error')
+        throw err
       }
     },
     [
@@ -689,258 +689,132 @@ export default function Editor({
       getMarkdownContent,
       preferences?.historyEnabled,
       preferences?.historySnapshotInterval,
-      preferences?.historyMaxEntries
-    ]
-  )
-
-  // Ejecutar auto-guardado reactivo
-  const executeAutoSave = useCallback(
-    async (contentToSave) => {
-      if (preferences?.autoSaveEnabled === false) return
-      const content = contentToSave !== undefined ? contentToSave : getMarkdownContent()
-
-      // 1. Si el archivo ya tiene ruta en disco, persistir directamente
-      if (filePath && window.api?.saveFile) {
-        try {
-          const res = await window.api.saveFile({
-            content,
-            filePath,
-            defaultName: fileName
-          })
-          if (res && res.success) {
-            setSaveStatus('saved')
-            saveHistorySnapshot({ trigger: 'auto', forcedContent: content })
-            if (onRefreshFolderTree) {
-              onRefreshFolderTree()
-            }
-          }
-        } catch (err) {
-          console.warn('Error en auto-guardado en disco:', err)
-        }
-      } else {
-        // 2. Si no tiene ruta (nuevo manuscrito), persistir el borrador localmente sin abrir diálogos invasivos
-        try {
-          if (initialDoc?.id) {
-            localStorage.setItem(`fountain_draft_${initialDoc.id}`, content)
-          }
-          setSaveStatus('saved')
-          saveHistorySnapshot({ trigger: 'auto', forcedContent: content })
-        } catch (err) {
-          console.warn('Error en auto-guardado de borrador:', err)
-        }
-      }
-    },
-    [
-      preferences?.autoSaveEnabled,
-      getMarkdownContent,
-      filePath,
-      fileName,
-      initialDoc?.id,
-      saveHistorySnapshot,
-      onRefreshFolderTree
-    ]
-  )
-
-  const executeAutoSaveRef = useRef(executeAutoSave)
-  useEffect(() => {
-    executeAutoSaveRef.current = executeAutoSave
-  }, [executeAutoSave])
-
-  // Limpiar temporizador de auto-guardado al desmontar
-  useEffect(() => {
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-      }
-    }
-  }, [])
-
-  // Restaurar versión desde el historial temporal
-  const handleRestoreVersion = useCallback(
-    async (restoredContent, snapshot) => {
-      if (!editor) return
-
-      // Tomar una instantánea previa del estado actual como respaldo seguro antes de restaurar
-      saveHistorySnapshot({ trigger: 'manual' })
-
-      editor.commands.setContent(restoredContent || '', false)
-      setSaveStatus('saved')
-
-      // Si tiene archivo en disco y auto-guardado está activo, persistir inmediatamente
-      if (filePath && preferences?.autoSaveEnabled !== false && window.api?.saveFile) {
-        try {
-          await window.api.saveFile({
-            content: restoredContent,
-            filePath,
-            defaultName: fileName
-          })
-        } catch (err) {
-          console.warn('Error al guardar tras restaurar:', err)
-        }
-      } else if (!filePath && initialDoc?.id) {
-        try {
-          localStorage.setItem(`fountain_draft_${initialDoc.id}`, restoredContent)
-        } catch {
-          // ignorar
-        }
-      }
-
-      const timeStr = snapshot?.timestamp
-        ? new Date(snapshot.timestamp).toLocaleTimeString([], {
-            hour: '2-digit',
-            minute: '2-digit'
-          })
-        : ''
-      showToast(
-        currentLang === 'en' ? `Version restored (${timeStr})` : `Versión restaurada (${timeStr})`
-      )
-    },
-    [
-      editor,
-      saveHistorySnapshot,
-      filePath,
-      preferences?.autoSaveEnabled,
-      fileName,
-      initialDoc?.id,
-      currentLang,
+      preferences?.historyMaxEntries,
       showToast
     ]
   )
 
-  // Guardar archivo (normal o si es nuevo abre diálogo)
-  const handleSave = useCallback(async () => {
-    if (!window.api?.saveFile) {
-      console.warn('API de Electron no disponible')
-      showToast('Guardado simulado (modo navegador)', 'info')
-      setSaveStatus('saved')
-      return
-    }
-
-    try {
-      setSaveStatus('saving')
-      setErrorMessage('')
-
-      const markdownContent = getMarkdownContent()
-
-      const res = await window.api.saveFile({
-        content: markdownContent,
-        filePath,
-        defaultName: fileName
-      })
-
-      if (res.canceled) {
-        setSaveStatus(filePath ? 'saved' : 'unsaved')
-        return
-      }
-
-      if (res.success) {
-        setFilePath(res.filePath)
-        setFileName(res.fileName)
-        onSavedFile?.(res.filePath, res.fileName, markdownContent)
-        setSaveStatus('saved')
-        showToast(currentLang === 'en' ? `Saved: ${res.fileName}` : `Guardado: ${res.fileName}`)
-        saveHistorySnapshot({
-          trigger: 'manual',
-          forcedContent: markdownContent,
-          customFilePath: res.filePath
+  useEffect(() => {
+    persistedCallbackRef.current = async ({
+      content,
+      filePath: targetPath,
+      previousPath,
+      trigger
+    }) => {
+      const fromKey = previousPath || `draft_${initialDoc.id}`
+      if (targetPath && fromKey !== targetPath && window.api?.historyMove) {
+        const moved = await window.api.historyMove({
+          fromKey,
+          toKey: targetPath,
+          docName: fileName,
+          filePath: targetPath
         })
-        if (onRefreshFolderTree) {
-          onRefreshFolderTree()
-        }
-      } else {
-        setSaveStatus('error')
-        setErrorMessage(
-          res.error || (currentLang === 'en' ? 'Error saving file' : 'Error al guardar el archivo')
-        )
-        showToast(
-          res.error || (currentLang === 'en' ? 'Error saving' : 'Error al guardar'),
-          'error'
-        )
+        if (!moved?.success) showToast(moved?.error || 'No se pudo trasladar el historial', 'error')
       }
-    } catch (err) {
-      setSaveStatus('error')
-      setErrorMessage(
-        err.message ||
-          (currentLang === 'en' ? 'Unexpected error while saving' : 'Error inesperado al guardar')
-      )
-      showToast(
-        currentLang === 'en' ? 'Unexpected error while saving' : 'Error inesperado al guardar',
-        'error'
-      )
+      await saveHistorySnapshot({ trigger, forcedContent: content, customFilePath: targetPath })
     }
-  }, [
-    getMarkdownContent,
-    filePath,
-    fileName,
-    onRefreshFolderTree,
-    showToast,
-    currentLang,
-    saveHistorySnapshot
-  ])
+  }, [fileName, initialDoc.id, saveHistorySnapshot, showToast])
 
-  // Guardar como (siempre abre diálogo nativo)
-  const handleSaveAs = useCallback(async () => {
-    if (!window.api?.saveFileAs) return
-
-    try {
-      setSaveStatus('saving')
-      setErrorMessage('')
-
-      const markdownContent = getMarkdownContent()
-
-      const res = await window.api.saveFileAs({
-        content: markdownContent,
-        defaultName: fileName
-      })
-
-      if (res.canceled) {
-        setSaveStatus(filePath ? 'saved' : 'unsaved')
-        return
+  const runTransition = useCallback(
+    async (action) => {
+      if (transitionRef.current) return false
+      transitionRef.current = true
+      editor?.setEditable(false, false)
+      try {
+        if (!(await saveBeforeSwitch())) return false
+        return await action()
+      } catch (error) {
+        showToast(error.message, 'error')
+        return false
+      } finally {
+        transitionRef.current = false
+        if (editor && !editor.isDestroyed) editor.setEditable(true, false)
       }
+    },
+    [editor, saveBeforeSwitch, showToast]
+  )
 
-      if (res.success) {
-        setFilePath(res.filePath)
-        setFileName(res.fileName)
-        onSavedFile?.(res.filePath, res.fileName, markdownContent)
-        setSaveStatus('saved')
-        showToast(
-          currentLang === 'en' ? `Saved as: ${res.fileName}` : `Guardado como: ${res.fileName}`
+  const handleRestoreVersion = useCallback(
+    async (restoredContent, snapshot) => {
+      if (transitionRef.current) return false
+      transitionRef.current = true
+      editor?.setEditable(false, false)
+      cancelAutoSave()
+      try {
+        await session.pending
+        await saveHistorySnapshot({ trigger: 'manual', forcedContent: session.state.content })
+        setIsSourceMode(
+          needsSourceEditor(restoredContent) || /\.txt$/i.test(session.state.fileName)
         )
-        saveHistorySnapshot({
-          trigger: 'manual',
-          forcedContent: markdownContent,
-          customFilePath: res.filePath
+        editor?.commands.setContent(restoredContent, { emitUpdate: false })
+        session.change(restoredContent)
+        if (preferences.autoSaveEnabled !== false) await session.flush()
+        showToast(
+          `${currentLang === 'en' ? 'Version restored' : 'Versión restaurada'} (${new Date(snapshot.timestamp).toLocaleTimeString()})`
+        )
+        return true
+      } catch (error) {
+        showToast(error.message, 'error')
+        return false
+      } finally {
+        transitionRef.current = false
+        if (editor && !editor.isDestroyed) editor.setEditable(true, false)
+      }
+    },
+    [
+      editor,
+      session,
+      cancelAutoSave,
+      saveHistorySnapshot,
+      preferences.autoSaveEnabled,
+      showToast,
+      currentLang
+    ]
+  )
+
+  const handleItemRenamed = useCallback(
+    async (result) => {
+      const current = session.state.filePath
+      if (
+        current &&
+        (current === result.oldPath ||
+          current.startsWith(result.oldPath + '/') ||
+          current.startsWith(result.oldPath + '\\'))
+      ) {
+        const next = result.newPath + current.slice(result.oldPath.length)
+        const name = next.split(/[\\/]/).pop()
+        session.relocate(next, name)
+        onSavedFile?.(next, name, session.state.content)
+      }
+      await onItemRenamed?.(result)
+    },
+    [session, onSavedFile, onItemRenamed]
+  )
+
+  const handleItemDeleted = useCallback(
+    async (result) => {
+      const current = session.state.filePath
+      if (
+        current &&
+        (current === result.targetPath ||
+          current.startsWith(result.targetPath + '/') ||
+          current.startsWith(result.targetPath + '\\'))
+      ) {
+        saveDraft(session.state)
+        session.relocate(null, session.state.fileName)
+        onSavedFile?.(null, session.state.fileName, session.state.content)
+        const moved = await window.api?.historyMove?.({
+          fromKey: current,
+          toKey: `draft_${initialDoc.id}`,
+          docName: session.state.fileName,
+          filePath: null
         })
-        if (onRefreshFolderTree) {
-          onRefreshFolderTree()
-        }
-      } else {
-        setSaveStatus('error')
-        setErrorMessage(
-          res.error || (currentLang === 'en' ? 'Error saving file' : 'Error al guardar el archivo')
-        )
-        showToast(
-          res.error || (currentLang === 'en' ? 'Error saving' : 'Error al guardar'),
-          'error'
-        )
+        if (moved && !moved.success) showToast(moved.error, 'error')
       }
-    } catch (err) {
-      setSaveStatus('error')
-      setErrorMessage(
-        err.message ||
-          (currentLang === 'en' ? 'Unexpected error while saving' : 'Error inesperado al guardar')
-      )
-      showToast(currentLang === 'en' ? 'Error saving copy' : 'Error al guardar copia', 'error')
-    }
-  }, [
-    getMarkdownContent,
-    fileName,
-    filePath,
-    onRefreshFolderTree,
-    showToast,
-    currentLang,
-    saveHistorySnapshot
-  ])
+      await onItemDeleted?.(result)
+    },
+    [session, initialDoc.id, onSavedFile, onItemDeleted, showToast]
+  )
 
   // Exportar documento en el formato seleccionado (PDF, Word, LibreOffice, Markdown, Texto plano)
   const handleExport = useCallback(
@@ -980,6 +854,10 @@ export default function Editor({
         }
 
         if (res?.success) {
+          if (res.warnings?.length) {
+            showToast(res.warnings.join(' · '))
+            return
+          }
           showToast(
             t.editor.toastExported?.(res.fileName || label) ||
               (currentLang === 'en'
@@ -1009,112 +887,54 @@ export default function Editor({
     [filePath, fileName, editor, getMarkdownContent, showToast, currentLang, t]
   )
 
-
-  const saveBeforeSwitch = useCallback(async () => {
-    const content = getMarkdownContent()
-    if (!filePath && initialDoc?.id) {
-      try {
-        localStorage.setItem(`fountain_draft_${initialDoc.id}`, content)
-        return true
-      } catch {
-        showToast(currentLang === 'en' ? 'Could not save draft' : 'No se pudo guardar el borrador', 'error')
-        return false
-      }
-    }
-    if (filePath && saveStatus !== 'saved' && window.api?.saveFile) {
-      try {
-        const result = await window.api.saveFile({ content, filePath, defaultName: fileName })
-        if (!result?.success) throw new Error(result?.error || 'Save failed')
-        setSaveStatus('saved')
-      } catch (err) {
-        showToast(err.message || (currentLang === 'en' ? 'Could not save file' : 'No se pudo guardar el archivo'), 'error')
-        return false
-      }
-    }
-    return true
-  }, [getMarkdownContent, filePath, initialDoc?.id, saveStatus, fileName, showToast, currentLang])
-
-  // Cambiar de carpeta (manuscrito) desde el desplegable rápido guardando primero el archivo actual
   const handleSelectFolderFromDropdown = useCallback(
-    async (targetFolderPath) => {
-      if (targetFolderPath === openedFolder?.path) {
+    (targetFolderPath) =>
+      runTransition(async () => {
         setIsManuscriptDropdownOpen(false)
-        return
-      }
-
-      if (!(await saveBeforeSwitch())) return
-
-      setIsManuscriptDropdownOpen(false)
-      setIsSidebarOpen(true)
-      onSwitchFolder?.(targetFolderPath)
-    },
-    [openedFolder?.path, saveBeforeSwitch, onSwitchFolder]
+        setSidebarHiddenFor(null)
+        return onSwitchFolder?.(targetFolderPath)
+      }),
+    [runTransition, onSwitchFolder]
   )
 
-  // Abrir una nueva carpeta (manuscrito) desde el desplegable rápido
-  const handleOpenFolderFromDropdown = useCallback(async () => {
-    if (!(await saveBeforeSwitch())) return
-
-    setIsManuscriptDropdownOpen(false)
-    if (onOpenFolder) {
-      const newFolder = await onOpenFolder()
-      if (newFolder?.path) {
-        setIsSidebarOpen(true)
-        onSwitchFolder?.(newFolder.path, newFolder)
-      }
-    }
-  }, [saveBeforeSwitch, onOpenFolder, onSwitchFolder])
-
-  // Volver a portada guardando cambios del manuscrito activo
-  const handleBack = useCallback(() => {
-    const currentMarkdown = getMarkdownContent()
-    if (saveStatus === 'unsaved' && filePath && window.api?.saveFile) {
-      window.api
-        .saveFile({ content: currentMarkdown, filePath, defaultName: fileName })
-        .catch(() => {})
-    } else if (!filePath && initialDoc?.id) {
-      try {
-        localStorage.setItem(`fountain_draft_${initialDoc.id}`, currentMarkdown)
-      } catch {}
-    }
-
-    onBack?.()
-  }, [initialDoc?.id, getMarkdownContent, saveStatus, filePath, fileName, onBack])
-
-  // Cambiar o abrir documento desde el árbol de carpetas o Zen
-  const handleSwitchDoc = useCallback(
-    async (targetFilePath, folderPath = openedFolder?.path) => {
-      if (targetFilePath === filePath) return
-
-      if (!(await saveBeforeSwitch())) return
-
-      if (onSelectFile) {
-        const opened = await onSelectFile(targetFilePath, folderPath)
-        if (opened === false) showToast(currentLang === 'en' ? 'Could not open file' : 'No se pudo abrir el archivo', 'error')
-      }
-    },
-    [filePath, saveBeforeSwitch, onSelectFile, openedFolder?.path, showToast, currentLang]
-  )
-
-  // Abrir archivo individual directamente con diálogo
-  const handleOpenFileDirectly = useCallback(async () => {
-    if (!window.api?.openFileDialog) return
-    try {
-      const res = await window.api.openFileDialog()
-      if (res && res.success) {
-        if (!(await saveBeforeSwitch())) return
-
-        if (onSelectFile) {
-          onSelectFile(res.filePath)
+  const handleOpenFolderFromDropdown = useCallback(
+    () =>
+      runTransition(async () => {
+        setIsManuscriptDropdownOpen(false)
+        const folder = await onOpenFolder?.()
+        if (folder) {
+          setSidebarHiddenFor(null)
+          return onSwitchFolder?.(folder.path, folder)
         }
-      }
-    } catch (err) {
-      showToast(
-        err.message || (currentLang === 'en' ? 'Error opening file' : 'Error al abrir archivo'),
-        'error'
-      )
-    }
-  }, [saveBeforeSwitch, onSelectFile, showToast, currentLang])
+      }),
+    [runTransition, onOpenFolder, onSwitchFolder]
+  )
+
+  const handleBack = useCallback(() => runTransition(() => onBack?.()), [runTransition, onBack])
+  const handleNewDocument = useCallback(
+    () => runTransition(() => onNewDoc?.()),
+    [runTransition, onNewDoc]
+  )
+  const handleSwitchDoc = useCallback(
+    (path, folderPath = openedFolder?.path) => {
+      if (path === session.state.filePath) return
+      return runTransition(() => onSelectFile?.(path, folderPath))
+    },
+    [session, openedFolder?.path, runTransition, onSelectFile]
+  )
+  const handleOpenFileDirectly = useCallback(
+    () =>
+      runTransition(async () => {
+        const result = await window.api?.openFileDialog?.()
+        if (result?.success) return onSelectFile?.(result.filePath)
+        if (result && !result.canceled) throw new Error(result.error)
+      }),
+    [runTransition, onSelectFile]
+  )
+
+  useEffect(() => {
+    return window.api?.onRequestClose?.(() => runTransition(() => true))
+  }, [runTransition])
 
   // Sincronizar y alternar Modo Zen con Pantalla Completa
   const toggleZenMode = useCallback(
@@ -1322,6 +1142,7 @@ export default function Editor({
   // Atajos de teclado del editor (diferenciando Modo Zen y Modo Normal)
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (document.querySelector('[aria-modal="true"]')) return
       // Ocultar inmediatamente la barra flotante al escribir
       if (mouseTimerRef.current) clearTimeout(mouseTimerRef.current)
       setIsMouseActive(false)
@@ -1483,7 +1304,7 @@ export default function Editor({
         if (isCtrlOrMeta && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
           if (onNewDoc) {
             e.preventDefault()
-            onNewDoc()
+            handleNewDocument()
             return
           }
         }
@@ -1498,7 +1319,7 @@ export default function Editor({
         // Ctrl+Shift+O: Abrir carpeta de trabajo
         if (isCtrlOrMeta && e.shiftKey && (e.key === 'o' || e.key === 'O')) {
           e.preventDefault()
-          if (onOpenFolder) onOpenFolder()
+          handleOpenFolderFromDropdown()
           return
         }
 
@@ -1544,8 +1365,10 @@ export default function Editor({
     handleSave,
     handleSaveAs,
     handleOpenFileDirectly,
-    onOpenFolder,
     onNewDoc,
+    handleOpenFolderFromDropdown,
+    setIsSidebarOpen,
+    handleNewDocument,
     onOpenProfile,
     toggleTypewriterMode,
     adjustFontSize,
@@ -1562,7 +1385,7 @@ export default function Editor({
   }
 
   // Cálculos estadísticos para escritores
-  const plainText = editor ? editor.getText() : ''
+  const plainText = isSourceMode ? session.state.content : editor ? editor.getText() : ''
   const words = plainText.trim() ? plainText.trim().split(/\s+/).filter(Boolean).length : 0
   const characters = plainText.length
   const readingTime = Math.max(1, Math.ceil(words / 200))
@@ -1614,7 +1437,11 @@ export default function Editor({
                 aria-expanded={isManuscriptDropdownOpen}
                 aria-haspopup="true"
               >
-                {openedFolder ? <FolderIcon size={16} className="header-folder-icon" /> : <FileTextIcon size={16} className="header-folder-icon" />}
+                {openedFolder ? (
+                  <FolderIcon size={16} className="header-folder-icon" />
+                ) : (
+                  <FileTextIcon size={16} className="header-folder-icon" />
+                )}
                 <span className="header-folder-name">{openedFolder?.name || fileName}</span>
               </button>
             )}
@@ -1640,13 +1467,22 @@ export default function Editor({
                 {(openedFolders.length > 0 || looseFiles.length > 0) && (
                   <div className="quick-dropdown-list">
                     {looseFiles.map((path) => (
-                      <div key={path} className={`quick-dropdown-item ${!openedFolder && filePath === path ? 'is-active' : ''}`}>
-                        <button type="button" className="quick-dropdown-item-btn" onClick={() => {
-                          setIsManuscriptDropdownOpen(false)
-                          handleSwitchDoc(path, null)
-                        }}>
+                      <div
+                        key={path}
+                        className={`quick-dropdown-item ${!openedFolder && filePath === path ? 'is-active' : ''}`}
+                      >
+                        <button
+                          type="button"
+                          className="quick-dropdown-item-btn"
+                          onClick={() => {
+                            setIsManuscriptDropdownOpen(false)
+                            handleSwitchDoc(path, null)
+                          }}
+                        >
                           <FileTextIcon size={14} className="dropdown-item-icon" />
-                          <span className="dropdown-item-name" title={path}>{path.split(/[\\/]/).pop()}</span>
+                          <span className="dropdown-item-name" title={path}>
+                            {path.split(/[\\/]/).pop()}
+                          </span>
                         </button>
                       </div>
                     ))}
@@ -1673,7 +1509,7 @@ export default function Editor({
                               className="btn-dropdown-item-close"
                               onClick={(e) => {
                                 e.stopPropagation()
-                                onCloseFolder(folder.path)
+                                runTransition(() => onCloseFolder(folder.path))
                               }}
                               title={t.fileTree.closeFolder}
                               aria-label={t.fileTree.closeFolder}
@@ -1688,10 +1524,14 @@ export default function Editor({
                 )}
 
                 <div className="quick-dropdown-footer">
-                  <button type="button" className="quick-dropdown-new-btn" onClick={() => {
-                    setIsManuscriptDropdownOpen(false)
-                    handleOpenFileDirectly()
-                  }}>
+                  <button
+                    type="button"
+                    className="quick-dropdown-new-btn"
+                    onClick={() => {
+                      setIsManuscriptDropdownOpen(false)
+                      handleOpenFileDirectly()
+                    }}
+                  >
                     <FileTextIcon size={13} />
                     <span>{t.home.openFile}</span>
                   </button>
@@ -2037,6 +1877,9 @@ export default function Editor({
           openedFolder={openedFolder}
           activeFilePath={filePath}
           onSelectFile={handleSwitchDoc}
+          runMutation={runTransition}
+          onItemRenamed={handleItemRenamed}
+          onItemDeleted={handleItemDeleted}
           onRefreshTree={onRefreshFolderTree}
           showToast={showToast}
           isMouseActive={isMouseActive}
@@ -2421,8 +2264,11 @@ export default function Editor({
               openedFolder={openedFolder}
               activeFilePath={filePath}
               onSelectFile={handleSwitchDoc}
+              runMutation={runTransition}
+              onItemRenamed={handleItemRenamed}
+              onItemDeleted={handleItemDeleted}
               onRefreshTree={() => onRefreshFolderTree?.(openedFolder.path)}
-              onCloseFolder={() => onCloseFolder?.(openedFolder.path)}
+              onCloseFolder={() => runTransition(() => onCloseFolder?.(openedFolder.path))}
               showToast={showToast}
               language={preferences?.language}
             />
@@ -2435,7 +2281,29 @@ export default function Editor({
             className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
             onClick={handleCanvasClick}
           >
-            <EditorContent editor={editor} className="tiptap-wrapper" />
+            {isSourceMode && (
+              <>
+                <p role="status" className="source-editor-notice">
+                  {currentLang === 'en'
+                    ? 'Source editing preserves the document’s original text and Markdown syntax.'
+                    : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
+                </p>
+                <textarea
+                  aria-label="Markdown"
+                  className="fountain-source-editor"
+                  value={session.state.content}
+                  spellCheck={preferences.spellcheckEnabled !== false}
+                  onChange={(event) => {
+                    if (!transitionRef.current) session.change(event.target.value)
+                  }}
+                />
+              </>
+            )}
+            <EditorContent
+              style={isSourceMode ? { display: 'none' } : undefined}
+              editor={editor}
+              className="tiptap-wrapper"
+            />
           </div>
         </main>
       </div>

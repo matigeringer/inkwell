@@ -1,8 +1,10 @@
+import useModalFocus from '../hooks/useModalFocus'
 import { useEffect } from 'react'
 import { CloseIcon, TrashIcon } from './Icons'
 import { getTranslation } from '../i18n'
 
 export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose, language = 'es' }) {
+  const dialogRef = useModalFocus(isOpen)
   const t = getTranslation(language)
 
   useEffect(() => {
@@ -28,6 +30,8 @@ export default function DeleteConfirmModal({ isOpen, item, onConfirm, onClose, l
       <div
         className="modal-card delete-modal-card"
         onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-modal-title"

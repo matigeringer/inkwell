@@ -1,3 +1,4 @@
+import useFileActions from '../hooks/useFileActions'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import {
@@ -65,11 +66,15 @@ export default function ZenFloatingFolder({
   openedFolder,
   activeFilePath,
   onSelectFile,
+  runMutation,
+  onItemRenamed,
+  onItemDeleted,
   onRefreshTree,
   showToast,
   isMouseActive,
   language = 'es'
 }) {
+  const { deleteItem } = useFileActions({ runMutation, onItemRenamed, onItemDeleted })
   const t = getTranslation(language)
   const isEn = language === 'en'
 
@@ -178,7 +183,7 @@ export default function ZenFloatingFolder({
           parentPath: creatingIn.parentPath,
           fileName: name
         })
-        if (res.success) {
+        if (res?.success) {
           showToast?.(t.fileTree.toastFileCreated(res.fileName))
           if (onRefreshTree) {
             await onRefreshTree()
@@ -187,7 +192,7 @@ export default function ZenFloatingFolder({
             onSelectFile(res.filePath)
           }
         } else {
-          showToast?.(res.error || t.fileTree.toastErrorCreateFile, 'error')
+          showToast?.(res?.error || t.fileTree.toastErrorCreateFile, 'error')
         }
       } else {
         if (!window.api?.createFolder) return
@@ -195,14 +200,14 @@ export default function ZenFloatingFolder({
           parentPath: creatingIn.parentPath,
           folderName: name
         })
-        if (res.success) {
+        if (res?.success) {
           showToast?.(t.fileTree.toastFolderCreated(res.folderName))
           setExpandedFolders((prev) => new Set(prev).add(res.folderPath))
           if (onRefreshTree) {
             await onRefreshTree()
           }
         } else {
-          showToast?.(res.error || t.fileTree.toastErrorCreateFolder, 'error')
+          showToast?.(res?.error || t.fileTree.toastErrorCreateFolder, 'error')
         }
       }
     } catch (err) {
@@ -214,12 +219,15 @@ export default function ZenFloatingFolder({
 
   const handleConfirmDelete = async (item) => {
     try {
-      const res = await window.api.deleteItem(item.path)
-      if (res.success) {
-        showToast?.(t.fileTree.toastDeleted(item.name))
+      const res = await deleteItem(item.path)
+      if (res?.success) {
+        showToast?.(
+          res.warning || t.fileTree.toastDeleted(item.name),
+          res.warning ? 'error' : 'info'
+        )
         await onRefreshTree?.()
       } else {
-        showToast?.(res.error || t.fileTree.toastErrorDelete, 'error')
+        showToast?.(res?.error || t.fileTree.toastErrorDelete, 'error')
       }
     } catch (err) {
       showToast?.(err.message || t.common.error, 'error')
@@ -281,7 +289,6 @@ export default function ZenFloatingFolder({
             if (e.key === 'Enter') handleConfirmCreate()
             if (e.key === 'Escape') handleCancelCreate()
           }}
-          onBlur={handleConfirmCreate}
         />
         <div className="zen-tree-inline-actions">
           <button

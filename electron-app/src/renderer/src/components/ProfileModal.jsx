@@ -1,3 +1,4 @@
+import useModalFocus from '../hooks/useModalFocus'
 import { useState, useEffect } from 'react'
 import {
   CloseIcon,
@@ -24,6 +25,7 @@ export default function ProfileModal({
   onUpdatePreferences,
   initialTab = 'general'
 }) {
+  const dialogRef = useModalFocus(isOpen)
   const normalizeTab = (tab) => {
     if (tab === 'appearance' || tab === 'typography') return 'appearance'
     if (tab === 'zen' || tab === 'writing') return 'writing'
@@ -169,7 +171,9 @@ export default function ProfileModal({
           onUpdatePreferences({ historyMaxEntries: targetMax })
           if (window.api?.historyPruneAll) {
             try {
-              await window.api.historyPruneAll(targetMax)
+              const result = await window.api.historyPruneAll(targetMax)
+              if (!result?.success)
+                throw new Error(result?.error || 'No se pudo podar el historial')
             } catch (err) {
               console.error('Error al podar historial:', err)
             }
@@ -192,7 +196,8 @@ export default function ProfileModal({
       onConfirm: async () => {
         setClearingHistory(true)
         try {
-          await window.api.historyClearAll()
+          const result = await window.api.historyClearAll()
+          if (!result?.success) throw new Error(result?.error || 'No se pudo limpiar el historial')
           setHistoryClearedMsg(true)
           setTimeout(() => setHistoryClearedMsg(false), 3000)
         } catch (err) {
@@ -210,6 +215,8 @@ export default function ProfileModal({
         <div
           className="modal-card modal-card-wide"
           onClick={(e) => e.stopPropagation()}
+          ref={dialogRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-title"

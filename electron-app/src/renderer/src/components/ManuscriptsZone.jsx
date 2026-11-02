@@ -9,6 +9,8 @@ export default function ManuscriptsZone({
   onRemoveLooseFile,
   activeFilePath = null,
   onSelectFile,
+  onItemRenamed,
+  onItemDeleted,
   onRefreshFolderTree,
   onCloseFolder,
   showToast,
@@ -23,13 +25,34 @@ export default function ManuscriptsZone({
           {looseFiles.map((path) => (
             <div key={path}>
               <div className={`loose-file-row ${activeFilePath === path ? 'is-active' : ''}`}>
-                <button type="button" className="loose-file-open" title={path} onClick={() => onSelectFile?.(path)}>
+                <button
+                  type="button"
+                  className="loose-file-open"
+                  title={path}
+                  onClick={() => onSelectFile?.(path)}
+                >
                   <FileTextIcon size={14} />
                   <span>{path.split(/[\\/]/).pop()}</span>
                 </button>
-                <button type="button" className="loose-file-remove" onClick={() => onRemoveLooseFile?.(path)} title={language === 'en' ? 'Remove shortcut' : 'Quitar acceso'} aria-label={language === 'en' ? `Remove shortcut to ${path}` : `Quitar acceso a ${path}`}><CloseIcon size={14} /></button>
+                <button
+                  type="button"
+                  className="loose-file-remove"
+                  onClick={() => onRemoveLooseFile?.(path)}
+                  title={language === 'en' ? 'Remove shortcut' : 'Quitar acceso'}
+                  aria-label={
+                    language === 'en' ? `Remove shortcut to ${path}` : `Quitar acceso a ${path}`
+                  }
+                >
+                  <CloseIcon size={14} />
+                </button>
               </div>
-              {looseFileError === path && <p className="loose-file-error" role="alert">{language === 'en' ? 'Could not open this file. It may have been moved or deleted.' : 'No se pudo abrir el archivo. Puede que se haya movido o eliminado.'}</p>}
+              {looseFileError === path && (
+                <p className="loose-file-error" role="alert">
+                  {language === 'en'
+                    ? 'Could not open this file. It may have been moved or deleted.'
+                    : 'No se pudo abrir el archivo. Puede que se haya movido o eliminado.'}
+                </p>
+              )}
             </div>
           ))}
         </div>
@@ -45,6 +68,8 @@ export default function ManuscriptsZone({
               onRefreshTree={() => onRefreshFolderTree?.(folder.path)}
               onCloseFolder={() => onCloseFolder?.(folder.path)}
               showToast={showToast}
+              onItemRenamed={onItemRenamed}
+              onItemDeleted={onItemDeleted}
               language={language}
             />
           </div>

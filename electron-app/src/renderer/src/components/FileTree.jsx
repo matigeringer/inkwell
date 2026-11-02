@@ -1,3 +1,4 @@
+import useFileActions from '../hooks/useFileActions'
 import { useState, useRef, useEffect } from 'react'
 import {
   FolderIcon,
@@ -33,11 +34,15 @@ export default function FileTree({
   openedFolder,
   activeFilePath,
   onSelectFile,
+  runMutation,
+  onItemRenamed,
+  onItemDeleted,
   onRefreshTree,
   onCloseFolder,
   showToast,
   language = 'es'
 }) {
+  const { renameItem, deleteItem } = useFileActions({ runMutation, onItemRenamed, onItemDeleted })
   const t = getTranslation(language)
   const isEn = language === 'en'
 
@@ -141,27 +146,27 @@ export default function FileTree({
           parentPath: creatingIn.parentPath,
           fileName: name
         })
-        if (res.success) {
+        if (res?.success) {
           showToast?.(t.fileTree.toastFileCreated(res.fileName))
           await onRefreshTree()
           if (onSelectFile && res.filePath) {
             onSelectFile(res.filePath)
           }
         } else {
-          showToast?.(res.error || t.fileTree.toastErrorCreateFile, 'error')
+          showToast?.(res?.error || t.fileTree.toastErrorCreateFile, 'error')
         }
       } else {
         const res = await window.api.createFolder({
           parentPath: creatingIn.parentPath,
           folderName: name
         })
-        if (res.success) {
+        if (res?.success) {
           showToast?.(t.fileTree.toastFolderCreated(res.folderName))
           // Auto-expandir la nueva carpeta
           setExpandedFolders((prev) => new Set(prev).add(res.folderPath))
           await onRefreshTree()
         } else {
-          showToast?.(res.error || t.fileTree.toastErrorCreateFolder, 'error')
+          showToast?.(res?.error || t.fileTree.toastErrorCreateFolder, 'error')
         }
       }
     } catch (err) {
@@ -192,20 +197,19 @@ export default function FileTree({
     }
 
     try {
-      const res = await window.api.renameItem({
+      const res = await renameItem({
         oldPath: renamingItem.path,
         newName
       })
 
-      if (res.success) {
-        showToast?.(t.fileTree.toastRenamed(res.newName))
+      if (res?.success) {
+        showToast?.(
+          res.warning || t.fileTree.toastRenamed(res.newName),
+          res.warning ? 'error' : 'info'
+        )
         await onRefreshTree()
-        // Si el archivo renombrado es el activo, actualizar selección
-        if (activeFilePath === renamingItem.path && onSelectFile) {
-          onSelectFile(res.newPath)
-        }
       } else {
-        showToast?.(res.error || t.fileTree.toastErrorRename, 'error')
+        showToast?.(res?.error || t.fileTree.toastErrorRename, 'error')
       }
     } catch (err) {
       showToast?.(err.message || t.common.error, 'error')
@@ -216,12 +220,15 @@ export default function FileTree({
 
   const handleConfirmDelete = async (item) => {
     try {
-      const res = await window.api.deleteItem(item.path)
-      if (res.success) {
-        showToast?.(t.fileTree.toastDeleted(item.name))
+      const res = await deleteItem(item.path)
+      if (res?.success) {
+        showToast?.(
+          res.warning || t.fileTree.toastDeleted(item.name),
+          res.warning ? 'error' : 'info'
+        )
         await onRefreshTree()
       } else {
-        showToast?.(res.error || t.fileTree.toastErrorDelete, 'error')
+        showToast?.(res?.error || t.fileTree.toastErrorDelete, 'error')
       }
     } catch (err) {
       showToast?.(err.message || t.common.error, 'error')
@@ -332,7 +339,6 @@ export default function FileTree({
                         if (e.key === 'Enter') handleConfirmRename()
                         if (e.key === 'Escape') handleCancelRename()
                       }}
-                      onBlur={handleConfirmRename}
                     />
                     <button
                       type="button"
@@ -444,7 +450,6 @@ export default function FileTree({
                             if (e.key === 'Enter') handleConfirmCreate()
                             if (e.key === 'Escape') handleCancelCreate()
                           }}
-                          onBlur={handleConfirmCreate}
                         />
                         <button
                           type="button"
@@ -494,7 +499,6 @@ export default function FileTree({
                       if (e.key === 'Enter') handleConfirmRename()
                       if (e.key === 'Escape') handleCancelRename()
                     }}
-                    onBlur={handleConfirmRename}
                   />
                   <button
                     type="button"
@@ -577,6 +581,16 @@ export default function FileTree({
 
   return (
     <div className="file-tree-container">
+      {openedFolder.error && (
+        <p role="alert" className="tree-load-warning">
+          {openedFolder.error}
+        </p>
+      )}
+      {openedFolder.warnings?.length > 0 && (
+        <p role="status" className="tree-load-warning">
+          {openedFolder.warnings.join(' · ')}
+        </p>
+      )}
       {/* Cabecera del Espacio de Trabajo */}
       <div className="file-tree-header">
         <div className="tree-workspace-title-row">
@@ -651,7 +665,6 @@ export default function FileTree({
                 if (e.key === 'Enter') handleConfirmCreate()
                 if (e.key === 'Escape') handleCancelCreate()
               }}
-              onBlur={handleConfirmCreate}
             />
             <button
               type="button"

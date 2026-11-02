@@ -128,8 +128,7 @@ export const translations = {
       statsBtnAria: 'Ver estadísticas',
       shortcutsBtnTitle: 'Guía de atajos de teclado (F1 o Ctrl+/)',
       shortcutsBtnAria: 'Guía de atajos',
-      placeholder:
-        'Empezá a escribir...',
+      placeholder: 'Empezá a escribir...',
       defaultDocName: 'documento.md',
       toastSaved: 'Documento guardado con éxito',
       toastZenEnabled: 'Modo Zen activado • F11 o Esc para salir',
