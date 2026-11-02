@@ -1,16 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
-  <!-- Fondo plano mate estilo Galera Oscuro / Carbón de la app (#161814) -->
-  <rect width="1024" height="1024" rx="220" fill="#161814" />
-  <!-- Tipografía "Ink" con el naranja exacto de la app (#ee6342) y Segoe UI Black -->
-  <text
-    x="145"
-    y="645"
-    fill="#ee6342"
-    font-family="'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif"
-    font-size="430"
-    font-weight="850"
-    letter-spacing="-16"
-  >Ink</text>
-  <!-- Barra vertical de cursor en el tono crema exacto de la app (#e6e3d6) -->
-  <rect x="782" y="304" width="34" height="376" rx="4" fill="#e6e3d6" />
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Inkwell</title>
+  <desc>Editorial italic monogram in vermilion on charcoal, with a warm paper rule.</desc>
+  <rect x="32" y="32" width="960" height="960" rx="160" fill="#161814" />
+  <!-- Outlined letterforms keep the mark independent of installed fonts. -->
+  <g fill="#ee6342">
+    <path d="M 572,218 C 610,218 635,241 629,273 C 623,305 596,326 562,326 C 527,326 504,303 510,273 C 516,241 542,218 572,218 Z" />
+    <path d="M 379,392 L 569,363 L 597,363 L 507,642 C 493,684 499,699 520,699 C 543,699 566,676 593,638 L 620,655 C 580,724 532,757 476,757 C 415,757 382,720 405,649 L 476,429 C 484,405 474,399 452,402 L 374,413 Z" />
+  </g>
+  <!-- The short rule echoes the wordmark in the application sidebar. -->
+  <path d="M 330,815 H 694" fill="none" stroke="#e6e3d6" stroke-width="24" />
 </svg>
