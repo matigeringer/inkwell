@@ -36,6 +36,7 @@
 [data-theme='light'],
 [data-theme='puro-light'],
 [data-theme='galera-light'] {
+  color-scheme: light;
   --bg-canvas: #efeee8;
   --bg-surface: #f7f6f1;
   --bg-sidebar: #e4e3db;
@@ -100,6 +101,7 @@
 [data-theme='dark'],
 [data-theme='puro-dark'],
 [data-theme='galera-dark'] {
+  color-scheme: dark;
   --bg-canvas: #161814;
   --bg-surface: #1e211c;
   --bg-sidebar: #111310;

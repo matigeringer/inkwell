@@ -23,6 +23,7 @@ const api = {
   showInFolder: (targetPath) => ipcRenderer.invoke('item:show-in-folder', targetPath),
 
   // Control de Pantalla Completa / Zen
+  setWindowTheme: (mode) => ipcRenderer.send('window:set-theme', mode),
   setFullScreen: (flag) => ipcRenderer.invoke('window:set-fullscreen', flag),
   toggleFullScreen: () => ipcRenderer.invoke('window:toggle-fullscreen'),
   isFullScreen: () => ipcRenderer.invoke('window:is-fullscreen'),

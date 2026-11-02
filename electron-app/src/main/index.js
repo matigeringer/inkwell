@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, Menu, MenuItem, session } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Menu, MenuItem, session, nativeTheme } from 'electron'
 import { join, basename, extname } from 'path'
 import { promises as fs } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -32,6 +32,9 @@ function applySpellCheckerLanguages(lang) {
 
 // Desactivar sandbox para entornos Linux con particiones montadas con nosuid
 app.commandLine.appendSwitch('no-sandbox')
+
+// Conservar los datos existentes al separar el nombre visible del identificador npm.
+app.setPath('userData', join(app.getPath('appData'), 'inkwell'))
 
 const IGNORED_NAMES = new Set([
   'node_modules',
@@ -103,6 +106,7 @@ function createWindow() {
     minWidth: 700,
     minHeight: 500,
     show: false,
+    backgroundColor: '#efeee8',
     autoHideMenuBar: true,
     ...(process.platform === 'darwin' ? {} : { icon: appIcon }),
     webPreferences: {
@@ -566,6 +570,15 @@ app.whenReady().then(() => {
     } catch (error) {
       return { success: false, error: error.message }
     }
+  })
+
+  // Mantener el fondo y las decoraciones nativas en el mismo tema que el contenido.
+  ipcMain.on('window:set-theme', (event, mode) => {
+    if (mode !== 'light' && mode !== 'dark' && mode !== 'system') return
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    nativeTheme.themeSource = mode
+    win.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#161814' : '#efeee8')
   })
 
   // Manejadores IPC para control de Pantalla Completa (Modo Zen)

@@ -1,5 +1,7 @@
 {
   "name": "inkwell",
+  "productName": "Inkwell",
+  "desktopName": "com.inkwell.app.desktop",
   "version": "1.0.0",
   "description": "Inkwell — Cuaderno de manuscritos Markdown",
   "main": "./out/main/index.js",

@@ -244,6 +244,7 @@ function App() {
     const safeTheme = 'puro'
     const dataThemeValue = `${safeTheme}-${effectiveMode}`
     root.setAttribute('data-theme', dataThemeValue)
+    window.api?.setWindowTheme?.(preferences.mode)
 
     // Aplicar fuente del editor
     let fontValue = 'var(--font-serif)'
@@ -299,6 +300,7 @@ function App() {
           const effectiveMode = isSystemDark ? 'dark' : 'light'
           const safeTheme = 'puro'
           rootEl.setAttribute('data-theme', `${safeTheme}-${effectiveMode}`)
+          window.api?.setWindowTheme?.('system')
         })
       }
     }
