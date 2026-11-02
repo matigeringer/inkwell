@@ -2,10 +2,13 @@ import { BrowserWindow, dialog } from 'electron'
 import { promises as fs } from 'fs'
 import { join, basename, dirname } from 'path'
 import MarkdownIt from 'markdown-it'
+import { randomUUID } from 'node:crypto'
+import { atomicWrite } from './storage'
+import { validateContent } from './fileService'
 
 // Instancia configurada de Markdown-it con opciones de lectura editorial
 const md = new MarkdownIt({
-  html: true,
+  html: false,
   linkify: true,
   typographer: true,
   breaks: false
@@ -104,6 +107,7 @@ function generateEditorialReadingHtml({ title, bodyHtml, fontFacesCss, isEn }) {
 <html lang="${isEn ? 'en' : 'es'}">
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; font-src data:; img-src data:; base-uri 'none'; form-action 'none'">
   <title>${escapeHtml(title)}</title>
   <style>
     ${fontFacesCss}
@@ -314,10 +318,10 @@ export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') 
 
   try {
     const isEn = appLanguage === 'en'
-    let { filePath, fileName, content, htmlContent, title } = data
+    let { filePath, fileName, content, title } = data
 
     // Si no se proporcionó contenido ni HTML, leer desde el archivo en disco
-    if (!content && !htmlContent && filePath) {
+    if (content == null && filePath) {
       try {
         content = await fs.readFile(filePath, 'utf-8')
       } catch (readErr) {
@@ -330,12 +334,14 @@ export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') 
       }
     }
 
-    if (!content && !htmlContent) {
+    if (content == null) {
       return {
         success: false,
         error: isEn ? 'No content to export' : 'No hay contenido para exportar'
       }
     }
+
+    validateContent(content)
 
     // Resolver el nombre del archivo y título del manuscrito
     const effectiveFileName = fileName || (filePath ? basename(filePath) : 'documento.md')
@@ -368,7 +374,7 @@ export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') 
     const destinationPdfPath = saveDialogResult.filePath
 
     // Obtener HTML del cuerpo: si viene de Tiptap usarlo, o renderizar el Markdown
-    const bodyHtml = htmlContent || md.render(content || '')
+    const bodyHtml = md.render(content)
 
     // Obtener CSS de fuentes locales incrustadas
     const fontFacesCss = await getFontFacesCss()
@@ -386,19 +392,25 @@ export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') 
       show: false,
       webPreferences: {
         nodeIntegration: false,
-        contextIsolation: true
+        contextIsolation: true,
+        sandbox: true,
+        javascript: false,
+        partition: `print-${randomUUID()}`
       }
+    })
+
+    printWin.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+    printWin.webContents.on('will-navigate', (event) => event.preventDefault())
+    printWin.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) =>
+      callback(false)
+    )
+    printWin.webContents.session.setPermissionCheckHandler(() => false)
+    printWin.webContents.session.webRequest.onBeforeRequest((details, callback) => {
+      callback({ cancel: !details.url.startsWith('data:') && details.url !== 'about:blank' })
     })
 
     // Cargar el HTML en la ventana de impresión
     await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fullHtml)}`)
-
-    // Asegurar que las fuentes y estilos terminen de pintarse
-    try {
-      await printWin.webContents.executeJavaScript('document.fonts.ready')
-    } catch {
-      // Ignorar si el navegador ya completó la carga
-    }
 
     // Pequeño retardo de seguridad para asegurar renderizado vectorial perfecto
     await new Promise((resolve) => setTimeout(resolve, 80))
@@ -426,7 +438,7 @@ export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') 
     const pdfBuffer = await printWin.webContents.printToPDF(pdfOptions)
 
     // Escribir el archivo PDF en disco
-    await fs.writeFile(destinationPdfPath, pdfBuffer)
+    await atomicWrite(destinationPdfPath, pdfBuffer)
 
     return {
       success: true,

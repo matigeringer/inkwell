@@ -2,29 +2,25 @@ import { BrowserWindow, dialog } from 'electron'
 import { promises as fs } from 'fs'
 import { join, basename, dirname } from 'path'
 import MarkdownIt from 'markdown-it'
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, ExternalHyperlink } from 'docx'
+import { Document, Packer } from 'docx'
+import { atomicWrite } from './storage'
+import { validateContent } from './fileService'
+import {
+  escapeXml,
+  tokensToDocx,
+  tokensToOdtXml,
+  tokensToPlainText,
+  exportWarnings
+} from './documentModel'
 import JSZip from 'jszip'
 import { exportDocumentToPdf } from './pdfExporter'
 
 const md = new MarkdownIt({
-  html: true,
+  html: false,
   linkify: true,
   typographer: true,
   breaks: false
 })
-
-/**
- * Escapa caracteres XML para el archivo content.xml de ODT
- */
-function escapeXml(unsafe) {
-  if (!unsafe) return ''
-  return String(unsafe)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
-}
 
 /**
  * Obtiene el título legible del documento
@@ -43,253 +39,6 @@ function resolveDocumentTitle(content, fileName, isEn) {
   }
 
   return isEn ? 'Manuscript' : 'Manuscrito'
-}
-
-/**
- * Convierte Markdown a texto plano legible sin sintaxis
- */
-function markdownToPlainText(mdText) {
-  if (!mdText) return ''
-  return mdText
-    .replace(/```[\s\S]*?```/g, (m) => m.replace(/```[a-z]*\n?/gi, '').replace(/```/g, ''))
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/^#{1,6}\s+(.+)$/gm, '$1')
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')
-    .replace(/(\*|_)(.*?)\1/g, '$2')
-    .replace(/~~(.*?)~~/g, '$1')
-    .replace(/^\s*>\s+/gm, '')
-    .replace(/^(\s*)[-*+]\s+\[[ xX]\]\s+/gm, '$1• ')
-    .replace(/^(\s*)[-*+]\s+/gm, '$1• ')
-    .trim()
-}
-
-/**
- * Convierte tokens de Markdown en párrafos de DOCX
- */
-function tokensToDocxChildren(tokens) {
-  const children = []
-  let inBlockquote = false
-  let inList = false
-  let listType = null // 'bullet' | 'ordered'
-  let orderedIndex = 1
-
-  function inlineToTextRuns(inlineTokens) {
-    const runs = []
-    let isBold = false
-    let isItalic = false
-    let currentLink = null
-
-    for (const token of inlineTokens) {
-      if (token.type === 'strong_open') isBold = true
-      else if (token.type === 'strong_close') isBold = false
-      else if (token.type === 'em_open') isItalic = true
-      else if (token.type === 'em_close') isItalic = false
-      else if (token.type === 'link_open') {
-        const href = token.attrs?.find((a) => a[0] === 'href')?.[1]
-        currentLink = href
-      } else if (token.type === 'link_close') {
-        currentLink = null
-      } else if (token.type === 'code_inline') {
-        runs.push(
-          new TextRun({
-            text: token.content,
-            font: 'Courier New',
-            shading: { fill: 'F0EFEA' }
-          })
-        )
-      } else if (token.type === 'text') {
-        if (currentLink) {
-          runs.push(
-            new ExternalHyperlink({
-              children: [
-                new TextRun({
-                  text: token.content,
-                  bold: isBold,
-                  italics: isItalic,
-                  underline: {}
-                })
-              ],
-              link: currentLink
-            })
-          )
-        } else {
-          runs.push(
-            new TextRun({
-              text: token.content,
-              bold: isBold,
-              italics: isItalic
-            })
-          )
-        }
-      }
-    }
-    return runs
-  }
-
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i]
-
-    if (token.type === 'heading_open') {
-      const level = parseInt(token.tag.replace('h', ''), 10)
-      const next = tokens[++i]
-      const headingMap = {
-        1: HeadingLevel.HEADING_1,
-        2: HeadingLevel.HEADING_2,
-        3: HeadingLevel.HEADING_3,
-        4: HeadingLevel.HEADING_4,
-        5: HeadingLevel.HEADING_5,
-        6: HeadingLevel.HEADING_6
-      }
-      children.push(
-        new Paragraph({
-          children: inlineToTextRuns(next.children || []),
-          heading: headingMap[level] || HeadingLevel.HEADING_1,
-          spacing: { before: 280, after: 120 }
-        })
-      )
-      i++ // saltar heading_close
-    } else if (token.type === 'paragraph_open') {
-      const next = tokens[++i]
-      const runs = inlineToTextRuns(next.children || [])
-      const paraOptions = {
-        children: runs,
-        spacing: { before: 80, after: 120, line: 360 }
-      }
-
-      if (inBlockquote) {
-        paraOptions.indent = { left: 720 }
-        runs.forEach((r) => {
-          if (r instanceof TextRun) r.italics = true
-        })
-      } else if (inList) {
-        if (listType === 'bullet') {
-          paraOptions.bullet = { level: 0 }
-        } else if (listType === 'ordered') {
-          runs.unshift(new TextRun({ text: `${orderedIndex++}. `, bold: true }))
-        }
-      }
-
-      children.push(new Paragraph(paraOptions))
-      i++ // saltar paragraph_close
-    } else if (token.type === 'blockquote_open') {
-      inBlockquote = true
-    } else if (token.type === 'blockquote_close') {
-      inBlockquote = false
-    } else if (token.type === 'bullet_list_open') {
-      inList = true
-      listType = 'bullet'
-    } else if (token.type === 'bullet_list_close') {
-      inList = false
-      listType = null
-    } else if (token.type === 'ordered_list_open') {
-      inList = true
-      listType = 'ordered'
-      orderedIndex = 1
-    } else if (token.type === 'ordered_list_close') {
-      inList = false
-      listType = null
-    } else if (token.type === 'fence' || token.type === 'code_block') {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: token.content,
-              font: 'Courier New',
-              size: 20
-            })
-          ],
-          spacing: { before: 140, after: 140 },
-          shading: { fill: 'F6F5F0' }
-        })
-      )
-    } else if (token.type === 'hr') {
-      children.push(
-        new Paragraph({
-          thematicBreak: true,
-          spacing: { before: 200, after: 200 }
-        })
-      )
-    }
-  }
-
-  return children
-}
-
-/**
- * Convierte tokens de Markdown en XML de OpenDocument Text (ODT)
- */
-function tokensToOdtXml(tokens) {
-  let xml = ''
-  let inBlockquote = false
-  let inList = false
-
-  function inlineToOdtXml(inlineTokens) {
-    let result = ''
-    let isBold = false
-    let isItalic = false
-
-    for (const token of inlineTokens) {
-      if (token.type === 'strong_open') isBold = true
-      else if (token.type === 'strong_close') isBold = false
-      else if (token.type === 'em_open') isItalic = true
-      else if (token.type === 'em_close') isItalic = false
-      else if (token.type === 'code_inline') {
-        result += `<text:span text:style-name="Code">${escapeXml(token.content)}</text:span>`
-      } else if (token.type === 'text') {
-        let styleName = ''
-        if (isBold && isItalic) styleName = 'BoldItalic'
-        else if (isBold) styleName = 'Bold'
-        else if (isItalic) styleName = 'Italic'
-
-        if (styleName) {
-          result += `<text:span text:style-name="${styleName}">${escapeXml(token.content)}</text:span>`
-        } else {
-          result += escapeXml(token.content)
-        }
-      }
-    }
-    return result
-  }
-
-  for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i]
-
-    if (token.type === 'heading_open') {
-      const level = parseInt(token.tag.replace('h', ''), 10)
-      const next = tokens[++i]
-      const textContent = inlineToOdtXml(next.children || [])
-      xml += `<text:h text:outline-level="${level}">${textContent}</text:h>`
-      i++ // saltar heading_close
-    } else if (token.type === 'paragraph_open') {
-      const next = tokens[++i]
-      const textContent = inlineToOdtXml(next.children || [])
-      const style = inBlockquote ? 'Quotations' : 'Standard'
-      if (inList) {
-        xml += `<text:list-item><text:p text:style-name="${style}">${textContent}</text:p></text:list-item>`
-      } else {
-        xml += `<text:p text:style-name="${style}">${textContent}</text:p>`
-      }
-      i++ // saltar paragraph_close
-    } else if (token.type === 'blockquote_open') {
-      inBlockquote = true
-    } else if (token.type === 'blockquote_close') {
-      inBlockquote = false
-    } else if (token.type === 'bullet_list_open' || token.type === 'ordered_list_open') {
-      inList = true
-      xml += `<text:list>`
-    } else if (token.type === 'bullet_list_close' || token.type === 'ordered_list_close') {
-      inList = false
-      xml += `</text:list>`
-    } else if (token.type === 'fence' || token.type === 'code_block') {
-      xml += `<text:p text:style-name="CodeBlock">${escapeXml(token.content)}</text:p>`
-    } else if (token.type === 'hr') {
-      xml += `<text:p text:style-name="HorizontalLine"/>`
-    }
-  }
-
-  return xml
 }
 
 /**
@@ -322,7 +71,7 @@ async function buildOdtBuffer(title, bodyXml) {
 
   // 4. styles.xml
   const stylesXml = `<?xml version="1.0" encoding="UTF-8"?>
-<office:document-styles xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" office:version="1.2">
+<office:document-styles xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" office:version="1.2">
   <office:font-face-decls>
     <style:font-face style:name="Newsreader" svg:font-family="Newsreader, Georgia, 'Times New Roman', serif"/>
   </office:font-face-decls>
@@ -339,6 +88,8 @@ async function buildOdtBuffer(title, bodyXml) {
   const contentXml = `<?xml version="1.0" encoding="UTF-8"?>
 <office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="1.2">
   <office:automatic-styles>
+    ${['ListBullet', 'ListNumber'].map((name) => `<text:list-style style:name="${name}">${Array.from({ length: 10 }, (_, i) => (name === 'ListNumber' ? `<text:list-level-style-number text:level="${i + 1}" style:num-format="1" style:num-suffix="."/>` : `<text:list-level-style-bullet text:level="${i + 1}" text:bullet-char="•"/>`)).join('')}</text:list-style>`).join('')}
+    <style:style style:name="Strike" style:family="text"><style:text-properties style:text-line-through-style="solid"/></style:style>
     <style:style style:name="Bold" style:family="text">
       <style:text-properties fo:font-weight="bold"/>
     </style:style>
@@ -387,7 +138,7 @@ export async function exportDocument(event, data = {}, appLanguage = 'es') {
     let { filePath, fileName, content, title } = data
 
     // Si no se proporcionó contenido, leer desde el archivo en disco
-    if (!content && filePath) {
+    if (content == null && filePath) {
       try {
         content = await fs.readFile(filePath, 'utf-8')
       } catch (readErr) {
@@ -406,6 +157,10 @@ export async function exportDocument(event, data = {}, appLanguage = 'es') {
         error: isEn ? 'No content to export' : 'No hay contenido para exportar'
       }
     }
+
+    validateContent(content)
+    const tokens = md.parse(content, {})
+    const warnings = exportWarnings(tokens)
 
     const effectiveFileName = fileName || (filePath ? basename(filePath) : 'documento.md')
     const baseNameWithoutExt = effectiveFileName.replace(/\.[^/.]+$/, '')
@@ -478,36 +233,36 @@ export async function exportDocument(event, data = {}, appLanguage = 'es') {
 
     // Generar el archivo según el formato
     if (format === 'markdown') {
-      await fs.writeFile(destinationPath, content, 'utf-8')
+      await atomicWrite(destinationPath, content)
     } else if (format === 'txt') {
-      const plainText = markdownToPlainText(content)
-      await fs.writeFile(destinationPath, plainText, 'utf-8')
+      const plainText = tokensToPlainText(tokens)
+      await atomicWrite(destinationPath, plainText)
     } else if (format === 'docx') {
-      const tokens = md.parse(content, {})
-      const docChildren = tokensToDocxChildren(tokens)
+      const model = tokensToDocx(tokens)
       const doc = new Document({
         title: effectiveTitle,
+        numbering: model.numbering,
         sections: [
           {
             properties: {},
-            children: docChildren
+            children: model.children
           }
         ]
       })
       const buffer = await Packer.toBuffer(doc)
-      await fs.writeFile(destinationPath, buffer)
+      await atomicWrite(destinationPath, buffer)
     } else if (format === 'odt') {
-      const tokens = md.parse(content, {})
       const bodyXml = tokensToOdtXml(tokens)
       const buffer = await buildOdtBuffer(effectiveTitle, bodyXml)
-      await fs.writeFile(destinationPath, buffer)
+      await atomicWrite(destinationPath, buffer)
     }
 
     return {
       success: true,
       filePath: destinationPath,
       fileName: basename(destinationPath),
-      format
+      format,
+      warnings
     }
   } catch (error) {
     console.error(`Error al exportar a formato ${format}:`, error)
