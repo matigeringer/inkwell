@@ -1,3 +1,5 @@
+export const THEME_IDS = ['puro', 'mono', 'beige']
+
 export const DEFAULT_PREFERENCES = {
   version: 1,
   theme: 'puro',
@@ -20,6 +22,7 @@ export const DEFAULT_PREFERENCES = {
   zenShowFolder: true
 }
 const choices = {
+  theme: THEME_IDS,
   mode: ['light', 'dark', 'system'],
   fontFamily: ['serif', 'sans', 'mono'],
   textAlign: ['left', 'justify', 'center'],

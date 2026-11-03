@@ -254,7 +254,9 @@ export const translations = {
           puro: {
             name: 'Galera',
             desc: 'Papel cálido de imprenta, tinta carbón y lápiz bermellón'
-          }
+          },
+          mono: { name: 'Blanco y negro' },
+          beige: { name: 'Beige' }
         },
         modeTitle: 'Modo de apariencia',
         lightName: 'Claro',
@@ -581,7 +583,9 @@ export const translations = {
           puro: {
             name: 'Galley',
             desc: 'Warm proofing paper, carbon ink, and vermillion pencil'
-          }
+          },
+          mono: { name: 'Black and white' },
+          beige: { name: 'Beige' }
         },
         modeTitle: 'Appearance Mode',
         lightName: 'Light',

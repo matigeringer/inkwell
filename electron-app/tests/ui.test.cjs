@@ -318,3 +318,72 @@ test('the home screen exposes recovered drafts and opens their original content'
   await act(async () => recover.click())
   assert.equal(activeEditor.getText(), 'recovered manuscript')
 })
+
+for (const theme of ['mono', 'beige']) {
+  test(`${theme} selection preserves content and writing settings across modes and restart`, async () => {
+    const originalMatchMedia = window.matchMedia
+    let onSystemChange
+    const systemQuery = {
+      matches: false,
+      addEventListener(_event, callback) {
+        onSystemChange = callback
+      },
+      removeEventListener() {}
+    }
+    window.matchMedia = (query) =>
+      query === '(prefers-color-scheme: dark)' ? systemQuery : originalMatchMedia(query)
+    try {
+      window.api = { onRequestClose: () => () => {}, setWindowTheme() {} }
+      const App = load('src/renderer/src/App.jsx').default
+      const start = async () => {
+        root = createRoot(document.getElementById('root'))
+        await act(async () => root.render(React.createElement(App)))
+        await act(async () => document.querySelector('.sidebar-settings-btn').click())
+        await act(async () =>
+          [...document.querySelectorAll('.segmented-tab-btn')]
+            .find((button) => button.textContent === 'Apariencia')
+            .click()
+        )
+      }
+      const selectMode = async (name) => {
+        await act(async () =>
+          [...document.querySelectorAll('.pref-segment-btn')]
+            .find((button) => button.textContent === name)
+            .click()
+        )
+      }
+      await start()
+      const originalText = document.body.textContent
+      await act(async () =>
+        document.querySelector(`.theme-mockup-screen[data-theme="${theme}-light"]`).click()
+      )
+      assert.equal(document.body.textContent, originalText)
+      assert.equal(document.documentElement.dataset.theme, `${theme}-light`)
+      assert.deepEqual(JSON.parse(localStorage.getItem('fountain_preferences')), {
+        ...DEFAULT_PREFERENCES,
+        theme
+      })
+      await selectMode('Oscuro')
+      assert.equal(document.documentElement.dataset.theme, `${theme}-dark`)
+      await act(async () => root.unmount())
+      await start()
+      assert.equal(document.documentElement.dataset.theme, `${theme}-dark`)
+      assert.equal(
+        document.querySelector('.theme-mockup-screen[aria-pressed="true"]').dataset.theme,
+        `${theme}-dark`
+      )
+      await selectMode('Sistema')
+      assert.equal(document.documentElement.dataset.theme, `${theme}-light`)
+      systemQuery.matches = true
+      await act(async () => onSystemChange())
+      assert.equal(document.documentElement.dataset.theme, `${theme}-dark`)
+      await act(async () => document.querySelector('.modal-card .btn-icon-subtle').click())
+      await act(async () =>
+        document.querySelector('.btn-quick-theme[aria-label="Cambiar modo de apariencia"]').click()
+      )
+      assert.equal(document.documentElement.dataset.theme, `${theme}-light`)
+    } finally {
+      window.matchMedia = originalMatchMedia
+    }
+  })
+}

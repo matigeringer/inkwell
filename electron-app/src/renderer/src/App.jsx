@@ -220,7 +220,7 @@ function App() {
     const isSystemDark = window.matchMedia('(prefers-color-scheme: dark)').matches
     const effectiveMode =
       preferences.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : preferences.mode
-    const safeTheme = 'puro'
+    const safeTheme = preferences.theme
     const dataThemeValue = `${safeTheme}-${effectiveMode}`
     root.setAttribute('data-theme', dataThemeValue)
     window.api?.setWindowTheme?.(preferences.mode)
@@ -277,7 +277,7 @@ function App() {
           const rootEl = document.documentElement
           const isSystemDark = mediaQuery.matches
           const effectiveMode = isSystemDark ? 'dark' : 'light'
-          const safeTheme = 'puro'
+          const safeTheme = preferences.theme
           rootEl.setAttribute('data-theme', `${safeTheme}-${effectiveMode}`)
           window.api?.setWindowTheme?.('system')
         })

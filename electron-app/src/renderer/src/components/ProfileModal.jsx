@@ -17,6 +17,7 @@ import {
 } from './Icons'
 import { getTranslation } from '../i18n'
 import ConfirmModal from './ConfirmModal'
+import { THEME_IDS } from '../lib/preferences'
 
 export default function ProfileModal({
   isOpen,
@@ -123,21 +124,6 @@ export default function ProfileModal({
       : preferences.fontFamily === 'mono'
         ? 'var(--font-mono)'
         : 'var(--font-serif)'
-
-  const themeSpecimen = {
-    light: {
-      bg: '#efeee8',
-      sidebar: '#e4e3db',
-      text: '#1c1d1a',
-      accent: '#c2381b'
-    },
-    dark: {
-      bg: '#161814',
-      sidebar: '#111310',
-      text: '#e6e3d6',
-      accent: '#ee6342'
-    }
-  }
 
   const handleToggleHistory = () => {
     if (currentHistory) {
@@ -424,81 +410,42 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Muestra minimalista de paleta y tema integrada (centrada sin rectángulo mayor) */}
-                <div className="theme-mockup-wrapper" aria-hidden="true">
-                  <div className="theme-mockup-screen">
-                    {preferences.mode === 'system' ? (
-                      <div className="compact-mockup-split">
-                        <div
-                          className="compact-mockup-half"
-                          style={{ backgroundColor: themeSpecimen.light.bg }}
-                        >
+                {/* Muestras seleccionables en el espacio de la paleta, sin texto visible adicional. */}
+                <div
+                  className="theme-mockup-wrapper"
+                  role="group"
+                  aria-label={t.preferences.appearance.themeDropdownLabel}
+                >
+                  {THEME_IDS.map((theme) => (
+                    <button
+                      key={theme}
+                      type="button"
+                      className="theme-mockup-screen"
+                      data-theme={`${theme}-${preferences.mode === 'dark' ? 'dark' : 'light'}`}
+                      aria-label={t.preferences.appearance.themes[theme].name}
+                      aria-pressed={preferences.theme === theme}
+                      onClick={() => onUpdatePreferences({ theme })}
+                    >
+                      <span className="compact-mockup-split" aria-hidden="true">
+                        {(preferences.mode === 'system'
+                          ? ['light', 'dark']
+                          : [preferences.mode]
+                        ).map((mode) => (
                           <span
-                            className="compact-mockup-dot"
-                            style={{ backgroundColor: themeSpecimen.light.accent }}
-                          />
-                          <div className="compact-mockup-lines">
-                            <span
-                              className="compact-line"
-                              style={{ backgroundColor: themeSpecimen.light.text }}
-                            />
-                            <span
-                              className="compact-line compact-line-accent"
-                              style={{ backgroundColor: themeSpecimen.light.accent }}
-                            />
-                          </div>
-                        </div>
-                        <div
-                          className="compact-mockup-half"
-                          style={{
-                            backgroundColor: themeSpecimen.dark.bg,
-                            borderLeft: '1px solid var(--border-subtle)'
-                          }}
-                        >
-                          <span
-                            className="compact-mockup-dot"
-                            style={{ backgroundColor: themeSpecimen.dark.accent }}
-                          />
-                          <div className="compact-mockup-lines">
-                            <span
-                              className="compact-line"
-                              style={{ backgroundColor: themeSpecimen.dark.text }}
-                            />
-                            <span
-                              className="compact-line compact-line-accent"
-                              style={{ backgroundColor: themeSpecimen.dark.accent }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      (() => {
-                        const palette =
-                          preferences.mode === 'dark' ? themeSpecimen.dark : themeSpecimen.light
-                        return (
-                          <div
-                            className="compact-mockup-full"
-                            style={{ backgroundColor: palette.bg }}
+                            key={mode}
+                            className="compact-mockup-half"
+                            data-theme={`${theme}-${mode}`}
                           >
-                            <span
-                              className="compact-mockup-dot"
-                              style={{ backgroundColor: palette.accent }}
-                            />
-                            <div className="compact-mockup-lines">
-                              <span
-                                className="compact-line"
-                                style={{ backgroundColor: palette.text }}
-                              />
-                              <span
-                                className="compact-line compact-line-accent"
-                                style={{ backgroundColor: palette.accent }}
-                              />
-                            </div>
-                          </div>
-                        )
-                      })()
-                    )}
-                  </div>
+                            <span className="compact-mockup-dot" />
+                            <span className="compact-mockup-lines">
+                              <span className="compact-line" />
+                              <span className="compact-line compact-line-accent" />
+                            </span>
+                          </span>
+                        ))}
+                      </span>
+                    </button>
+                  ))}
                 </div>
 
                 {/* Fila: Tipografía */}

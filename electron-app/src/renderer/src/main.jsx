@@ -20,7 +20,7 @@ const initialMode =
       ? 'dark'
       : 'light'
     : initialPreferences.mode
-document.documentElement.setAttribute('data-theme', `puro-${initialMode}`)
+document.documentElement.setAttribute('data-theme', `${initialPreferences.theme}-${initialMode}`)
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
