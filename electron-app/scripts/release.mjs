@@ -8,7 +8,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const metadata = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'))
 const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'))
 
-export function checkVersion(tag = process.env.CI_COMMIT_TAG) {
+export function checkVersion(
+  tag = process.env.GITHUB_REF_TYPE === 'tag' ? process.env.GITHUB_REF_NAME : undefined
+) {
   const version = metadata.version
   if (!/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.test(version)) {
     throw new Error('Only stable X.Y.Z versions are supported')
@@ -25,10 +27,15 @@ export function checkVersion(tag = process.env.CI_COMMIT_TAG) {
 export function artifacts(version = checkVersion()) {
   return {
     linux: [
-      { name: `inkwell-${version}-linux-x86_64.AppImage`, path: '/linux/inkwell.AppImage' },
-      { name: `inkwell-${version}-linux-amd64.deb`, path: '/linux/inkwell.deb' }
+      {
+        name: `inkwell-${version}-linux-x86_64.AppImage`,
+        downloadName: 'inkwell-linux-x86_64.AppImage'
+      },
+      { name: `inkwell-${version}-linux-amd64.deb`, downloadName: 'inkwell-linux-amd64.deb' }
     ],
-    windows: [{ name: `inkwell-${version}-windows-x64.exe`, path: '/windows/inkwell.exe' }]
+    windows: [
+      { name: `inkwell-${version}-windows-x64.exe`, downloadName: 'inkwell-windows-x64.exe' }
+    ]
   }
 }
 
@@ -55,90 +62,120 @@ export async function prepare(platform, directory = join(root, 'dist')) {
   await writeFile(join(directory, `SHA256SUMS-${platform}.txt`), manifest)
 }
 
-export async function releasePayload(directory, projectUrl, packageUrl) {
+export async function releasePayload(directory, projectUrl) {
   const version = checkVersion()
-  const links = []
+  const assets = []
   for (const [platform, entries] of Object.entries(artifacts(version))) {
     const name = `SHA256SUMS-${platform}.txt`
     const expected = await checksumManifest(platform, directory)
     if ((await readFile(join(directory, name), 'utf8')) !== expected) {
       throw new Error(`Checksum mismatch: ${name}`)
     }
-    for (const entry of [...entries, { name, path: `/checksums/${name}` }]) {
-      links.push({
-        name: entry.name,
-        url: `${packageUrl}/${entry.name}`,
-        direct_asset_path: entry.path,
-        link_type: 'package'
+    const lines = expected.trimEnd().split('\n')
+    const manifest = []
+    for (const [index, entry] of entries.entries()) {
+      const sha256 = lines[index].split('  ')[0]
+      assets.push({
+        name: entry.downloadName,
+        source: entry.name,
+        sha256
       })
+      manifest.push(`${sha256}  ${entry.downloadName}\n`)
     }
+    // Release downloads have stable names, so regenerate their checksum manifests.
+    assets.push({ name, content: manifest.join('') })
   }
   return {
     name: `Inkwell ${version}`,
     tag_name: `v${version}`,
-    description: [
+    body: [
       `Inkwell ${version} para Linux y Windows de 64 bits (x86-64).`,
       '',
       'Linux: AppImage o paquete .deb. Windows: ejecutable portable, sin instalación.',
       'El ejecutable de Windows se distribuye sin firma digital.',
       '',
-      `Consulta [instalación y requisitos](${projectUrl}/-/blob/v${version}/README.md)`,
-      `y [notas de la versión](${projectUrl}/-/blob/v${version}/CHANGELOG.md).`,
+      `Consulta [instalación y requisitos](${projectUrl}/blob/v${version}/README.md)`,
+      `y [notas de la versión](${projectUrl}/blob/v${version}/CHANGELOG.md).`,
       'Verifica las descargas con los archivos SHA256SUMS adjuntos.',
       '',
       'Software libre GPL-3.0-only. Código fuente disponible en los archivos de esta etiqueta.'
     ].join('\n'),
-    assets: { links }
+    assets
   }
 }
 
-async function publish(dryRun) {
-  const version = checkVersion()
-  if (!dryRun && process.env.CI_COMMIT_TAG !== `v${version}`) {
-    throw new Error('Publishing requires a GitLab version tag pipeline')
+export async function publish(
+  dryRun,
+  { directory = join(root, 'dist'), env = process.env, request = fetch } = {}
+) {
+  const version = checkVersion(env.GITHUB_REF_TYPE === 'tag' ? env.GITHUB_REF_NAME : undefined)
+  if (!dryRun && (env.GITHUB_REF_TYPE !== 'tag' || env.GITHUB_REF_NAME !== `v${version}`)) {
+    throw new Error('Publishing requires a GitHub version tag workflow')
   }
-  const directory = join(root, 'dist')
-  const projectUrl = process.env.CI_PROJECT_URL || metadata.homepage
-  const api = process.env.CI_API_V4_URL || 'https://gitlab.com/api/v4'
-  const project = encodeURIComponent(process.env.CI_PROJECT_ID || 'ada-arg/fountain')
-  const endpoint = `${api}/projects/${project}`
-  const packageUrl = `${endpoint}/packages/generic/inkwell/${version}`
+  const repository = env.GITHUB_REPOSITORY || new URL(metadata.homepage).pathname.slice(1)
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repository)) throw new Error('Invalid GitHub repository')
+  const projectUrl = `https://github.com/${repository}`
+  const endpoint = `https://api.github.com/repos/${repository}`
   // Verify all three binaries and both manifests before making any request.
-  const payload = await releasePayload(directory, projectUrl, packageUrl)
+  const payload = await releasePayload(directory, projectUrl)
   if (dryRun) {
     await writeFile(join(directory, 'release.json'), JSON.stringify(payload, null, 2) + '\n')
     console.log('Release validated; preview saved in dist/release.json')
     return
   }
-  const token = process.env.CI_JOB_TOKEN
-  if (!token) throw new Error('CI_JOB_TOKEN is required')
-  const headers = { 'JOB-TOKEN': token }
-  const existing = await fetch(`${endpoint}/releases/v${version}`, {
+  const token = env.GITHUB_TOKEN
+  if (!token) throw new Error('GITHUB_TOKEN is required')
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  }
+  const existing = await request(`${endpoint}/releases/tags/v${version}`, {
     headers,
     signal: AbortSignal.timeout(30000)
   })
   // Released versions are immutable: do not overwrite downloadable binaries on retry.
   if (existing.ok) throw new Error(`v${version} already exists; publish a new version`)
   if (existing.status !== 404) throw new Error(`Release lookup failed: ${existing.status}`)
-  for (const { name } of payload.assets.links) {
-    const response = await fetch(`${packageUrl}/${name}`, {
-      method: 'PUT',
-      headers: { ...headers, 'Content-Type': 'application/octet-stream' },
-      body: createReadStream(join(directory, name)),
-      duplex: 'half',
+  const { assets, ...release } = payload
+  // Keep incomplete uploads private; publish only after all five assets are attached.
+  const created = await request(`${endpoint}/releases`, {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...release, draft: true, prerelease: false }),
+    signal: AbortSignal.timeout(30000)
+  })
+  if (!created.ok) throw new Error(`Release creation failed: ${created.status}`)
+  const draft = await created.json()
+  const uploadUrl = draft.upload_url.replace(/\{.*$/, '')
+  if (new URL(uploadUrl).origin !== 'https://uploads.github.com') {
+    throw new Error('Unexpected GitHub upload URL')
+  }
+  for (const { name, source, content } of assets) {
+    const response = await request(`${uploadUrl}?name=${encodeURIComponent(name)}`, {
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Type': source ? 'application/octet-stream' : 'text/plain; charset=utf-8',
+        'Content-Length': String(
+          source ? (await stat(join(directory, source))).size : Buffer.byteLength(content)
+        )
+      },
+      body: source ? createReadStream(join(directory, source)) : content,
+      ...(source ? { duplex: 'half' } : {}),
       signal: AbortSignal.timeout(600000)
     })
     if (!response.ok) throw new Error(`Upload failed for ${name}: ${response.status}`)
     console.log(`Uploaded ${name}`)
   }
-  const response = await fetch(`${endpoint}/releases`, {
-    method: 'POST',
+  const response = await request(`${endpoint}/releases/${draft.id}`, {
+    method: 'PATCH',
     headers: { ...headers, 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({ draft: false, make_latest: 'true' }),
     signal: AbortSignal.timeout(30000)
   })
-  if (!response.ok) throw new Error(`Release creation failed: ${response.status}`)
-  console.log(`Published ${projectUrl}/-/releases/v${version}`)
+  if (!response.ok) throw new Error(`Release publication failed: ${response.status}`)
+  console.log(`Published ${projectUrl}/releases/tag/v${version}`)
 }
 
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {

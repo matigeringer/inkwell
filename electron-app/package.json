@@ -7,13 +7,13 @@
   "license": "GPL-3.0-only",
   "main": "./out/main/index.js",
   "author": "Inkwell",
-  "homepage": "https://gitlab.com/ada-arg/fountain",
+  "homepage": "https://github.com/matigeringer/inkwell",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/ada-arg/fountain.git"
+    "url": "https://github.com/matigeringer/inkwell.git"
   },
   "bugs": {
-    "url": "https://gitlab.com/ada-arg/fountain/-/issues"
+    "url": "https://github.com/matigeringer/inkwell/issues"
   },
   "scripts": {
     "format": "prettier --write .",

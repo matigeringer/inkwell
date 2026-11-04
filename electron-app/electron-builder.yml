@@ -54,4 +54,4 @@ appImage:
   artifactName: ${name}-${version}-linux-${arch}.${ext}
 deb:
   artifactName: ${name}-${version}-linux-${arch}.${ext}
-  maintainer: Inkwell contributors (https://gitlab.com/ada-arg/fountain/-/issues)
+  maintainer: Inkwell contributors (https://github.com/matigeringer/inkwell/issues)

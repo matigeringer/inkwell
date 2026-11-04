@@ -1,0 +1,99 @@
+name: Build and release
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+jobs:
+  quality:
+    runs-on: ubuntu-22.04
+    defaults:
+      run:
+        working-directory: electron-app
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: electron-app/package-lock.json
+      - run: npm run release:check
+      - run: npm ci
+      - run: npm run check
+      - run: npm audit --omit=dev --audit-level=low
+      - run: npm audit --audit-level=high
+
+  package:
+    needs: quality
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            target: linux
+          - os: windows-2022
+            target: win
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: electron-app
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: electron-app/package-lock.json
+      - run: npm ci
+      - run: npm run build:${{ matrix.target }}
+      - uses: actions/upload-artifact@v6
+        with:
+          name: inkwell-${{ matrix.target }}
+          retention-days: 14
+          compression-level: 0
+          if-no-files-found: error
+          path: |
+            electron-app/dist/*.AppImage
+            electron-app/dist/*.deb
+            electron-app/dist/*-windows-x64.exe
+            electron-app/dist/SHA256SUMS-*.txt
+
+  release:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [quality, package]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+          package-manager-cache: false
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: inkwell-*
+          path: electron-app/dist
+          merge-multiple: true
+      - run: npm run release:publish
+        working-directory: electron-app
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -25,7 +25,7 @@ Electron descarga su binario oficial al ejecutarse por primera vez. Para descarg
 - `npm run release:check`: coherencia entre versión, lockfile y etiqueta de CI.
 - `npm run release:publish -- --dry-run`: verifica los paquetes y genera una vista previa local de la release.
 
-Las descargas e instrucciones de instalación están en el [README principal](../README.md). Consulta la [guía de publicación](../docs/RELEASING.md) para crear una release en GitLab.
+Las descargas e instrucciones de instalación están en el [README principal](../README.md). Consulta la [guía de publicación](../docs/RELEASING.md) para crear una release en GitHub.
 
 ## Conservación de documentos
 
@@ -65,6 +65,6 @@ Sólo los selectores nativos conceden acceso. Las autorizaciones se guardan en `
 
 Todas las ventanas usan sandbox. No usar `--no-sandbox` para solucionar una instalación: Linux necesita namespaces de usuario o el helper de sandbox correctamente instalado. Se verificó el arranque nativo en Linux sin desactivar esta protección.
 
-Se distribuyen AppImage y deb para Linux e ejecutable portable para Windows, únicamente x64. Los paquetes contienen el código compilado, dependencias de producción y la licencia GPL. Los iconos se comparten desde `resources/`. No se incluye un actualizador automático: las actualizaciones se descargan desde Releases. El ejecutable Windows no está firmado por defecto; la guía de publicación documenta la configuración opcional. Los paquetes deben probarse en sus sistemas antes de publicar. No hay credenciales de firma en el repositorio.
+Se distribuyen AppImage y deb para Linux y un ejecutable portable para Windows, únicamente x64. Los paquetes contienen el código compilado, dependencias de producción y la licencia GPL. Los iconos se comparten desde `resources/`. No se incluye un actualizador automático: las actualizaciones se descargan desde Releases. El ejecutable Windows no está firmado por defecto; la guía de publicación documenta la configuración opcional. Los paquetes deben probarse en sus sistemas antes de publicar. No hay credenciales de firma en el repositorio.
 
-GitLab CI ejecuta instalación reproducible, controles, `npm audit --omit=dev` y `npm audit --audit-level=high`. Las vulnerabilidades de producción o los avisos altos/críticos detienen la pipeline. No se fuerzan sustituciones mayores incompatibles. Las pruebas usan directorios temporales y no deben apuntarse a manuscritos reales.
+GitHub Actions ejecuta instalación reproducible, controles, `npm audit --omit=dev` y `npm audit --audit-level=high`. Las vulnerabilidades de producción o los avisos altos/críticos detienen el workflow. No se fuerzan sustituciones mayores incompatibles. Las pruebas usan directorios temporales y no deben apuntarse a manuscritos reales.

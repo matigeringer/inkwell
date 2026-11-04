@@ -41,30 +41,85 @@ test('release requires all artifacts and rejects modified binaries before upload
   const { artifacts, prepare, releasePayload } = await import('../scripts/release.mjs')
   const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'inkwell-release-'))
   t.after(() => fs.rm(directory, { recursive: true, force: true }))
-  const project = 'https://gitlab.example/owner/project'
-  const registry = 'https://gitlab.example/api/v4/projects/1/packages/generic/inkwell/1.0.0'
+  const project = 'https://github.com/owner/project'
   await assert.rejects(prepare('mac', directory), /Platform/)
-  await assert.rejects(releasePayload(directory, project, registry), /ENOENT/)
+  await assert.rejects(releasePayload(directory, project), /ENOENT/)
   for (const [platform, entries] of Object.entries(artifacts())) {
     for (const { name } of entries) await fs.writeFile(path.join(directory, name), `test ${name}`)
     await prepare(platform, directory)
   }
-  const payload = await releasePayload(directory, project, registry)
-  assert.equal(payload.assets.links.length, 5)
+  const payload = await releasePayload(directory, project)
+  assert.equal(payload.assets.length, 5)
   assert.deepEqual(
-    payload.assets.links.map((link) => link.direct_asset_path),
+    payload.assets.map((asset) => asset.name),
     [
-      '/linux/inkwell.AppImage',
-      '/linux/inkwell.deb',
-      '/checksums/SHA256SUMS-linux.txt',
-      '/windows/inkwell.exe',
-      '/checksums/SHA256SUMS-windows.txt'
+      'inkwell-linux-x86_64.AppImage',
+      'inkwell-linux-amd64.deb',
+      'SHA256SUMS-linux.txt',
+      'inkwell-windows-x64.exe',
+      'SHA256SUMS-windows.txt'
     ]
   )
-  assert.ok(payload.assets.links.every((link) => link.url.startsWith(registry + '/')))
+  assert.ok(payload.body.includes(`${project}/blob/v${payload.tag_name.slice(1)}/README.md`))
+  const manifest = payload.assets.find((asset) => asset.name === 'SHA256SUMS-windows.txt')
+  const executable = payload.assets.find((asset) => asset.name === 'inkwell-windows-x64.exe')
+  assert.equal(manifest.content, `${executable.sha256}  ${executable.name}\n`)
   const binary = path.join(directory, artifacts().windows[0].name)
   await fs.appendFile(binary, 'tampered')
-  await assert.rejects(releasePayload(directory, project, registry), /Checksum mismatch/)
+  await assert.rejects(releasePayload(directory, project), /Checksum mismatch/)
   await fs.writeFile(binary, '')
   await assert.rejects(prepare('windows', directory), /Empty artifact/)
+})
+
+test('GitHub release stays a draft until every upload succeeds', async (t) => {
+  const { artifacts, prepare, publish } = await import('../scripts/release.mjs')
+  const { version } = require('../package.json')
+  const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'inkwell-github-release-'))
+  t.after(() => fs.rm(directory, { recursive: true, force: true }))
+  for (const [platform, entries] of Object.entries(artifacts())) {
+    for (const { name } of entries) await fs.writeFile(path.join(directory, name), `test ${name}`)
+    await prepare(platform, directory)
+  }
+  const env = {
+    GITHUB_REF_TYPE: 'tag',
+    GITHUB_REF_NAME: `v${version}`,
+    GITHUB_REPOSITORY: 'owner/project',
+    GITHUB_TOKEN: 'test-token'
+  }
+  const calls = []
+  let failUpload = false
+  const request = async (url, options) => {
+    const method = options.method || 'GET'
+    calls.push({ url, method })
+    if (method === 'GET') return new Response('{}', { status: 404 })
+    if (url.endsWith('/releases')) {
+      assert.equal(JSON.parse(options.body).draft, true)
+      return Response.json({
+        id: 42,
+        upload_url: 'https://uploads.github.com/repos/owner/project/releases/42/assets{?name,label}'
+      })
+    }
+    if (method === 'POST') {
+      const chunks = []
+      if (typeof options.body === 'string') chunks.push(Buffer.from(options.body))
+      else for await (const chunk of options.body) chunks.push(chunk)
+      assert.equal(Buffer.concat(chunks).length, Number(options.headers['Content-Length']))
+      return new Response('{}', { status: failUpload ? 500 : 201 })
+    }
+    assert.equal(method, 'PATCH')
+    assert.equal(JSON.parse(options.body).draft, false)
+    return Response.json({})
+  }
+  await publish(false, { directory, env, request })
+  assert.deepEqual(
+    calls.map((call) => call.method),
+    ['GET', 'POST', 'POST', 'POST', 'POST', 'POST', 'POST', 'PATCH']
+  )
+  calls.length = 0
+  failUpload = true
+  await assert.rejects(publish(false, { directory, env, request }), /Upload failed/)
+  assert.ok(!calls.some((call) => call.method === 'PATCH'))
+  calls.length = 0
+  await assert.rejects(publish(false, { directory, env: {}, request }), /version tag workflow/)
+  assert.equal(calls.length, 0)
 })
