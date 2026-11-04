@@ -15,6 +15,7 @@ release/
 *.deb
 *.snap
 *.rpm
+*.blockmap
 *.zip
 *.tar.gz
 
@@ -70,3 +71,9 @@ Thumbs.db
 
 # AI agent project rules
 GEMINI.md
+
+# Local agent configuration
+.agents/
+.codex/
+.aws/
+skills/

@@ -1,42 +1,57 @@
 appId: com.inkwell.app
 productName: Inkwell
 directories:
-  buildResources: build
+  buildResources: resources
+  output: dist
+# Include compiled code and production dependencies, without source/tests/caches.
 files:
-  - '!dist/**'
-  - '!**/.vscode/*'
-  - '!src/**'
-  - '!tests/**'
-  - '!scripts/**'
-  - '!electron.vite.config.{js,ts,mjs,cjs}'
-  - '!{.eslintcache,eslint.config.mjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
-  - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
+  - out/**/*
+  - package.json
+  - from: resources
+    to: resources
+    filter:
+      - icon.png
+      - icon.ico
+extraFiles:
+  - from: ../LICENSE
+    to: LICENSE
+asar: true
 asarUnpack:
   - resources/**
+npmRebuild: false
+publish: null
 win:
   executableName: inkwell
-  icon: build/icon.ico
+  icon: resources/icon.ico
+  target:
+    - target: portable
+      arch: [x64]
+portable:
+  artifactName: ${name}-${version}-windows-${arch}.${ext}
+  requestExecutionLevel: user
 nsis:
-  artifactName: ${name}-${version}-setup.${ext}
+  artifactName: ${name}-${version}-windows-${arch}-setup.${ext}
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
-  createDesktopShortcut: always
-mac:
-  icon: build/icon.icns
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    NSDocumentsFolderUsageDescription: Open and save documents selected by the user.
-    NSDownloadsFolderUsageDescription: Open and save documents selected by the user.
-dmg:
-  artifactName: ${name}-${version}.${ext}
+  createDesktopShortcut: true
+  deleteAppDataOnUninstall: false
+  license: ../LICENSE
+  installerLanguages: [es_ES, en_US]
 linux:
-  icon: build/icon.png
+  executableName: inkwell
+  icon: resources/icon.png
   syncDesktopName: true
   target:
-    - AppImage
-    - snap
-    - deb
-  category: Utility
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Office
 appImage:
-  artifactName: ${name}-${version}.${ext}
-npmRebuild: false
+  artifactName: ${name}-${version}-linux-${arch}.${ext}
+deb:
+  artifactName: ${name}-${version}-linux-${arch}.${ext}
+  maintainer: Inkwell contributors (https://gitlab.com/ada-arg/fountain/-/issues)

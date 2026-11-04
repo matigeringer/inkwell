@@ -38,7 +38,10 @@ const waitFor = async (condition) => {
       window.webContents.once('did-finish-load', () => resolve(window))
     })
   )
-  require('../out/main/index.js')
+  const entry = process.argv.includes('--packaged')
+    ? '../dist/linux-unpacked/resources/app.asar/out/main/index.js'
+    : '../out/main/index.js'
+  require(entry)
   const window = await created
   const evaluate = (code) => window.webContents.executeJavaScript(code)
   await waitFor(() => evaluate('Boolean(document.querySelector(".welcome-actions"))'))

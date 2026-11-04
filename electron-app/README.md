@@ -17,8 +17,15 @@ Electron descarga su binario oficial al ejecutarse por primera vez. Para descarg
 - `npm test`: pruebas de archivos, historial, contratos IPC, sesión, exportación e interfaz React/Tiptap.
 - `npm run check`: ESLint sin advertencias, pruebas y compilación de producción.
 - `npm run test:electron`: prueba nativa de arranque, sandbox, IPC, edición, guardado y PDF; utiliza perfil y archivos temporales en Linux, sin acceder a los documentos del usuario.
+- `npm run test:packaged`: repite esa prueba sobre el código y las dependencias del ASAR generado por `build:linux`.
 - `npm run build:unpack`: paquete para inspección local.
-- `npm run build:win`, `build:mac`, `build:linux`: instaladores de cada plataforma.
+- `npm run build:linux`: AppImage y deb x64, con `SHA256SUMS-linux.txt`.
+- `npm run build:win`: ejecutable portable x64, con `SHA256SUMS-windows.txt`, compilable en Windows o Linux.
+- `npm run build:win:installer`: instalador NSIS opcional. Requiere Windows o Wine funcional en Linux y no forma parte de las descargas de la release.
+- `npm run release:check`: coherencia entre versión, lockfile y etiqueta de CI.
+- `npm run release:publish -- --dry-run`: verifica los paquetes y genera una vista previa local de la release.
+
+Las descargas e instrucciones de instalación están en el [README principal](../README.md). Consulta la [guía de publicación](../docs/RELEASING.md) para crear una release en GitLab.
 
 ## Conservación de documentos
 
@@ -58,6 +65,6 @@ Sólo los selectores nativos conceden acceso. Las autorizaciones se guardan en `
 
 Todas las ventanas usan sandbox. No usar `--no-sandbox` para solucionar una instalación: Linux necesita namespaces de usuario o el helper de sandbox correctamente instalado. Se verificó el arranque nativo en Linux sin desactivar esta protección.
 
-No se publica ni actualiza desde una URL de ejemplo. Firma de Windows, notarización de macOS, contacto del responsable y validación de instaladores deben configurarse en el entorno de distribución correspondiente. No hay credenciales de firma en el repositorio.
+Se distribuyen AppImage y deb para Linux e ejecutable portable para Windows, únicamente x64. Los paquetes contienen el código compilado, dependencias de producción y la licencia GPL. Los iconos se comparten desde `resources/`. No se incluye un actualizador automático: las actualizaciones se descargan desde Releases. El ejecutable Windows no está firmado por defecto; la guía de publicación documenta la configuración opcional. Los paquetes deben probarse en sus sistemas antes de publicar. No hay credenciales de firma en el repositorio.
 
-GitLab CI ejecuta instalación reproducible, controles, `npm audit --omit=dev` y `npm audit --audit-level=high`. Quedan avisos moderados de `minimatch` propagados por herramientas de lint/empaquetado, sin forzar sustituciones mayores incompatibles. Las pruebas usan directorios temporales y no deben apuntarse a manuscritos reales.
+GitLab CI ejecuta instalación reproducible, controles, `npm audit --omit=dev` y `npm audit --audit-level=high`. Las vulnerabilidades de producción o los avisos altos/críticos detienen la pipeline. No se fuerzan sustituciones mayores incompatibles. Las pruebas usan directorios temporales y no deben apuntarse a manuscritos reales.
