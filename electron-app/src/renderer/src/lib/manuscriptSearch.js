@@ -54,16 +54,24 @@ export function matchClassName(isActive) {
   return isActive ? 'manuscript-match is-current-match' : 'manuscript-match'
 }
 
-export function highlightManuscriptMatches(editor, matches, activeIndex) {
+export function highlightManuscriptMatches(editor, matches, activeIndex, workspaceMatch) {
   const { state, view } = editor
-  if (!matches.length && searchHighlightsKey.getState(state) === DecorationSet.empty) return
-
-  const decorations = DecorationSet.create(
-    state.doc,
-    matches.map(({ from, to }, index) =>
-      Decoration.inline(from, to, { class: matchClassName(index === activeIndex) })
-    )
+  if (
+    !matches.length &&
+    !workspaceMatch &&
+    searchHighlightsKey.getState(state) === DecorationSet.empty
   )
+    return
+
+  const ranges = matches.map(({ from, to }, index) =>
+    Decoration.inline(from, to, { class: matchClassName(index === activeIndex) })
+  )
+  if (workspaceMatch) {
+    ranges.push(
+      Decoration.inline(workspaceMatch.from, workspaceMatch.to, { class: 'workspace-editor-match' })
+    )
+  }
+  const decorations = DecorationSet.create(state.doc, ranges)
   view.dispatch(state.tr.setMeta(searchHighlightsKey, decorations).setMeta('addToHistory', false))
 }
 
@@ -73,5 +81,43 @@ export function revealMatch(container, match) {
   const bottom = bounds.top + container.clientHeight
   if (rect.top < bounds.top || rect.bottom > bottom) {
     container.scrollTop += (rect.top + rect.bottom - bounds.top - bottom) / 2
+  }
+}
+
+export function manuscriptTextBlocks(doc) {
+  const blocks = []
+  doc.descendants((node, pos) => {
+    if (!node.isTextblock) return
+    const text = node.textBetween(0, node.content.size, '', '\n')
+    if (text) blocks.push({ text, start: pos + 1 })
+    return false
+  })
+  return blocks
+}
+
+export function syncSourceOverlay(source, overlay) {
+  overlay.style.width = `${source.clientWidth}px`
+  overlay.style.height = `${source.clientHeight}px`
+  overlay.scrollTop = source.scrollTop
+  overlay.scrollLeft = source.scrollLeft
+}
+
+export function revealSourceMatch(source, { from, to }, onReveal) {
+  const overlay = document.createElement('div')
+  overlay.className = 'source-search-overlay fountain-source-editor'
+  overlay.style.visibility = 'hidden'
+  const match = document.createElement('span')
+  const text = source.value
+  match.textContent = text.slice(from, to)
+  overlay.append(text.slice(0, from), match, text.slice(to), text.endsWith('\n') ? '\u200b' : '')
+  source.before(overlay)
+  try {
+    source.setSelectionRange(from, from)
+    syncSourceOverlay(source, overlay)
+    revealMatch(source, match)
+    syncSourceOverlay(source, overlay)
+    onReveal(match)
+  } finally {
+    overlay.remove()
   }
 }

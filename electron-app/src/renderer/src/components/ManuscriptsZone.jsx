@@ -13,13 +13,15 @@ export default function ManuscriptsZone({
   onItemDeleted,
   onRefreshFolderTree,
   onCloseFolder,
+  onSearchFolder,
+  hidden,
   showToast,
   language = 'es'
 }) {
   const t = getTranslation(language)
 
   return (
-    <div className="manuscripts-zone">
+    <div className="manuscripts-zone" hidden={hidden}>
       {looseFiles.length > 0 && (
         <div className="loose-files">
           {looseFiles.map((path) => (
@@ -67,6 +69,7 @@ export default function ManuscriptsZone({
               onSelectFile={(filePath) => onSelectFile?.(filePath, folder.path)}
               onRefreshTree={() => onRefreshFolderTree?.(folder.path)}
               onCloseFolder={() => onCloseFolder?.(folder.path)}
+              onSearchFolder={onSearchFolder}
               showToast={showToast}
               onItemRenamed={onItemRenamed}
               onItemDeleted={onItemDeleted}

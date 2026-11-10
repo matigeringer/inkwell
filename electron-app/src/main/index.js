@@ -11,8 +11,10 @@ import {
 } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'node:url'
+import { Worker } from 'node:worker_threads'
 import { FileService, validateContent, validateName } from './fileService'
 import { isTrustedSender, isSafeExternalUrl } from './ipcSecurity'
+import { scanWorkspace, searchInWorker } from './workspaceSearch'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
@@ -53,6 +55,7 @@ if (!app.requestSingleInstanceLock()) app.exit(0)
 const trustedWindows = new Set()
 const closeRequests = new Map()
 const closeReady = new Set()
+const workspaceSearches = new Map()
 const rendererUrl =
   is.dev && process.env.ELECTRON_RENDERER_URL
     ? process.env.ELECTRON_RENDERER_URL
@@ -125,6 +128,8 @@ function createWindow() {
     trustedWindows.delete(contents)
     closeReady.delete(contents)
     closeRequests.delete(contents)
+    workspaceSearches.get(contents)?.controller.abort()
+    workspaceSearches.delete(contents)
   })
   if (process.platform === 'win32') mainWindow.setIcon(appIcon)
 
@@ -323,6 +328,44 @@ app.whenReady().then(async () => {
     return fileService.readTree(folderPath)
   })
   handle('folder:read-tree', (_event, path) => fileService.readTree(path))
+  handle('workspace-search:start', async ({ sender }, request) => {
+    if (typeof request?.id !== 'string' || request.id.length > 100) {
+      throw new Error('Identificador de búsqueda inválido')
+    }
+    workspaceSearches.get(sender)?.controller.abort()
+    const controller = new AbortController()
+    const search = { id: request.id, controller }
+    workspaceSearches.set(sender, search)
+    let worker
+    try {
+      return await scanWorkspace(fileService, request, {
+        signal: controller.signal,
+        publish: (batch) => {
+          if (workspaceSearches.get(sender) === search && !sender.isDestroyed()) {
+            sender.send('workspace-search:batch', { id: search.id, ...batch })
+          }
+        },
+        searchText: (data) => {
+          if (!worker) {
+            worker = new Worker(join(__dirname, 'workspace-search-worker.js'))
+            // A worker can fail between requests as well as while processing one.
+            worker.on('error', () => {})
+          }
+          return searchInWorker(worker, data, controller.signal)
+        }
+      })
+    } catch (error) {
+      if (controller.signal.aborted) return { canceled: true }
+      throw error
+    } finally {
+      if (workspaceSearches.get(sender) === search) workspaceSearches.delete(sender)
+      await worker?.terminate()
+    }
+  })
+  handle('workspace-search:cancel', ({ sender }, id) => {
+    const search = workspaceSearches.get(sender)
+    if (search?.id === id) search.controller.abort()
+  })
   handle('folder:create', (_event, { parentPath, folderName } = {}) =>
     fileService.create(parentPath, folderName, true)
   )

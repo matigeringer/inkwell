@@ -17,7 +17,8 @@ import {
   FilePdfIcon,
   FileDocxIcon,
   FileOdtIcon,
-  FileMarkdownIcon
+  FileMarkdownIcon,
+  SearchIcon
 } from './Icons'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { getTranslation } from '../i18n'
@@ -39,6 +40,7 @@ export default function FileTree({
   onItemDeleted,
   onRefreshTree,
   onCloseFolder,
+  onSearchFolder,
   showToast,
   language = 'es'
 }) {
@@ -600,6 +602,19 @@ export default function FileTree({
           </div>
 
           <div className="tree-header-actions">
+            {onSearchFolder && (
+              <button
+                type="button"
+                className="btn-tree-header-icon"
+                onClick={() =>
+                  onSearchFolder({ path: openedFolder.path, rootPath: openedFolder.path })
+                }
+                title={t.workspaceSearch.title}
+                aria-label={t.workspaceSearch.title}
+              >
+                <SearchIcon size={13} aria-hidden="true" />
+              </button>
+            )}
             <button
               type="button"
               className="btn-tree-header-icon"
@@ -881,6 +896,21 @@ export default function FileTree({
             </>
           ) : (
             <>
+              {onSearchFolder && (
+                <button
+                  type="button"
+                  className="tree-context-menu-item"
+                  onClick={() => {
+                    onSearchFolder({ rootPath: openedFolder.path, path: contextMenu.item.path })
+                    setContextMenu(null)
+                  }}
+                >
+                  <span className="tree-context-menu-icon">
+                    <SearchIcon size={15} />
+                  </span>
+                  <span className="tree-context-menu-label">{t.workspaceSearch.inFolder}</span>
+                </button>
+              )}
               <button
                 type="button"
                 className="tree-context-menu-item"

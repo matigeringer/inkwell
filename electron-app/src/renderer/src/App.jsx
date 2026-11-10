@@ -3,6 +3,7 @@ import { flushSync } from 'react-dom'
 import Editor from './components/Editor'
 import ProfileModal from './components/ProfileModal'
 import ManuscriptsZone from './components/ManuscriptsZone'
+import WorkspaceSearch from './components/WorkspaceSearch'
 import {
   PlusIcon,
   SunIcon,
@@ -14,6 +15,7 @@ import {
 import { getTranslation } from './i18n'
 import { listDrafts } from './lib/drafts'
 import { loadPreferences, normalizePreferences } from './lib/preferences'
+import useWorkspaceSearch from './hooks/useWorkspaceSearch'
 
 function findFirstFileInTree(items) {
   if (!Array.isArray(items)) return null
@@ -84,6 +86,15 @@ function App() {
   }, [])
   const [view, setView] = useState('home') // 'home' | 'editor'
   const [activeDoc, setActiveDoc] = useState(null)
+  const [isZenMode, setIsZenMode] = useState(false)
+  const [workspaceJump, setWorkspaceJump] = useState(null)
+  const workspaceOpenPending = useRef(false)
+  useEffect(() => {
+    if (window.api?.onFullScreenChange) return window.api.onFullScreenChange(setIsZenMode)
+    const sync = () => setIsZenMode(Boolean(document.fullscreenElement))
+    document.addEventListener('fullscreenchange', sync)
+    return () => document.removeEventListener('fullscreenchange', sync)
+  }, [])
   useEffect(() => {
     if (view === 'home') return window.api?.onRequestClose?.(() => true)
   }, [view])
@@ -98,6 +109,14 @@ function App() {
     }
   })
   const [looseFileError, setLooseFileError] = useState(null)
+  const workspaceSearch = useWorkspaceSearch(openedFolders)
+  const {
+    open: openWorkspaceSearch,
+    close: closeWorkspaceSearch,
+    invalidate: invalidateWorkspaceSearch,
+    selectMatch: selectWorkspaceMatch
+  } = workspaceSearch
+  const workspaceRequestId = workspaceSearch.result?.id
 
   useEffect(() => {
     try {
@@ -515,7 +534,7 @@ function App() {
 
   // Seleccionar archivo desde el árbol o Zen
   const handleSelectFile = useCallback(
-    async (filePath, folderPath = null) => {
+    async (filePath, folderPath = null, jump = null) => {
       if (!window.api?.readFile) return
       try {
         const res = await window.api.readFile(filePath)
@@ -537,6 +556,7 @@ function App() {
             rememberLooseFile(res.filePath)
           }
           setLooseFileError(null)
+          setWorkspaceJump(jump)
           setView('editor')
           return true
         } else {
@@ -553,62 +573,100 @@ function App() {
     [openedFolders, rememberLooseFile, showToast]
   )
 
-  const handleItemRenamed = useCallback((result) => {
-    const update = (path) =>
-      path === result.oldPath || folderContainsFile(result.oldPath, path)
-        ? result.newPath + path.slice(result.oldPath.length)
-        : path
-    const updateTree = (items) =>
-      items.map((item) => ({
-        ...item,
-        path: update(item.path),
-        name: item.path === result.oldPath ? result.newName : item.name,
-        ...(item.children ? { children: updateTree(item.children) } : {})
-      }))
-    setLooseFiles((files) => files.map(update))
-    setActiveDoc((doc) =>
-      doc?.filePath
-        ? {
-            ...doc,
-            filePath: update(doc.filePath),
-            fileName: update(doc.filePath).split(/[\\/]/).pop()
-          }
-        : doc
-    )
-    setActiveFolderPath((path) => (path ? update(path) : path))
-    setLastFileByFolder((previous) =>
-      Object.fromEntries(
-        Object.entries(previous).map(([folder, file]) => [update(folder), update(file)])
+  const openWorkspaceResult = useCallback(
+    async (group, match, current = false) => {
+      if (workspaceOpenPending.current) return false
+      workspaceOpenPending.current = true
+      const jump = {
+        path: group.path,
+        match,
+        version: group.version,
+        requestId: workspaceRequestId
+      }
+      try {
+        if (current) setWorkspaceJump(jump)
+        else if (!(await handleSelectFile(group.path, group.folderPath, jump))) return false
+        return true
+      } finally {
+        workspaceOpenPending.current = false
+      }
+    },
+    [handleSelectFile, workspaceRequestId]
+  )
+
+  const finishWorkspaceJump = useCallback(
+    (jump, found) => {
+      setWorkspaceJump((current) => (current === jump ? null : current))
+      if (found) selectWorkspaceMatch(jump.requestId, jump.path, jump.match)
+      else showToast(t.workspaceSearch.stale)
+    },
+    [selectWorkspaceMatch, showToast, t.workspaceSearch.stale]
+  )
+
+  const handleItemRenamed = useCallback(
+    (result) => {
+      invalidateWorkspaceSearch()
+      const update = (path) =>
+        path === result.oldPath || folderContainsFile(result.oldPath, path)
+          ? result.newPath + path.slice(result.oldPath.length)
+          : path
+      const updateTree = (items) =>
+        items.map((item) => ({
+          ...item,
+          path: update(item.path),
+          name: item.path === result.oldPath ? result.newName : item.name,
+          ...(item.children ? { children: updateTree(item.children) } : {})
+        }))
+      setLooseFiles((files) => files.map(update))
+      setActiveDoc((doc) =>
+        doc?.filePath
+          ? {
+              ...doc,
+              filePath: update(doc.filePath),
+              fileName: update(doc.filePath).split(/[\\/]/).pop()
+            }
+          : doc
       )
-    )
-    setOpenedFolders((folders) => {
-      const next = folders.map((folder) => ({
-        ...folder,
-        path: update(folder.path),
-        name: folder.path === result.oldPath ? result.newName : folder.name,
-        tree: updateTree(folder.tree)
-      }))
-      localStorage.setItem(
-        'fountain_opened_folders',
-        JSON.stringify(next.map((folder) => folder.path))
+      setActiveFolderPath((path) => (path ? update(path) : path))
+      setLastFileByFolder((previous) =>
+        Object.fromEntries(
+          Object.entries(previous).map(([folder, file]) => [update(folder), update(file)])
+        )
       )
-      return next
-    })
-  }, [])
-  const handleItemDeleted = useCallback(({ targetPath }) => {
-    const removed = (path) => path === targetPath || folderContainsFile(targetPath, path)
-    setLooseFiles((files) => files.filter((path) => !removed(path)))
-    setActiveDoc((doc) => (doc?.filePath && removed(doc.filePath) ? null : doc))
-    setOpenedFolders((folders) => {
-      const next = folders.filter((folder) => !removed(folder.path))
-      localStorage.setItem(
-        'fountain_opened_folders',
-        JSON.stringify(next.map((folder) => folder.path))
-      )
-      return next
-    })
-    setActiveFolderPath((path) => (path && removed(path) ? null : path))
-  }, [])
+      setOpenedFolders((folders) => {
+        const next = folders.map((folder) => ({
+          ...folder,
+          path: update(folder.path),
+          name: folder.path === result.oldPath ? result.newName : folder.name,
+          tree: updateTree(folder.tree)
+        }))
+        localStorage.setItem(
+          'fountain_opened_folders',
+          JSON.stringify(next.map((folder) => folder.path))
+        )
+        return next
+      })
+    },
+    [invalidateWorkspaceSearch]
+  )
+  const handleItemDeleted = useCallback(
+    ({ targetPath }) => {
+      invalidateWorkspaceSearch()
+      const removed = (path) => path === targetPath || folderContainsFile(targetPath, path)
+      setLooseFiles((files) => files.filter((path) => !removed(path)))
+      setActiveDoc((doc) => (doc?.filePath && removed(doc.filePath) ? null : doc))
+      setOpenedFolders((folders) => {
+        const next = folders.filter((folder) => !removed(folder.path))
+        localStorage.setItem(
+          'fountain_opened_folders',
+          JSON.stringify(next.map((folder) => folder.path))
+        )
+        return next
+      })
+      setActiveFolderPath((path) => (path && removed(path) ? null : path))
+    },
+    [invalidateWorkspaceSearch]
+  )
 
   // Cambiar carpeta/manuscrito activo desde el desplegable del editor
   const handleSwitchFolder = useCallback(
@@ -659,10 +717,41 @@ function App() {
     setView('home')
   }
 
+  const activeFolder = openedFolders.find((folder) => folder.path === activeFolderPath)
+
   // Atajos globales de la aplicación
   useEffect(() => {
     const handleKeyDown = (e) => {
       const isCtrlOrMeta = e.ctrlKey || e.metaKey
+      if (e.defaultPrevented || document.querySelector('[aria-modal="true"]')) return
+      if (
+        isCtrlOrMeta &&
+        e.altKey &&
+        !e.shiftKey &&
+        !e.isComposing &&
+        !e.getModifierState('AltGraph') &&
+        (e.code === 'KeyF' || e.key.toLowerCase() === 'f')
+      ) {
+        const scope = workspaceSearch.isOpen
+          ? workspaceSearch.scope
+          : activeFolder && { path: activeFolder.path, rootPath: activeFolder.path }
+        if (!scope) return
+        e.preventDefault()
+        setShowAddMenu(false)
+        openWorkspaceSearch(scope)
+        return
+      }
+      if (
+        view === 'home' &&
+        e.key === 'Escape' &&
+        workspaceSearch.isOpen &&
+        !e.isComposing &&
+        !showAddMenu
+      ) {
+        e.preventDefault()
+        closeWorkspaceSearch()
+        return
+      }
 
       // Ctrl+N: Nuevo documento
       if (isCtrlOrMeta && !e.shiftKey && (e.key === 'n' || e.key === 'N') && view === 'home') {
@@ -688,7 +777,18 @@ function App() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [view, handleCreate, handleOpenFile, handleOpenFolder])
+  }, [
+    view,
+    handleCreate,
+    handleOpenFile,
+    handleOpenFolder,
+    openWorkspaceSearch,
+    closeWorkspaceSearch,
+    workspaceSearch.isOpen,
+    workspaceSearch.scope,
+    activeFolder,
+    showAddMenu
+  ])
 
   // Calcular modo efectivo para la interfaz
   const isSystemDark =
@@ -698,10 +798,6 @@ function App() {
   const effectiveMode =
     preferences.mode === 'system' ? (isSystemDark ? 'dark' : 'light') : preferences.mode
   const isEffectiveDark = effectiveMode === 'dark'
-
-  const activeFolder = activeFolderPath
-    ? openedFolders.find((f) => f.path === activeFolderPath) || null
-    : null
 
   if (view === 'editor') {
     return (
@@ -718,6 +814,12 @@ function App() {
           openedFolder={activeFolder}
           openedFolders={openedFolders}
           looseFiles={looseFiles}
+          isZenMode={isZenMode}
+          setIsZenMode={setIsZenMode}
+          workspaceSearch={workspaceSearch}
+          workspaceJump={workspaceJump}
+          onOpenWorkspaceResult={openWorkspaceResult}
+          onFinishWorkspaceJump={finishWorkspaceJump}
           onSavedFile={(path, name, content) => {
             setActiveDoc((doc) => ({ ...doc, filePath: path, fileName: name, content }))
             if (!openedFolders.some((folder) => folderContainsFile(folder.path, path)))
@@ -795,7 +897,16 @@ function App() {
                 )}
               </div>
             </div>
+            {workspaceSearch.isOpen && (
+              <WorkspaceSearch
+                search={workspaceSearch}
+                labels={t.workspaceSearch}
+                navigationLabels={t.search}
+                onOpen={openWorkspaceResult}
+              />
+            )}
             <ManuscriptsZone
+              hidden={workspaceSearch.isOpen}
               openedFolders={openedFolders}
               looseFiles={looseFiles}
               looseFileError={looseFileError}
@@ -810,6 +921,7 @@ function App() {
               onItemDeleted={handleItemDeleted}
               onRefreshFolderTree={handleRefreshFolderTree}
               onCloseFolder={handleCloseFolder}
+              onSearchFolder={openWorkspaceSearch}
               language={preferences.language}
             />
           </div>

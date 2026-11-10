@@ -78,6 +78,19 @@ export const translations = {
         `¿Estás seguro de que deseas eliminar la carpeta "${name}" y todo su contenido?`,
       descFile: (name) => `¿Estás seguro de que deseas eliminar el archivo "${name}"?`
     },
+    workspaceSearch: {
+      title: 'Buscar en la carpeta',
+      inFolder: 'Buscar en esta carpeta',
+      close: 'Cerrar búsqueda en carpeta',
+      placeholder: 'Buscar una palabra…',
+      noResults: 'Sin coincidencias',
+      error: 'No se pudo completar la búsqueda.',
+      canceled: 'Búsqueda interrumpida.',
+      progress: 'Buscando…',
+      limited: 'Resultados parciales. Acotá la búsqueda para ver más.',
+      skipped: (count) => `Archivos o carpetas omitidos: ${count}`,
+      stale: 'La coincidencia cambió. Repetí la búsqueda para ubicarla.'
+    },
     search: {
       title: 'Buscar en el manuscrito',
       placeholder: 'Buscar palabra o frase…',
@@ -414,6 +427,19 @@ export const translations = {
       descFolder: (name) =>
         `Are you sure you want to delete the folder "${name}" and all of its contents?`,
       descFile: (name) => `Are you sure you want to delete the file "${name}"?`
+    },
+    workspaceSearch: {
+      title: 'Find in folder',
+      inFolder: 'Find in this folder',
+      close: 'Close folder search',
+      placeholder: 'Find a word…',
+      noResults: 'No matches',
+      error: 'The search could not be completed.',
+      canceled: 'Search interrupted.',
+      progress: 'Searching…',
+      limited: 'Partial results. Narrow your search to see more.',
+      skipped: (count) => `Files or folders skipped: ${count}`,
+      stale: 'The match changed. Run the search again to locate it.'
     },
     search: {
       title: 'Find in manuscript',

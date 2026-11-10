@@ -1985,6 +1985,144 @@
   flex-shrink: 0;
 }
 
+.editor-sidebar-panel[hidden],
+.manuscripts-zone[hidden],
+.zen-floating-folder[hidden] {
+  display: none;
+}
+
+.workspace-search {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  overflow-y: auto;
+}
+
+.sidebar .workspace-search {
+  padding: 0;
+}
+
+.workspace-search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.workspace-search-field {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0 0.45rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+
+.workspace-search-field:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.workspace-search-field svg {
+  flex: none;
+}
+
+.workspace-search-field input {
+  width: 100%;
+  min-width: 0;
+  padding: 0.42rem 0;
+  font: inherit;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  outline: 0;
+}
+
+.workspace-search-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0.2rem 0.6rem;
+}
+
+.workspace-search-folder {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-muted);
+  font: 0.7rem var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspace-search-status:not(:empty) {
+  padding: 0 0.2rem 0.55rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.workspace-search-results {
+  flex: 1 0 5rem;
+  overflow: auto;
+  padding: 0 2px;
+  scrollbar-width: thin;
+}
+
+.workspace-search-group {
+  border-top: 1px solid var(--rule);
+  padding: 0.35rem 0;
+}
+
+.workspace-search-file {
+  display: flex;
+  gap: 0.45rem;
+  align-items: flex-start;
+  padding: 0.3rem 0.35rem;
+  overflow-wrap: anywhere;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.workspace-search-file svg {
+  flex: none;
+  color: var(--accent-primary);
+}
+
+.workspace-search-hit {
+  width: 100%;
+  padding: 0.4rem 0.35rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-align: start;
+  cursor: pointer;
+}
+
+.workspace-search-hit:hover,
+.workspace-search-hit:focus-visible {
+  background: var(--bg-hover);
+}
+
+.workspace-search-hit[aria-current='true'] {
+  background: var(--accent-primary-subtle);
+  box-shadow: inset 2px 0 var(--accent-primary);
+}
+
+.workspace-search-hit mark {
+  color: inherit;
+}
+
 @keyframes sidebarSlideIn {
   from {
     width: 0;
@@ -2371,43 +2509,45 @@
   color: var(--text-muted);
 }
 
-.manuscript-search input::-webkit-search-cancel-button {
+:is(.manuscript-search, .workspace-search-field) input::-webkit-search-cancel-button {
   display: none;
 }
 
-.manuscript-search-count {
+:is(.manuscript-search-count, .workspace-search-count) {
   font: 0.72rem var(--font-mono);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-.manuscript-search-actions {
+:is(.manuscript-search-actions, .workspace-search-actions) {
   display: flex;
   align-items: center;
 }
 
-.manuscript-search-actions .btn-icon-sober {
+:is(.manuscript-search-actions, .workspace-search-actions) .btn-icon-sober {
   width: 28px;
   height: 28px;
 }
 
-.manuscript-search-actions .btn-icon-sober:disabled {
+:is(.manuscript-search-actions, .workspace-search-actions) .btn-icon-sober:disabled {
   opacity: 0.4;
   cursor: default;
   border-color: transparent;
   color: var(--text-secondary);
 }
 
-.manuscript-search-previous {
+:is(.manuscript-search-previous, .workspace-search-previous) {
   transform: rotate(180deg);
 }
 
-.manuscript-match {
+.manuscript-match,
+.workspace-editor-match {
   background-color: var(--selection);
   border-radius: var(--radius-sm);
 }
 
-.manuscript-match.is-current-match {
+.manuscript-match.is-current-match,
+.workspace-editor-match {
   background-color: color-mix(in srgb, var(--accent-primary) 32%, var(--bg-canvas));
   box-shadow: inset 0 -2px var(--accent-primary);
 }

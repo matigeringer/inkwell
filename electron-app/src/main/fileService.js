@@ -1,4 +1,4 @@
-import { promises as fs } from 'node:fs'
+import { constants, promises as fs } from 'node:fs'
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { createHash, randomUUID } from 'node:crypto'
 import { atomicWrite, createQueue, renameWithoutReplacement } from './storage'
@@ -6,6 +6,8 @@ import { atomicWrite, createQueue, renameWithoutReplacement } from './storage'
 export const MAX_DOCUMENT_BYTES = 10 * 1024 * 1024
 const EXTENSIONS = new Set(['.md', '.markdown', '.mdown', '.mkd', '.txt'])
 const IGNORED = new Set(['node_modules', 'dist', 'out', 'build', '$RECYCLE.BIN'])
+export const isDocumentPath = (path) => EXTENSIONS.has(extname(path).toLowerCase())
+const isIgnoredName = (name) => name.startsWith('.') || IGNORED.has(name)
 const hash = (content) => createHash('sha256').update(content).digest('hex')
 export const containsPath = (parent, child) => {
   const rel = relative(parent, child)
@@ -154,6 +156,61 @@ export class FileService {
     })
   }
 
+  async searchDirectory(path, rootPath = path) {
+    const root = await this.authorize(rootPath, { directory: true })
+    const directory = await this.authorize(path, { directory: true })
+    if (
+      root !== resolve(rootPath) ||
+      directory !== resolve(path) ||
+      !containsPath(root, directory) ||
+      relative(root, directory).split(sep).some(isIgnoredName)
+    ) {
+      throw new Error('Carpeta fuera del alcance de búsqueda')
+    }
+    return directory
+  }
+
+  async searchDocument(path, directory) {
+    const target = await this.authorize(path)
+    if (
+      target !== resolve(path) ||
+      (directory && !containsPath(directory, target)) ||
+      !isDocumentPath(target) ||
+      !(await fs.lstat(target)).isFile()
+    ) {
+      throw new Error('Archivo fuera del alcance de búsqueda')
+    }
+    return target
+  }
+
+  async readSearchDocument(path, directory, byteBudget) {
+    // Bound the read even if the file grows after stat. Search never changes save baselines.
+    const file = await fs.open(
+      path,
+      constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
+    )
+    try {
+      const stat = await file.stat()
+      if (!stat.isFile() || stat.size > MAX_DOCUMENT_BYTES) throw new Error('Archivo inválido')
+      if (stat.size > byteBudget) return null
+      await this.searchDocument(path, directory)
+      const current = await fs.lstat(path)
+      if (stat.dev !== current.dev || stat.ino !== current.ino)
+        throw new Error('Archivo modificado')
+      const buffer = Buffer.allocUnsafe(stat.size)
+      let bytesRead = 0
+      while (bytesRead < buffer.length) {
+        const read = await file.read(buffer, { offset: bytesRead, position: bytesRead })
+        if (!read.bytesRead) break
+        bytesRead += read.bytesRead
+      }
+      const content = buffer.subarray(0, bytesRead)
+      return { bytesRead, content: content.includes(0) ? null : content.toString('utf8') }
+    } finally {
+      await file.close()
+    }
+  }
+
   async saveFile(filePath, content, { selected = false } = {}) {
     validateContent(content)
     return this.queue(async () => {
@@ -254,20 +311,25 @@ export class FileService {
     })
   }
 
-  async readTree(folderPath) {
+  async readTree(folderPath, { signal } = {}) {
     const root = await this.authorize(folderPath, { directory: true })
+    if (signal && root !== resolve(folderPath)) throw new Error('Ruta de búsqueda modificada')
     const warnings = []
     let count = 0
     const visit = async (directory, depth) => {
+      signal?.throwIfAborted()
       if (depth > 8 || count > 20000) {
         warnings.push(`Carpeta omitida por tamaño/profundidad: ${directory}`)
         return []
       }
+      if (signal && (await this.canonical(directory)) !== directory) {
+        throw new Error('Ruta de búsqueda modificada')
+      }
       const entries = await fs.readdir(directory, { withFileTypes: true })
       const children = []
       for (const entry of entries) {
-        if (entry.name.startsWith('.') || IGNORED.has(entry.name) || entry.isSymbolicLink())
-          continue
+        signal?.throwIfAborted()
+        if (isIgnoredName(entry.name) || entry.isSymbolicLink()) continue
         count++
         if (count > 20000) {
           warnings.push('Se alcanzó el límite de 20000 elementos')
@@ -283,9 +345,10 @@ export class FileService {
               children: await visit(target, depth + 1)
             })
           } catch (error) {
+            signal?.throwIfAborted()
             warnings.push(`${target}: ${error.message}`)
           }
-        } else if (entry.isFile() && EXTENSIONS.has(extname(entry.name).toLowerCase())) {
+        } else if (entry.isFile() && isDocumentPath(target)) {
           children.push({ name: entry.name, path: target, isDirectory: false })
         }
       }

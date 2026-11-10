@@ -37,12 +37,19 @@ import HistoryModal from './HistoryModal'
 import ManuscriptSearch from './ManuscriptSearch'
 import SourceEditor from './SourceEditor'
 import ZenFloatingFolder from './ZenFloatingFolder'
+import WorkspaceSearch from './WorkspaceSearch'
 import { getTranslation } from '../i18n'
 import useDocumentPersistence from '../hooks/useDocumentPersistence'
 import useManuscriptSearch from '../hooks/useManuscriptSearch'
 import { saveDraft } from '../lib/drafts'
 import { needsSourceEditor } from '../lib/markdownSupport'
-import { revealMatch, SearchHighlights } from '../lib/manuscriptSearch'
+import {
+  manuscriptTextBlocks,
+  revealMatch,
+  revealSourceMatch,
+  SearchHighlights
+} from '../lib/manuscriptSearch'
+import { locateWorkspaceMatch, normalizeSource } from '../../../shared/workspaceMatch'
 
 const EXPORT_OPTIONS = [
   {
@@ -108,6 +115,12 @@ export default function Editor({
   openedFolder,
   openedFolders = [],
   looseFiles = [],
+  isZenMode = false,
+  setIsZenMode,
+  workspaceSearch,
+  workspaceJump,
+  onOpenWorkspaceResult,
+  onFinishWorkspaceJump,
   onSavedFile,
   onSwitchFolder,
   onRefreshFolderTree,
@@ -122,6 +135,7 @@ export default function Editor({
   const defaultDocName = currentLang === 'en' ? 'document.md' : 'documento.md'
 
   const [toast, setToast] = useState(null)
+  const [workspaceHighlight, setWorkspaceHighlight] = useState(null)
   const toastTimeoutRef = useRef(null)
   const showToast = useCallback((message, type = 'info') => {
     clearTimeout(toastTimeoutRef.current)
@@ -152,7 +166,6 @@ export default function Editor({
     () => needsSourceEditor(initialDoc?.content) || /\.txt$/i.test(initialDoc?.fileName || '')
   )
   const transitionRef = useRef(false)
-  const [isZenMode, setIsZenMode] = useState(false)
   const [sidebarHiddenFor, setSidebarHiddenFor] = useState(null)
   const isSidebarOpen = Boolean(openedFolder) && sidebarHiddenFor !== openedFolder.path
   const setIsSidebarOpen = useCallback(
@@ -502,7 +515,7 @@ export default function Editor({
       SearchHighlights
     ],
     content: session.state.content,
-    autofocus: 'end',
+    autofocus: workspaceJump || workspaceSearch?.isOpen ? false : 'end',
     editorProps: {
       attributes: {
         class: 'fountain-editor-content',
@@ -605,9 +618,90 @@ export default function Editor({
     [cancelScrollAnimation]
   )
   // Textareas normalize line endings, so highlight offsets use the same text as the input.
-  const source = isSourceMode ? session.state.content.replace(/\r\n?/g, '\n') : null
-  const search = useManuscriptSearch({ editor, source, onReveal: revealSearchMatch })
+  const source = isSourceMode ? normalizeSource(session.state.content) : null
+  const sourceRef = useRef(null)
+  const workspaceMatch =
+    workspaceHighlight &&
+    workspaceSearch?.isOpen &&
+    workspaceHighlight.requestId === workspaceSearch?.result?.id &&
+    workspaceHighlight.revision === session.state.revision &&
+    workspaceHighlight.filePath === filePath
+      ? workspaceHighlight.range
+      : null
+  const search = useManuscriptSearch({
+    editor,
+    source,
+    sourceRef,
+    workspaceMatch,
+    onReveal: revealSearchMatch
+  })
   const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = search
+  const isWorkspaceSearchOpen = workspaceSearch?.isOpen
+  const closeSearchPanel = workspaceSearch?.close
+  const closeWorkspaceSearch = useCallback(
+    (options) => {
+      setWorkspaceHighlight(null)
+      closeSearchPanel?.({ fallback: sourceRef.current ?? editor?.view.dom, ...options })
+    },
+    [closeSearchPanel, editor]
+  )
+
+  useEffect(() => {
+    if (!workspaceJump || workspaceJump.path !== filePath || !editor) return
+    let canceled = false
+    async function jump() {
+      const content = session.state.content
+      let version
+      if (globalThis.crypto?.subtle) {
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content))
+        version = Array.from(new Uint8Array(digest), (byte) =>
+          byte.toString(16).padStart(2, '0')
+        ).join('')
+      }
+      if (canceled || editor.isDestroyed || session.state.filePath !== filePath) return
+      const surface = isSourceMode ? sourceRef.current : editor.view.dom
+      surface.focus({ preventScroll: true })
+      const blocks = isSourceMode
+        ? [{ text: surface.value, start: 0 }]
+        : manuscriptTextBlocks(editor.state.doc)
+      const range = locateWorkspaceMatch(
+        blocks,
+        workspaceJump.match,
+        version === workspaceJump.version && content === session.state.content
+      )
+      if (range) {
+        cancelScrollAnimation()
+        if (isSourceMode) revealSourceMatch(surface, range, revealSearchMatch)
+        else editor.chain().setTextSelection(range.from).scrollIntoView().run()
+        setWorkspaceHighlight({
+          range,
+          requestId: workspaceJump.requestId,
+          revision: session.state.revision,
+          filePath
+        })
+      }
+      onFinishWorkspaceJump(workspaceJump, Boolean(range))
+    }
+    const frame = requestAnimationFrame(() => {
+      jump().catch(() => {
+        if (!canceled) onFinishWorkspaceJump(workspaceJump, false)
+      })
+    })
+    return () => {
+      canceled = true
+      cancelAnimationFrame(frame)
+    }
+  }, [
+    workspaceJump,
+    filePath,
+    editor,
+    isSourceMode,
+    session,
+    sourceRef,
+    cancelScrollAnimation,
+    revealSearchMatch,
+    onFinishWorkspaceJump
+  ])
 
   // Centrar al cambiar preferencias si está activo
   useEffect(() => {
@@ -942,6 +1036,12 @@ export default function Editor({
     },
     [session, openedFolder?.path, runTransition, onSelectFile]
   )
+  const handleWorkspaceResult = (group, match) => {
+    if (transitionRef.current) return false
+    return group.path === session.state.filePath
+      ? onOpenWorkspaceResult(group, match, true)
+      : runTransition(() => onOpenWorkspaceResult(group, match))
+  }
   const handleOpenFileDirectly = useCallback(
     () =>
       runTransition(async () => {
@@ -960,7 +1060,7 @@ export default function Editor({
   const toggleZenMode = useCallback(
     async (forcedState) => {
       const nextState = typeof forcedState === 'boolean' ? forcedState : !isZenMode
-      setIsZenMode(nextState)
+      setIsZenMode?.(nextState)
 
       // Controlar pantalla completa nativa en Electron o fallback al navegador
       try {
@@ -992,32 +1092,8 @@ export default function Editor({
         setIsShortcutsModalOpen(false)
       }
     },
-    [isZenMode, preferences, showToast, t]
+    [isZenMode, setIsZenMode, preferences, showToast, t]
   )
-
-  // Escuchar cambios externos de pantalla completa (gestos del SO o tecla F11 nativa)
-  useEffect(() => {
-    let cleanupIpc = null
-    if (window.api?.onFullScreenChange) {
-      cleanupIpc = window.api.onFullScreenChange((isFullscreen) => {
-        setIsZenMode(isFullscreen)
-      })
-    }
-
-    const handleDomFullscreenChange = () => {
-      if (!window.api?.onFullScreenChange) {
-        setIsZenMode(Boolean(document.fullscreenElement))
-      }
-    }
-
-    document.addEventListener('fullscreenchange', handleDomFullscreenChange)
-
-    return () => {
-      if (cleanupIpc) cleanupIpc()
-      document.removeEventListener('fullscreenchange', handleDomFullscreenChange)
-      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current)
-    }
-  }, [])
 
   // Alternar Modo (Claro / Oscuro) dentro del tema activo sin cambiar de tema
   const cycleTheme = useCallback(() => {
@@ -1162,7 +1238,7 @@ export default function Editor({
   // Atajos de teclado del editor (diferenciando Modo Zen y Modo Normal)
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (document.querySelector('[aria-modal="true"]')) return
+      if (e.defaultPrevented || document.querySelector('[aria-modal="true"]')) return
       // Ocultar inmediatamente la barra flotante al escribir
       if (mouseTimerRef.current) clearTimeout(mouseTimerRef.current)
       setIsMouseActive(false)
@@ -1217,10 +1293,20 @@ export default function Editor({
           setActionsMenuOpen(false)
           return
         }
+        if (e.isComposing) return
+        if (isWorkspaceSearchOpen && document.activeElement?.closest('.workspace-search')) {
+          e.preventDefault()
+          closeWorkspaceSearch()
+          return
+        }
         if (isSearchOpen) {
-          if (e.isComposing) return
           e.preventDefault()
           closeSearch()
+          return
+        }
+        if (isWorkspaceSearchOpen) {
+          e.preventDefault()
+          closeWorkspaceSearch({ restoreFocus: false })
           return
         }
         if (isZenMode) {
@@ -1398,6 +1484,8 @@ export default function Editor({
     isSearchOpen,
     openSearch,
     closeSearch,
+    isWorkspaceSearchOpen,
+    closeWorkspaceSearch,
     openedFolder,
     toggleZenMode,
     handleSave,
@@ -1459,7 +1547,6 @@ export default function Editor({
               <SidebarIcon size={16} />
             </button>
           )}
-
           {/* Grupo de Navegación: Carpeta y Flecha Desplegable para cambiar de manuscrito */}
           <div
             className={`header-folder-nav-group ${isManuscriptDropdownOpen ? 'is-open' : ''}`}
@@ -1938,6 +2025,7 @@ export default function Editor({
       {/* Ventana flotante de notas y subcarpetas en Modo Zen (superior izquierda) */}
       {isZenMode && openedFolder && preferences?.zenShowFolder !== false && (
         <ZenFloatingFolder
+          hidden={isWorkspaceSearchOpen}
           openedFolder={openedFolder}
           activeFilePath={filePath}
           onSelectFile={handleSwitchDoc}
@@ -1945,6 +2033,7 @@ export default function Editor({
           onItemRenamed={handleItemRenamed}
           onItemDeleted={handleItemDeleted}
           onRefreshTree={onRefreshFolderTree}
+          onSearchFolder={workspaceSearch?.open}
           showToast={showToast}
           isMouseActive={isMouseActive}
           language={preferences?.language}
@@ -2064,6 +2153,20 @@ export default function Editor({
                   </div>
                 </div>
               </div>
+              {workspaceSearch && (
+                <div className="pref-row">
+                  <div className="pref-row-info">
+                    <span className="pref-row-title">{t.workspaceSearch.title}</span>
+                  </div>
+                  <div className="pref-row-control shortcut-kbd-group">
+                    <kbd className="shortcut-kbd">Ctrl</kbd>
+                    <span className="shortcut-kbd-sep">+</span>
+                    <kbd className="shortcut-kbd">Alt</kbd>
+                    <span className="shortcut-kbd-sep">+</span>
+                    <kbd className="shortcut-kbd">F</kbd>
+                  </div>
+                </div>
+              )}
               {shortcutsTab === 'zen' && (
                 <div className="shortcuts-tab-panel">
                   <div className="pref-row">
@@ -2333,8 +2436,23 @@ export default function Editor({
 
       {/* Disposición dividida para panel lateral y lienzo */}
       <div className="editor-workspace-layout">
+        {isWorkspaceSearchOpen && (
+          <aside className="editor-sidebar-panel workspace-search-panel">
+            <WorkspaceSearch
+              search={workspaceSearch}
+              labels={t.workspaceSearch}
+              navigationLabels={t.search}
+              getActiveFile={() => {
+                const { filePath, content } = session.state
+                return filePath ? { path: filePath, content, sourceMode: isSourceMode } : null
+              }}
+              onOpen={handleWorkspaceResult}
+              onClose={closeWorkspaceSearch}
+            />
+          </aside>
+        )}
         {isSidebarOpen && !isZenMode && openedFolder && (
-          <aside className="editor-sidebar-panel">
+          <aside className="editor-sidebar-panel" hidden={isWorkspaceSearchOpen}>
             <FileTree
               key={openedFolder.path}
               openedFolder={openedFolder}
@@ -2345,6 +2463,7 @@ export default function Editor({
               onItemDeleted={handleItemDeleted}
               onRefreshTree={() => onRefreshFolderTree?.(openedFolder.path)}
               onCloseFolder={() => runTransition(() => onCloseFolder?.(openedFolder.path))}
+              onSearchFolder={workspaceSearch?.open}
               showToast={showToast}
               language={preferences?.language}
             />
@@ -2368,6 +2487,7 @@ export default function Editor({
                   <SourceEditor
                     content={source}
                     search={search}
+                    workspaceMatch={workspaceMatch}
                     onReveal={revealSearchMatch}
                     spellCheck={preferences.spellcheckEnabled !== false}
                     onChange={(event) => {

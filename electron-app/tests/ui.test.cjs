@@ -179,6 +179,7 @@ test('manuscript search navigates across inline formatting without changing the 
       content: '# Brisa\n\nLa bri**sa** sopla. BRISA.'
     }
   })
+  await act(async () => new Promise((resolve) => requestAnimationFrame(resolve)))
   const original = activeEditor.state.doc
   const selection = activeEditor.state.selection
   const status = () => document.querySelector('.manuscript-search-count').textContent
@@ -191,7 +192,7 @@ test('manuscript search navigates across inline formatting without changing the 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true }))
   )
   const input = document.querySelector('input[type="search"]')
-  assert.equal(document.activeElement, input)
+  assert.ok(document.activeElement === input)
   await act(async () => {
     Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(
       input,
@@ -410,6 +411,113 @@ test('the home screen exposes recovered drafts and opens their original content'
   assert.ok(recover)
   await act(async () => recover.click())
   assert.equal(activeEditor.getText(), 'recovered manuscript')
+})
+
+test('the workspace worker and rich editor agree on searchable Markdown blocks', async () => {
+  const content = [
+    '# Una **brisa**',
+    'Palabras con **formato**\ny otra línea.  \nUn salto forzado.',
+    '- [x] Una tarea con *brisa*\n- Otra tarea',
+    '> [Enlace](https://example.com) con `código`',
+    '```txt\n    Código sin recortar\n```'
+  ].join('\n\n')
+  await mount({ initialDoc: { id: 'search-blocks', filePath: '/a.md', fileName: 'a.md', content } })
+  const { searchTextBlocks } = load('src/main/workspaceSearchWorker.js')
+  const { manuscriptTextBlocks } = load('src/renderer/src/lib/manuscriptSearch.js')
+  assert.deepEqual(
+    searchTextBlocks(content, 'a.md'),
+    manuscriptTextBlocks(activeEditor.state.doc).map(({ text }) => text)
+  )
+})
+
+test('folder search has one field and discards batches from superseded queries', async () => {
+  localStorage.setItem('fountain_opened_folders', JSON.stringify(['/book', '/other']))
+  const pending = []
+  const canceled = []
+  let onBatch
+  window.api = {
+    onRequestClose: () => () => {},
+    setWindowTheme() {},
+    readFolderTree: async (folderPath) => ({
+      success: true,
+      folderPath,
+      folderName: folderPath.slice(1),
+      tree: []
+    }),
+    onFileSearchBatch: (callback) => {
+      onBatch = callback
+      return () => {}
+    },
+    cancelFileSearch: async (id) => canceled.push(id),
+    searchFiles: (request) => new Promise((resolve) => pending.push({ request, resolve }))
+  }
+  const App = load('src/renderer/src/App.jsx').default
+  root = createRoot(document.getElementById('root'))
+  await act(async () => root.render(React.createElement(App)))
+  await act(async () =>
+    document
+      .querySelectorAll('.file-tree-header button[aria-label="Buscar en la carpeta"]')[1]
+      .click()
+  )
+  const input = document.querySelector('.workspace-search input[type="search"]')
+  assert.ok(document.activeElement === input)
+  assert.equal(document.querySelector('.workspace-search-folder').textContent, 'other')
+  assert.equal(
+    document.querySelectorAll('.workspace-search input, .workspace-search select').length,
+    1
+  )
+  for (const query of ['primera', 'segunda']) {
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(
+        input,
+        query
+      )
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    if (query === 'primera') {
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 220)))
+    } else {
+      await act(async () =>
+        input.form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      )
+    }
+  }
+  assert.deepEqual(
+    pending.map(({ request }) => request.scope),
+    [
+      { path: '/other', rootPath: '/other' },
+      { path: '/other', rootPath: '/other' }
+    ]
+  )
+  assert.deepEqual(canceled, [pending[0].request.id])
+  await act(async () => {
+    onBatch({
+      id: pending[0].request.id,
+      count: 1,
+      groups: [
+        {
+          path: '/other/a.md',
+          relativePath: 'a.md',
+          matches: [{ block: 0, offset: 0, match: 'tardío' }]
+        }
+      ]
+    })
+    pending[0].resolve({ canceled: true })
+    onBatch({
+      id: pending[1].request.id,
+      count: 1,
+      groups: [
+        {
+          path: '/other/b.md',
+          relativePath: 'b.md',
+          matches: [{ block: 0, offset: 0, match: 'actual' }]
+        }
+      ]
+    })
+    pending[1].resolve({ success: true, count: 1 })
+  })
+  assert.equal(document.querySelector('.workspace-search-file').textContent, 'b.md')
+  assert.equal(document.querySelector('.workspace-search-hit mark').textContent, 'actual')
 })
 
 for (const theme of ['mono', 'beige']) {

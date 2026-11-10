@@ -1,21 +1,51 @@
-import { Fragment, useCallback, useLayoutEffect, useRef } from 'react'
-import { matchClassName, revealMatch } from '../lib/manuscriptSearch'
+import { Fragment, useCallback, useLayoutEffect, useMemo, useRef } from 'react'
+import { matchClassName, revealMatch, syncSourceOverlay } from '../lib/manuscriptSearch'
 
-export default function SourceEditor({ content, search, onReveal, spellCheck, onChange }) {
+function sourceHighlights(matches, activeIndex, workspaceMatch) {
+  const highlights = matches.map((range, index) => ({ ...range, active: index === activeIndex }))
+  if (!workspaceMatch) return highlights
+
+  const { from, to } = workspaceMatch
+  const activeStart = matches[activeIndex]?.from
+  // The overlay mirrors the document once. Split other highlights at the workspace match.
+  return [
+    ...highlights
+      .filter((range) => range.from < from)
+      .map((range) => ({ ...range, to: Math.min(range.to, from) })),
+    { from, to, workspace: true, active: activeStart >= from && activeStart < to },
+    ...highlights
+      .filter((range) => range.to > to)
+      .map((range) => ({
+        from: Math.max(range.from, to),
+        to: range.to,
+        active: range.active && range.from >= to
+      }))
+  ]
+}
+
+export default function SourceEditor({
+  content,
+  search,
+  workspaceMatch,
+  onReveal,
+  spellCheck,
+  onChange
+}) {
   const { matches, activeIndex, sourceRef, isBarFocused } = search
   const overlayRef = useRef(null)
   const activeMatchRef = useRef(null)
-  const hasMatches = matches.length > 0
+  const highlights = useMemo(
+    () => sourceHighlights(matches, activeIndex, workspaceMatch),
+    [matches, activeIndex, workspaceMatch]
+  )
+  const hasMatches = highlights.length > 0
 
   // A textarea cannot style individual ranges. Mirror its visible text behind it.
   const syncOverlay = useCallback(() => {
     const source = sourceRef.current
     const overlay = overlayRef.current
     if (!overlay || !source) return
-    overlay.style.width = `${source.clientWidth}px`
-    overlay.style.height = `${source.clientHeight}px`
-    overlay.scrollTop = source.scrollTop
-    overlay.scrollLeft = source.scrollLeft
+    syncSourceOverlay(source, overlay)
   }, [sourceRef])
 
   useLayoutEffect(() => {
@@ -34,7 +64,7 @@ export default function SourceEditor({ content, search, onReveal, spellCheck, on
       syncOverlay()
       onReveal(active)
     }
-  }, [matches, activeIndex, hasMatches, isBarFocused, onReveal, sourceRef, syncOverlay])
+  }, [highlights, hasMatches, isBarFocused, onReveal, sourceRef, syncOverlay])
 
   return (
     <div className="source-editor-wrap">
@@ -44,18 +74,18 @@ export default function SourceEditor({ content, search, onReveal, spellCheck, on
           aria-hidden="true"
           ref={overlayRef}
         >
-          {matches.map(({ from, to }, index) => (
+          {highlights.map(({ from, to, active, workspace }, index) => (
             <Fragment key={from}>
-              {content.slice(matches[index - 1]?.to ?? 0, from)}
+              {content.slice(highlights[index - 1]?.to ?? 0, from)}
               <span
-                className={matchClassName(index === activeIndex)}
-                ref={index === activeIndex ? activeMatchRef : undefined}
+                className={workspace ? 'workspace-editor-match' : matchClassName(active)}
+                ref={active ? activeMatchRef : undefined}
               >
                 {content.slice(from, to)}
               </span>
             </Fragment>
           ))}
-          {content.slice(matches.at(-1).to)}
+          {content.slice(highlights.at(-1).to)}
           {content.endsWith('\n') && '\u200b'}
         </div>
       )}

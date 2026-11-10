@@ -12,7 +12,8 @@ import {
   ChevronRightIcon,
   CheckIcon,
   CloseIcon,
-  TrashIcon
+  TrashIcon,
+  SearchIcon
 } from './Icons'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { getTranslation } from '../i18n'
@@ -70,6 +71,8 @@ export default function ZenFloatingFolder({
   onItemRenamed,
   onItemDeleted,
   onRefreshTree,
+  onSearchFolder,
+  hidden,
   showToast,
   isMouseActive,
   language = 'es'
@@ -437,6 +440,7 @@ export default function ZenFloatingFolder({
       <aside
         className={`zen-floating-folder ${isPanelActive ? 'visible' : ''} ${isCollapsed ? 'is-collapsed' : ''} ${creatingIn ? 'is-creating' : ''}`}
         aria-label="Explorador de notas en modo Zen"
+        hidden={hidden}
       >
         {/* Cabecera / Pill de la carpeta flotante */}
         <header
@@ -459,6 +463,19 @@ export default function ZenFloatingFolder({
             <span className="zen-folder-header-title">{openedFolder.name}</span>
           </div>
           <div className="zen-folder-header-actions" onClick={(e) => e.stopPropagation()}>
+            {onSearchFolder && (
+              <button
+                type="button"
+                className="btn-zen-folder-header-action"
+                onClick={() =>
+                  onSearchFolder({ path: openedFolder.path, rootPath: openedFolder.path })
+                }
+                title={`${t.workspaceSearch.title} (Ctrl+Alt+F)`}
+                aria-label={t.workspaceSearch.title}
+              >
+                <SearchIcon size={14} aria-hidden="true" />
+              </button>
+            )}
             <button
               type="button"
               className="btn-zen-folder-header-action"
@@ -560,7 +577,8 @@ export default function ZenFloatingFolder({
       </aside>
 
       {/* Menú contextual flotante posicionado con portal */}
-      {contextMenu &&
+      {!hidden &&
+        contextMenu &&
         createPortal(
           <div
             className="tree-context-menu"
@@ -569,6 +587,21 @@ export default function ZenFloatingFolder({
           >
             {contextMenu.item?.isDirectory ? (
               <>
+                {onSearchFolder && (
+                  <button
+                    type="button"
+                    className="tree-context-menu-item"
+                    onClick={() => {
+                      onSearchFolder({ rootPath: openedFolder.path, path: contextMenu.item.path })
+                      setContextMenu(null)
+                    }}
+                  >
+                    <span className="tree-context-menu-icon">
+                      <SearchIcon size={14} />
+                    </span>
+                    <span className="tree-context-menu-label">{t.workspaceSearch.inFolder}</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   className="tree-context-menu-item"

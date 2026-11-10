@@ -32,6 +32,13 @@ const api = {
   openFolder: () => ipcRenderer.invoke('folder:open'),
   readFolderTree: (folderPath) => ipcRenderer.invoke('folder:read-tree', folderPath),
   createFolder: (data) => ipcRenderer.invoke('folder:create', data),
+  searchFiles: (data) => ipcRenderer.invoke('workspace-search:start', data),
+  cancelFileSearch: (id) => ipcRenderer.invoke('workspace-search:cancel', id),
+  onFileSearchBatch: (callback) => {
+    const listener = (_event, batch) => callback(batch)
+    ipcRenderer.on('workspace-search:batch', listener)
+    return () => ipcRenderer.removeListener('workspace-search:batch', listener)
+  },
 
   // Operaciones comunes
   renameItem: (data) => ipcRenderer.invoke('item:rename', data),
