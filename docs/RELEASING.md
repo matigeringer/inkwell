@@ -4,7 +4,7 @@ El repositorio principal es [matigeringer/inkwell](https://github.com/matigering
 
 ## Compilación y controles
 
-[GitHub Actions](https://github.com/matigeringer/inkwell/actions/workflows/build.yml) ejecuta el workflow [build.yml](../.github/workflows/build.yml) al subir ramas, abrir pull requests o subir etiquetas `v*`.
+[GitHub Actions](https://github.com/matigeringer/inkwell/actions/workflows/build.yml) ejecuta el workflow [build.yml](../.github/workflows/build.yml) al subir cambios a `main`, subir etiquetas `v*` o iniciarlo manualmente.
 
 - `quality`: comprueba versión y lockfile, instala con `npm ci`, ejecuta lint, pruebas, compilación y auditorías. Los avisos de producción y los altos/críticos impiden continuar.
 - `package`: genera AppImage y `.deb` en Ubuntu 22.04 y el portable `.exe` en Windows Server 2022. Los paquetes de prueba y sus manifiestos se conservan como artefactos durante 14 días.

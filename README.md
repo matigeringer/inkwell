@@ -114,7 +114,7 @@ El contenedor puede crear archivos con propietario root. Evita compartir `node_m
 
 ## Publicar una versión
 
-La [guía de publicación](docs/RELEASING.md) detalla los requisitos de GitHub Actions, la validación de paquetes, la firma opcional y cómo generar además un instalador NSIS en Windows. El workflow ejecuta controles y empaqueta Linux y Windows también en ramas y pull requests; conserva esos artefactos durante 14 días. Sólo una etiqueta estable `vX.Y.Z` publica paquetes permanentes y crea una release con los enlaces del README.
+La [guía de publicación](docs/RELEASING.md) detalla los requisitos de GitHub Actions, la validación de paquetes, la firma opcional y cómo generar además un instalador NSIS en Windows. El workflow ejecuta controles y empaqueta Linux y Windows al subir cambios a `main` o etiquetas de versión; conserva esos artefactos durante 14 días. Sólo una etiqueta estable `vX.Y.Z` publica paquetes permanentes y crea una release con los enlaces del README.
 
 Para la primera versión, después de revisar, guardar y subir estos cambios a `main` y validar los paquetes:
 
