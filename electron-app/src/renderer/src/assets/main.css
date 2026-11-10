@@ -2323,6 +2323,95 @@
   color: var(--accent-primary);
 }
 
+.editor-document-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.manuscript-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: flex-end;
+  gap: 0.35rem 0.55rem;
+  width: min(27rem, calc(100% - 2rem));
+  margin: 0.75rem 1rem 0;
+  padding: 0.35rem 0.55rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-top: 2px solid var(--accent-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+}
+
+.zen-mode-active:has(.zen-floating-toolbar) .manuscript-search {
+  margin-top: 4rem;
+}
+
+.manuscript-search > svg {
+  flex: none;
+}
+
+.manuscript-search input {
+  flex: 1 1 8rem;
+  min-width: 0;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-input);
+  color: var(--text-primary);
+  font: 0.85rem var(--font-ui);
+}
+
+.manuscript-search input::placeholder {
+  color: var(--text-muted);
+}
+
+.manuscript-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.manuscript-search-count {
+  font: 0.72rem var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.manuscript-search-actions {
+  display: flex;
+  align-items: center;
+}
+
+.manuscript-search-actions .btn-icon-sober {
+  width: 28px;
+  height: 28px;
+}
+
+.manuscript-search-actions .btn-icon-sober:disabled {
+  opacity: 0.4;
+  cursor: default;
+  border-color: transparent;
+  color: var(--text-secondary);
+}
+
+.manuscript-search-previous {
+  transform: rotate(180deg);
+}
+
+.manuscript-match {
+  background-color: var(--selection);
+  border-radius: var(--radius-sm);
+}
+
+.manuscript-match.is-current-match {
+  background-color: color-mix(in srgb, var(--accent-primary) 32%, var(--bg-canvas));
+  box-shadow: inset 0 -2px var(--accent-primary);
+}
+
 /* Editor Main Canvas */
 .editor-main {
   flex: 1;
@@ -4984,6 +5073,27 @@
   font-family: var(--font-mono);
   line-height: 1.7;
   tab-size: 2;
+}
+
+.source-editor-wrap {
+  position: relative;
+}
+
+.source-editor-wrap textarea {
+  position: relative;
+  z-index: 1;
+}
+
+.fountain-source-editor.source-search-overlay {
+  position: absolute;
+  inset: 0 auto auto 0;
+  min-height: 0;
+  overflow: hidden;
+  resize: none;
+  pointer-events: none;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  color: transparent;
 }
 
 .source-editor-notice,

@@ -540,6 +540,25 @@ export function FolderCloseIcon({ className = '', size = 18, ...props }) {
   )
 }
 
+export function SearchIcon({ className = '', size = 16, ...props }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      className={className}
+      {...props}
+    >
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m16 16 4.5 4.5" />
+    </svg>
+  )
+}
+
 export function ChevronRightIcon({ className = '', size = 16, ...props }) {
   return (
     <svg

@@ -170,6 +170,99 @@ test('source editing preserves unsupported Markdown through navigation', async (
   assert.equal(fixture.writes.at(-1)?.content, edited)
 })
 
+test('manuscript search navigates across inline formatting without changing the document', async () => {
+  const fixture = await mount({
+    initialDoc: {
+      id: 'search',
+      filePath: '/a.md',
+      fileName: 'a.md',
+      content: '# Brisa\n\nLa bri**sa** sopla. BRISA.'
+    }
+  })
+  const original = activeEditor.state.doc
+  const selection = activeEditor.state.selection
+  const status = () => document.querySelector('.manuscript-search-count').textContent
+  const activeText = () =>
+    [...document.querySelectorAll('.tiptap .is-current-match')]
+      .map((element) => element.textContent)
+      .join('')
+
+  await act(async () =>
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', ctrlKey: true }))
+  )
+  const input = document.querySelector('input[type="search"]')
+  assert.equal(document.activeElement, input)
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(
+      input,
+      'brisa'
+    )
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  assert.equal(status(), '1 de 3')
+  assert.equal(activeText(), 'Brisa')
+  await act(async () =>
+    document.querySelector('button[aria-label="Coincidencia siguiente"]').click()
+  )
+  assert.equal(status(), '2 de 3')
+  assert.equal(activeText(), 'brisa')
+  for (const expected of ['3 de 3', '1 de 3']) {
+    await act(async () =>
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    )
+    assert.equal(status(), expected)
+  }
+  await act(async () =>
+    input.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })
+    )
+  )
+  assert.equal(activeText(), 'BRISA')
+  await act(async () =>
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  )
+  assert.equal(document.querySelector('.manuscript-search'), null)
+  assert.equal(document.querySelector('.manuscript-match'), null)
+  assert.equal(document.activeElement, activeEditor.view.dom)
+  assert.equal(activeEditor.state.doc, original)
+  assert.ok(activeEditor.state.selection.eq(selection))
+  assert.equal(fixture.writes.length, 0)
+})
+
+test('source search matches literal text and refreshes while editing', async () => {
+  const content = 'Intro\r\n[a.b] literal\r\n[A.B] literal'
+  await mount({ initialDoc: { id: 'source', filePath: '/a.txt', fileName: 'a.txt', content } })
+  await act(async () =>
+    document.querySelector('button[aria-label="Buscar en el manuscrito"]').click()
+  )
+  const input = document.querySelector('input[type="search"]')
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(
+      input,
+      '[a.b]'
+    )
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  assert.deepEqual(
+    [...document.querySelectorAll('.source-search-overlay .manuscript-match')].map(
+      (element) => element.textContent
+    ),
+    ['[a.b]', '[A.B]']
+  )
+  const textarea = document.querySelector('textarea[aria-label="Markdown"]')
+  await act(async () => {
+    textarea.focus()
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(
+      textarea,
+      'Intro\n[axb] literal'
+    )
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  assert.equal(document.activeElement, textarea)
+  assert.equal(document.querySelector('.manuscript-search-count').textContent, 'Sin coincidencias')
+  assert.equal(document.querySelector('.source-search-overlay'), null)
+})
+
 test('restore waits for snapshot content and stays dirty with autosave disabled', async () => {
   let finishPreview
   const fixture = await mount(

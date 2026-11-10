@@ -78,6 +78,15 @@ export const translations = {
         `¿Estás seguro de que deseas eliminar la carpeta "${name}" y todo su contenido?`,
       descFile: (name) => `¿Estás seguro de que deseas eliminar el archivo "${name}"?`
     },
+    search: {
+      title: 'Buscar en el manuscrito',
+      placeholder: 'Buscar palabra o frase…',
+      count: (current, total) => `${current} de ${total}`,
+      noResults: 'Sin coincidencias',
+      previous: 'Coincidencia anterior',
+      next: 'Coincidencia siguiente',
+      close: 'Cerrar búsqueda'
+    },
     editor: {
       homeBtn: 'Inicio',
       homeBtnTitle: 'Volver a la portada (Ctrl+Esc)',
@@ -405,6 +414,15 @@ export const translations = {
       descFolder: (name) =>
         `Are you sure you want to delete the folder "${name}" and all of its contents?`,
       descFile: (name) => `Are you sure you want to delete the file "${name}"?`
+    },
+    search: {
+      title: 'Find in manuscript',
+      placeholder: 'Find a word or phrase…',
+      count: (current, total) => `${current} of ${total}`,
+      noResults: 'No matches',
+      previous: 'Previous match',
+      next: 'Next match',
+      close: 'Close search'
     },
     editor: {
       homeBtn: 'Home',

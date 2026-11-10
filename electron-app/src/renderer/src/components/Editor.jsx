@@ -29,15 +29,20 @@ import {
   MenuIcon,
   FeatherIcon,
   FolderTreeIcon,
-  FolderIcon
+  FolderIcon,
+  SearchIcon
 } from './Icons'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
+import ManuscriptSearch from './ManuscriptSearch'
+import SourceEditor from './SourceEditor'
 import ZenFloatingFolder from './ZenFloatingFolder'
 import { getTranslation } from '../i18n'
 import useDocumentPersistence from '../hooks/useDocumentPersistence'
+import useManuscriptSearch from '../hooks/useManuscriptSearch'
 import { saveDraft } from '../lib/drafts'
 import { needsSourceEditor } from '../lib/markdownSupport'
+import { revealMatch, SearchHighlights } from '../lib/manuscriptSearch'
 
 const EXPORT_OPTIONS = [
   {
@@ -493,7 +498,8 @@ export default function Editor({
         HTMLAttributes: {
           class: 'fountain-task-item'
         }
-      })
+      }),
+      SearchHighlights
     ],
     content: session.state.content,
     autofocus: 'end',
@@ -588,6 +594,20 @@ export default function Editor({
       }
     }
   })
+
+  const revealSearchMatch = useCallback(
+    (match) => {
+      const container = scrollContainerRef.current
+      if (!container) return
+      cancelScrollAnimation()
+      revealMatch(container, match)
+    },
+    [cancelScrollAnimation]
+  )
+  // Textareas normalize line endings, so highlight offsets use the same text as the input.
+  const source = isSourceMode ? session.state.content.replace(/\r\n?/g, '\n') : null
+  const search = useManuscriptSearch({ editor, source, onReveal: revealSearchMatch })
+  const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = search
 
   // Centrar al cambiar preferencias si está activo
   useEffect(() => {
@@ -1156,6 +1176,15 @@ export default function Editor({
         return
       }
 
+      if (isCtrlOrMeta && !e.shiftKey && !e.altKey && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault()
+        setIsManuscriptDropdownOpen(false)
+        setActionsMenuOpen(false)
+        setExportMenuOpen(false)
+        openSearch()
+        return
+      }
+
       // 2. Escape: Cerrar modales, menús o salir de Modo Zen
       if (e.key === 'Escape') {
         if (isManuscriptDropdownOpen) {
@@ -1186,6 +1215,12 @@ export default function Editor({
         if (actionsMenuOpen) {
           e.preventDefault()
           setActionsMenuOpen(false)
+          return
+        }
+        if (isSearchOpen) {
+          if (e.isComposing) return
+          e.preventDefault()
+          closeSearch()
           return
         }
         if (isZenMode) {
@@ -1360,6 +1395,9 @@ export default function Editor({
     showStatsHud,
     actionsMenuOpen,
     exportMenuOpen,
+    isSearchOpen,
+    openSearch,
+    closeSearch,
     openedFolder,
     toggleZenMode,
     handleSave,
@@ -1570,6 +1608,20 @@ export default function Editor({
           {errorMessage && <span className="error-badge">{errorMessage}</span>}
 
           <button
+            type="button"
+            className={`btn-icon-sober ${isSearchOpen ? 'active' : ''}`}
+            onClick={openSearch}
+            title={`${t.search.title} (Ctrl+F)`}
+            aria-label={t.search.title}
+            aria-expanded={isSearchOpen}
+            aria-controls={isSearchOpen ? 'manuscript-search' : undefined}
+            aria-keyshortcuts="Control+F Meta+F"
+            tabIndex={isZenMode ? -1 : undefined}
+          >
+            <SearchIcon size={16} aria-hidden="true" />
+          </button>
+
+          <button
             className={`btn-icon-sober ${preferences?.typewriterMode ? 'active' : ''}`}
             onClick={toggleTypewriterMode}
             title={t.editor.typewriterTitle(preferences?.typewriterMode)}
@@ -1756,6 +1808,18 @@ export default function Editor({
           aria-label="Controles discretos de modo Zen"
         >
           <div className="zen-toolbar-pill">
+            <button
+              type="button"
+              className={`zen-pill-btn zen-pill-icon-only ${isSearchOpen ? 'active' : ''}`}
+              onClick={openSearch}
+              title={`${t.search.title} (Ctrl+F)`}
+              aria-label={t.search.title}
+              aria-expanded={isSearchOpen}
+              aria-controls={isSearchOpen ? 'manuscript-search' : undefined}
+              aria-keyshortcuts="Control+F Meta+F"
+            >
+              <SearchIcon size={15} aria-hidden="true" />
+            </button>
             <button
               className={`zen-pill-btn zen-pill-icon-only ${preferences?.typewriterMode ? 'active' : ''}`}
               onClick={toggleTypewriterMode}
@@ -1988,6 +2052,18 @@ export default function Editor({
             </header>
 
             <div className="modal-body modal-body-wide shortcuts-modal-body">
+              <div className="pref-row">
+                <div className="pref-row-info">
+                  <span className="pref-row-title">{t.search.title}</span>
+                </div>
+                <div className="pref-row-control">
+                  <div className="shortcut-kbd-group">
+                    <kbd className="shortcut-kbd">Ctrl</kbd>
+                    <span className="shortcut-kbd-sep">+</span>
+                    <kbd className="shortcut-kbd">F</kbd>
+                  </div>
+                </div>
+              </div>
               {shortcutsTab === 'zen' && (
                 <div className="shortcuts-tab-panel">
                   <div className="pref-row">
@@ -2275,37 +2351,39 @@ export default function Editor({
           </aside>
         )}
 
-        {/* Lienzo de escritura WYSIWYG centralizado */}
-        <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
-          <div
-            className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
-            onClick={handleCanvasClick}
-          >
-            {isSourceMode && (
-              <>
-                <p role="status" className="source-editor-notice">
-                  {currentLang === 'en'
-                    ? 'Source editing preserves the document’s original text and Markdown syntax.'
-                    : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
-                </p>
-                <textarea
-                  aria-label="Markdown"
-                  className="fountain-source-editor"
-                  value={session.state.content}
-                  spellCheck={preferences.spellcheckEnabled !== false}
-                  onChange={(event) => {
-                    if (!transitionRef.current) session.change(event.target.value)
-                  }}
-                />
-              </>
-            )}
-            <EditorContent
-              style={isSourceMode ? { display: 'none' } : undefined}
-              editor={editor}
-              className="tiptap-wrapper"
-            />
-          </div>
-        </main>
+        <div className="editor-document-panel">
+          {isSearchOpen && <ManuscriptSearch search={search} labels={t.search} />}
+          <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
+            <div
+              className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
+              onClick={handleCanvasClick}
+            >
+              {isSourceMode && (
+                <>
+                  <p role="status" className="source-editor-notice">
+                    {currentLang === 'en'
+                      ? 'Source editing preserves the document’s original text and Markdown syntax.'
+                      : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
+                  </p>
+                  <SourceEditor
+                    content={source}
+                    search={search}
+                    onReveal={revealSearchMatch}
+                    spellCheck={preferences.spellcheckEnabled !== false}
+                    onChange={(event) => {
+                      if (!transitionRef.current) session.change(event.target.value)
+                    }}
+                  />
+                </>
+              )}
+              <EditorContent
+                style={isSourceMode ? { display: 'none' } : undefined}
+                editor={editor}
+                className="tiptap-wrapper"
+              />
+            </div>
+          </main>
+        </div>
       </div>
 
       {/* Barra de estado discreta inferior (se oculta totalmente en Zen) */}
