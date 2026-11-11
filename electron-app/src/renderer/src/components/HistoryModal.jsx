@@ -13,11 +13,7 @@ import {
 } from './Icons'
 import { getTranslation } from '../i18n'
 import useHistoryDiff from '../hooks/useHistoryDiff'
-
-function countWords(text = '') {
-  const trimmed = text.trim()
-  return trimmed ? trimmed.split(/\s+/).filter(Boolean).length : 0
-}
+import { countWords } from '../../../shared/textStats'
 
 export default function HistoryModal({
   isOpen,
@@ -36,8 +32,8 @@ export default function HistoryModal({
     preview?.docKey === docKey && preview?.id === selectedSnapshotId && !preview.error
   const previewContent = previewReady ? preview.content : ''
   const [isRestoring, setIsRestoring] = useState(false)
-  const [viewMode, setViewMode] = useState('reading') // 'reading' | 'compare'
-  const [compareTargetId, setCompareTargetId] = useState('current') // 'current' | snapshotId
+  const [viewMode, setViewMode] = useState('reading')
+  const [compareTargetId, setCompareTargetId] = useState('current')
   const [comparison, setComparison] = useState(null)
   const [isCompareDropdownOpen, setIsCompareDropdownOpen] = useState(false)
   const [isCopied, setIsCopied] = useState(false)
@@ -57,7 +53,6 @@ export default function HistoryModal({
       ? compareTargetId
       : 'current'
 
-  // Cerrar el desplegable de comparación al hacer clic fuera
   useEffect(() => {
     if (!isCompareDropdownOpen) return
     const handleClickOutside = (e) => {
@@ -69,7 +64,6 @@ export default function HistoryModal({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isCompareDropdownOpen])
 
-  // Cargar snapshots del documento al abrir
   useEffect(() => {
     if (!isOpen || !docKey || !window.api?.historyGetSnapshots) {
       return
@@ -105,7 +99,6 @@ export default function HistoryModal({
     }
   }, [isOpen, docKey])
 
-  // Cargar contenido de la snapshot seleccionada (columna izquierda / lectura)
   useEffect(() => {
     if (!isOpen || !docKey || !selectedSnapshotId || !window.api?.historyGetSnapshotContent) {
       return
@@ -129,7 +122,6 @@ export default function HistoryModal({
     }
   }, [isOpen, docKey, selectedSnapshotId])
 
-  // Cargar contenido de la versión objetivo cuando se compara contra otra versión del historial
   useEffect(() => {
     if (
       !isOpen ||
@@ -157,7 +149,6 @@ export default function HistoryModal({
     }
   }, [isOpen, docKey, effectiveCompareTargetId])
 
-  // Manejar tecla Escape y navegación con flechas
   useEffect(() => {
     if (!isOpen) return
 
@@ -212,7 +203,6 @@ export default function HistoryModal({
       ? null
       : snapshots.find((s) => s.id === effectiveCompareTargetId) || null
 
-  // Formato de fecha conciso mostrando siempre la fecha y la hora
   const formatSnapshotDate = (timestamp) => {
     if (!timestamp) return ''
     const date = new Date(timestamp)
@@ -235,7 +225,6 @@ export default function HistoryModal({
     return `${dateStr}, ${timeStr}`
   }
 
-  // Sincronización de desplazamiento entre las dos columnas de comparación
   const handleSyncScroll = (source) => {
     const sourceEl = source === 'left' ? leftPaneRef.current : rightPaneRef.current
     const targetEl = source === 'left' ? rightPaneRef.current : leftPaneRef.current
@@ -261,7 +250,6 @@ export default function HistoryModal({
     })
   }
 
-  // Eliminar una snapshot específica
   const handleDeleteSnapshot = async (e, snapshotId) => {
     e.stopPropagation()
     if (!window.api?.historyDeleteSnapshot || !docKey) return
@@ -288,7 +276,6 @@ export default function HistoryModal({
     }
   }
 
-  // Copiar contenido de la versión al portapapeles
   const handleCopyContent = async () => {
     if (!previewContent) return
     try {
@@ -303,7 +290,6 @@ export default function HistoryModal({
     }
   }
 
-  // Restaurar la versión seleccionada
   const handleRestore = async () => {
     if (!selectedSnapshot || !previewReady || isRestoring) return
     setIsRestoring(true)
@@ -356,7 +342,6 @@ export default function HistoryModal({
         aria-modal="true"
         aria-labelledby="history-modal-title"
       >
-        {/* Cabecera estilo ProfileModal con pestañas segmentadas: Lectura primero, Lado a lado después */}
         <header className="modal-header-wide">
           <div className="modal-header-title-bar">
             <h2 id="history-modal-title" className="modal-title">
@@ -394,7 +379,6 @@ export default function HistoryModal({
         </header>
 
         <div className="history-modal-body">
-          {/* Lista lateral minimalista: solo fecha/hora */}
           <aside className="history-timeline-panel">
             {snapshots.length === 0 ? (
               <div className="history-empty-state">
@@ -434,11 +418,9 @@ export default function HistoryModal({
             )}
           </aside>
 
-          {/* Panel principal: Comparación Lado a Lado o Lectura limpia */}
           <main className="history-preview-panel">
             {selectedSnapshot ? (
               <>
-                {/* Barra de herramientas sobria alineada con ProfileModal */}
                 <div className="history-toolbar">
                   {viewMode === 'compare' ? (
                     <div className="history-compare-controls">
@@ -559,10 +541,8 @@ export default function HistoryModal({
                   </div>
                 </div>
 
-                {/* Contenido principal según la pestaña activa */}
                 {viewMode === 'compare' ? (
                   <div className="history-compare-grid">
-                    {/* Columna Izquierda: Versión seleccionada */}
                     <section className="history-compare-col">
                       <header className="history-col-header">
                         <span className="history-col-title">
@@ -611,7 +591,6 @@ export default function HistoryModal({
                       </div>
                     </section>
 
-                    {/* Columna Derecha: Versión a comparar (Actual u otra snapshot) */}
                     <section className="history-compare-col">
                       <header className="history-col-header">
                         <span className="history-col-title">{compareTargetLabel}</span>

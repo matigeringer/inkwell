@@ -712,7 +712,6 @@ export function TypewriterIcon({ className = '', size = 18, ...props }) {
       className={className}
       {...props}
     >
-      {/* Visual target center line with typewriter carriage indicator */}
       <line x1="3" y1="12" x2="21" y2="12" strokeDasharray="2 2" strokeOpacity="0.6" />
       <rect x="4" y="6" width="16" height="12" rx="2" />
       <circle cx="12" cy="12" r="2.5" />

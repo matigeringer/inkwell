@@ -413,6 +413,107 @@ test('the home screen exposes recovered drafts and opens their original content'
   assert.equal(activeEditor.getText(), 'recovered manuscript')
 })
 
+test('the shortcut guide closes on Escape and restores the writing focus', async () => {
+  await mount()
+  const writingSurface = activeEditor.view.dom
+  await act(async () => {
+    writingSurface.focus()
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F1' }))
+  })
+  const guide = document.querySelector('.modal-card-shortcuts')
+  assert.ok(guide)
+  assert.ok(guide.contains(document.activeElement))
+  await act(async () => {
+    document.activeElement.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    )
+  })
+  assert.equal(document.querySelector('.modal-card-shortcuts'), null)
+  assert.equal(document.activeElement, writingSurface)
+})
+
+test('typewriter scrolling respects manual inspection and follows the caret when typing resumes', async (t) => {
+  const originalScroll = window.scrollBy
+  window.scrollBy = () => {}
+  t.after(() => {
+    window.scrollBy = originalScroll
+  })
+  await mount({
+    preferences: { ...DEFAULT_PREFERENCES, autoSaveEnabled: false, typewriterMode: true }
+  })
+  const canvas = document.querySelector('.editor-main')
+  Object.defineProperties(canvas, {
+    clientHeight: { value: 400, configurable: true },
+    scrollHeight: { value: 2000, configurable: true }
+  })
+  canvas.getBoundingClientRect = () => ({
+    top: 0,
+    left: 0,
+    height: 400,
+    bottom: 400,
+    right: 800,
+    width: 800
+  })
+  let caretLine = 500
+  activeEditor.view.coordsAtPos = () => ({
+    top: caretLine - canvas.scrollTop,
+    bottom: caretLine + 20 - canvas.scrollTop
+  })
+  const waitForScroll = async (expected) => {
+    for (let i = 0; i < 40 && Math.round(canvas.scrollTop) !== expected; i++) {
+      await act(async () => new Promise((resolve) => setTimeout(resolve, 25)))
+    }
+    assert.equal(Math.round(canvas.scrollTop), expected)
+  }
+  await waitForScroll(310)
+
+  await act(async () => {
+    canvas.dispatchEvent(new Event('wheel'))
+    canvas.scrollTop = 475
+    caretLine = 1000
+    activeEditor.commands.setTextSelection(1)
+  })
+  await act(async () => new Promise((resolve) => setTimeout(resolve, 180)))
+  assert.equal(Math.round(canvas.scrollTop), 475)
+
+  await act(async () => activeEditor.commands.insertContent('continue '))
+  await waitForScroll(810)
+})
+
+test('opening a folder while restoring the workspace preserves both folders and the new selection', async () => {
+  const savedPath = '/saved-folder'
+  const newPath = '/new-folder'
+  localStorage.setItem('fountain_opened_folders', JSON.stringify([savedPath]))
+  localStorage.setItem('fountain_active_folder', savedPath)
+  const savedTree = Promise.withResolvers()
+  window.api = {
+    onRequestClose: () => () => {},
+    readFolderTree: () => savedTree.promise,
+    openFolder: async () => ({ success: true, folderPath: newPath, folderName: 'New', tree: [] })
+  }
+
+  const App = load('src/renderer/src/App.jsx').default
+  root = createRoot(document.getElementById('root'))
+  await act(async () =>
+    root.render(React.createElement(React.StrictMode, null, React.createElement(App)))
+  )
+  await act(async () => document.querySelectorAll('.welcome-actions button')[2].click())
+  assert.equal(document.querySelector('.tree-workspace-name')?.textContent, 'New')
+
+  await act(async () => {
+    savedTree.resolve({ success: true, folderPath: savedPath, folderName: 'Saved', tree: [] })
+  })
+  assert.deepEqual(
+    [...document.querySelectorAll('.tree-workspace-name')].map((folder) => folder.textContent),
+    ['Saved', 'New']
+  )
+  assert.deepEqual(JSON.parse(localStorage.getItem('fountain_opened_folders')), [
+    savedPath,
+    newPath
+  ])
+  assert.equal(localStorage.getItem('fountain_active_folder'), newPath)
+})
+
 test('the workspace worker and rich editor agree on searchable Markdown blocks', async () => {
   const content = [
     '# Una **brisa**',

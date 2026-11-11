@@ -1,7 +1,4 @@
-/**
- * Calcula las diferencias por palabras dentro de un bloque de texto
- * usando Longest Common Subsequence (LCS) sobre tokens.
- */
+// Compare word tokens with a bounded longest common subsequence matrix.
 function diffWords(leftStr, rightStr) {
   if (leftStr === rightStr) {
     return {
@@ -34,7 +31,7 @@ function diffWords(leftStr, rightStr) {
   const a = leftStr.split(/(\s+)/)
   const b = rightStr.split(/(\s+)/)
 
-  // Si el bloque es demasiado largo, marcar el párrafo completo para mantener fluidez instantánea
+  // Fall back to the whole block when the word matrix would grow too large.
   if (a.length * b.length > 250000) {
     return {
       leftTokens: [{ text: leftStr, type: 'removed' }],
@@ -106,10 +103,6 @@ function diffWords(leftStr, rightStr) {
   }
 }
 
-/**
- * Compara dos documentos completos línea por línea y refina por palabras
- * en los párrafos modificados para la vista "Lado a lado".
- */
 export function computeSideBySideDiff(leftText = '', rightText = '') {
   const left = leftText.replace(/\r\n/g, '\n')
   const right = rightText.replace(/\r\n/g, '\n')

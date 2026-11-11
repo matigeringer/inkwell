@@ -11,8 +11,10 @@ test('main enforces IPC grants and the close handshake with sandbox enabled', as
   t.after(() => fs.rm(directory, { recursive: true, force: true }))
   const selected = path.join(directory, 'selected.md')
   const privateFile = path.join(directory, 'private.md')
+  const exportFile = path.join(directory, 'export.md')
   await fs.writeFile(selected, 'chosen by user')
   await fs.writeFile(privateFile, 'private')
+  let exportDialogs = 0
   let ready
   const handlers = new Map()
   const ipcMain = new EventEmitter()
@@ -89,7 +91,13 @@ test('main enforces IPC grants and the close handshake with sandbox enabled', as
           setPermissionCheckHandler() {}
         }
       },
-      dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: [selected] }) }
+      dialog: {
+        showOpenDialog: async () => ({ canceled: false, filePaths: [selected] }),
+        showSaveDialog: async () => {
+          exportDialogs++
+          return { canceled: false, filePath: exportFile }
+        }
+      }
     },
     '@electron-toolkit/utils': {
       electronApp: { setAppUserModelId() {} },
@@ -105,18 +113,39 @@ test('main enforces IPC grants and the close handshake with sandbox enabled', as
   assert.equal((await handlers.get('file:read')(event, privateFile)).success, false)
   assert.equal((await handlers.get('file:open-dialog')(event)).success, true)
   assert.equal((await handlers.get('file:read')(event, selected)).content, 'chosen by user')
+  const untrusted = { ...event, senderFrame: { url: event.senderFrame.url } }
+  assert.equal((await handlers.get('file:read')(untrusted, selected)).success, false)
   assert.equal(
     (
-      await handlers.get('file:read')(
-        { ...event, senderFrame: { url: event.senderFrame.url } },
-        selected
-      )
+      await handlers.get('file:export')(event, {
+        filePath: privateFile,
+        format: 'markdown',
+        content: 'supplied by renderer'
+      })
     ).success,
     false
   )
+  assert.equal(exportDialogs, 0)
+
+  await fs.writeFile(selected, 'external edit')
+  assert.equal(
+    (await handlers.get('file:export')(event, { filePath: selected, format: 'markdown' })).success,
+    true
+  )
+  assert.equal(await fs.readFile(exportFile, 'utf8'), 'external edit')
+  const save = await handlers.get('file:save')(event, {
+    filePath: selected,
+    content: 'unsaved edit'
+  })
+  assert.equal(save.success, false)
+  assert.equal(await fs.readFile(selected, 'utf8'), 'external edit')
+
   ipcMain.emit('window:close-ready', event, true)
+  ipcMain.emit('window:close-ready', untrusted, false)
   assert.equal(window.close().prevented, true)
   assert.equal(window.sent.at(-1)[0], 'window:request-close')
+  assert.equal((await handlers.get('window:confirm-close')(untrusted, true)).success, false)
+  assert.equal(window.closed, undefined)
   await handlers.get('window:confirm-close')(event, false)
   assert.equal(window.closed, undefined)
   window.close()

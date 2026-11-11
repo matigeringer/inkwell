@@ -15,7 +15,7 @@ npm run check
 Electron descarga su binario oficial al ejecutarse por primera vez. Para descargarlo previamente: `npm exec --no -- install-electron`. La compilación y las pruebas de Node/DOM no necesitan abrir Electron.
 
 - `npm test`: pruebas de archivos, historial, contratos IPC, sesión, exportación e interfaz React/Tiptap.
-- `npm run check`: ESLint sin advertencias, pruebas y compilación de producción.
+- `npm run check`: formato con Prettier, ESLint sin advertencias, pruebas y compilación de producción.
 - `npm run test:electron`: prueba nativa de arranque, sandbox, IPC, edición, guardado y PDF; utiliza perfil y archivos temporales en Linux, sin acceder a los documentos del usuario.
 - `npm run test:packaged`: repite esa prueba sobre el código y las dependencias del ASAR generado por `build:linux`.
 - `npm run build:unpack`: paquete para inspección local.
@@ -49,15 +49,12 @@ La comparación de versiones usa un worker cancelable y matrices limitadas. Camb
 
 ## Arquitectura
 
-- `src/main/fileService.js`: autorizaciones, rutas, conflictos y operaciones de archivos.
-- `src/main/storage.js`: cola, escritura atómica y renombrado sin reemplazo.
-- `src/main/historyManager.js`: versiones, recuperación y traslado del historial.
-- `src/main/ipcSecurity.js`: verificación de ventana/frame/URL y protocolos externos.
-- `src/main/documentModel.js`: conversión de tokens para exportaciones.
-- `src/main/index.js`: ciclo de vida, diálogos y adaptadores IPC que validan el remitente.
-- `src/preload/index.js`: API específica y suscripciones con limpieza, sin IPC genérico.
-- `src/renderer/src/lib/documentSession.js`: contenido, revisiones y guardado, independiente de React.
-- `src/renderer/src/hooks`: persistencia, operaciones de archivos, comparación y foco de modales.
+- **Proceso principal:** `src/main/index.js` inicializa los servicios. `windowManager.js` administra las ventanas y espera al editor antes de cerrar. `ipc.js` aplica las comprobaciones de `ipcSecurity.js` a todos los canales que reciben mensajes del renderer.
+- **Archivos y exportación:** `fileIpc.js` coordina los selectores nativos, las autorizaciones de `fileService.js` y las exportaciones. `storage.js` implementa la cola de escrituras y el reemplazo atómico; `historyManager.js` mantiene las versiones. Los exportadores reciben Markdown y comparten la preparación del documento en `exportSource.js`.
+- **Búsqueda en carpetas:** `workspaceSearchIpc.js` administra una búsqueda cancelable por ventana. `workspaceSearch.js` recorre los archivos autorizados y delega el análisis de Markdown a un worker.
+- **Preload:** `src/preload/index.js` expone métodos específicos y suscripciones con limpieza.
+- **Renderer:** `App.jsx` conecta la portada con el editor. Los hooks administran preferencias, carpetas y navegación; `lib/documentSession.js` conserva las revisiones y serializa el guardado independientemente de React. El editor usa hooks propios para los atajos, el historial y el desplazamiento de máquina de escribir.
+- **Estilos:** `src/renderer/src/assets/main.css` define el orden de las hojas de estilos. Las reglas están agrupadas por pantalla o función de la interfaz.
 
 Sólo los selectores nativos conceden acceso. Las autorizaciones se guardan en `authorized-paths.json`. Tras actualizar desde una versión sin ese registro puede ser necesario volver a abrir una vez las carpetas/archivos con el selector. Carpetas desconectadas o sin acceso muestran un error. Los documentos tienen un límite de 10 MiB y el explorador informa límites de profundidad/tamaño y errores parciales.
 

@@ -39,7 +39,6 @@ function countTotalFiles(items) {
   return count
 }
 
-// Filtrado recursivo cuando hay texto en el buscador
 function filterTree(items, query) {
   if (!query) return items
   const q = query.toLowerCase()
@@ -83,13 +82,12 @@ export default function ZenFloatingFolder({
 
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [creatingIn, setCreatingIn] = useState(null) // { parentPath, type: 'file' | 'folder' } | null
+  const [creatingIn, setCreatingIn] = useState(null)
   const [creatingName, setCreatingName] = useState('')
-  const [contextMenu, setContextMenu] = useState(null) // { x, y, item } | null
+  const [contextMenu, setContextMenu] = useState(null)
   const [deletingItem, setDeletingItem] = useState(null)
   const createInputRef = useRef(null)
 
-  // Cerrar menú contextual al hacer clic fuera, scroll o Escape
   useEffect(() => {
     if (!contextMenu) return
 
@@ -116,7 +114,6 @@ export default function ZenFloatingFolder({
     }
   }, [contextMenu])
 
-  // Expandir todas las subcarpetas inicialmente para acceso rápido
   const [expandedFolders, setExpandedFolders] = useState(() => {
     const set = new Set([openedFolder?.path])
     const addAllFolders = (items) => {
@@ -132,7 +129,6 @@ export default function ZenFloatingFolder({
     return set
   })
 
-  // Enfocar input al iniciar creación
   useEffect(() => {
     if (creatingIn && createInputRef.current) {
       createInputRef.current.focus()
@@ -266,7 +262,6 @@ export default function ZenFloatingFolder({
     return filterTree(openedFolder.tree, q)
   }, [openedFolder?.tree, searchQuery])
 
-  // Formulario en línea para creación rápida
   const renderInlineCreateForm = () => {
     if (!creatingIn) return null
 
@@ -325,7 +320,6 @@ export default function ZenFloatingFolder({
     )
   }
 
-  // Renderizador recursivo de árbol estilo explorador Zen
   const renderTreeNodes = (items) => {
     if (!Array.isArray(items) || items.length === 0) {
       return (
@@ -410,7 +404,6 @@ export default function ZenFloatingFolder({
         )
       }
 
-      // Archivo / Nota
       const isActive = activeFilePath === item.path
 
       return (
@@ -442,7 +435,6 @@ export default function ZenFloatingFolder({
         aria-label="Explorador de notas en modo Zen"
         hidden={hidden}
       >
-        {/* Cabecera / Pill de la carpeta flotante */}
         <header
           className="zen-folder-header"
           onClick={() => setIsCollapsed((prev) => !prev)}
@@ -508,7 +500,6 @@ export default function ZenFloatingFolder({
           </div>
         </header>
 
-        {/* Contenido expandido con buscador sutil y lista de notas */}
         {!isCollapsed && (
           <div className="zen-folder-body">
             {totalFiles > 5 && (
@@ -576,7 +567,6 @@ export default function ZenFloatingFolder({
         )}
       </aside>
 
-      {/* Menú contextual flotante posicionado con portal */}
       {!hidden &&
         contextMenu &&
         createPortal(
@@ -703,7 +693,6 @@ export default function ZenFloatingFolder({
           document.body
         )}
 
-      {/* Modal de confirmación para eliminar carpeta o archivo */}
       {deletingItem &&
         createPortal(
           <DeleteConfirmModal

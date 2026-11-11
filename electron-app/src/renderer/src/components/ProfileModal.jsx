@@ -46,7 +46,6 @@ export default function ProfileModal({
   const [clearingHistory, setClearingHistory] = useState(false)
   const [historyClearedMsg, setHistoryClearedMsg] = useState(false)
   const [confirmDialog, setConfirmDialog] = useState(null)
-  // Cerrar modal con tecla Escape (o cerrar el diálogo de confirmación si está abierto)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape' && isOpen) {
@@ -222,7 +221,6 @@ export default function ProfileModal({
               </button>
             </div>
 
-            {/* Navegación de 3 pestañas principales */}
             <nav className="modal-segmented-nav" aria-label="Secciones de configuración">
               {tabs.map((tab) => {
                 const TabIcon = tab.icon
@@ -243,12 +241,8 @@ export default function ProfileModal({
           </header>
 
           <div className="modal-body modal-body-wide">
-            {/* =================================================================
-              PESTAÑA 1: GENERAL (Idioma, Corrector, Guardado, Historial)
-             ================================================================= */}
             {activeTab === 'general' && (
               <div className="pref-tab-panel">
-                {/* Fila: Idioma de la interfaz */}
                 <div className="pref-row">
                   <div className="pref-row-info">
                     <span className="pref-row-title">{t.preferences.general.languageTitle}</span>
@@ -273,7 +267,6 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Fila: Corrector ortográfico */}
                 <div className="pref-row">
                   <div className="pref-row-info">
                     <span className="pref-row-title">
@@ -293,7 +286,6 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Fila: Guardado automático (fijo en 2.5s) */}
                 <div className="pref-row">
                   <div className="pref-row-info">
                     <span className="pref-row-title">{t.preferences.general.autoSaveTitle}</span>
@@ -317,7 +309,6 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Fila: Historial de versiones */}
                 <div className="pref-section-group">
                   <div className="pref-row">
                     <div className="pref-row-info">
@@ -379,12 +370,8 @@ export default function ProfileModal({
               </div>
             )}
 
-            {/* =================================================================
-              PESTAÑA 2: APARIENCIA
-             ================================================================= */}
             {activeTab === 'appearance' && (
               <div className="pref-tab-panel">
-                {/* Fila: Modo de apariencia */}
                 <div className="pref-row">
                   <div className="pref-row-info">
                     <span className="pref-row-title">{t.preferences.appearance.modeTitle}</span>
@@ -410,7 +397,6 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Muestras seleccionables en el espacio de la paleta, sin texto visible adicional. */}
                 <div
                   className="theme-mockup-wrapper"
                   role="group"
@@ -448,7 +434,6 @@ export default function ProfileModal({
                   ))}
                 </div>
 
-                {/* Fila: Tipografía */}
                 <div className="pref-row">
                   <div className="pref-row-info">
                     <span className="pref-row-title">
@@ -474,7 +459,6 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Fila: Tamaño de texto */}
                 <div className="pref-row">
                   <div className="pref-row-info">
                     <span className="pref-row-title">{t.preferences.appearance.fontSizeTitle}</span>
@@ -499,7 +483,6 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Fila: Alineación */}
                 <div className="pref-row">
                   <div className="pref-row-info">
                     <span className="pref-row-title">{t.preferences.appearance.alignTitle}</span>
@@ -525,7 +508,6 @@ export default function ProfileModal({
                   </div>
                 </div>
 
-                {/* Muestra interactiva de texto sobria (mancha tipográfica de prueba) */}
                 <div className="live-preview-compact">
                   <p
                     className="live-preview-line"
@@ -541,12 +523,8 @@ export default function ProfileModal({
               </div>
             )}
 
-            {/* =================================================================
-              PESTAÑA 3: ESCRITURA (Rodillo + Modo Zen)
-             ================================================================= */}
             {activeTab === 'writing' && (
               <div className="pref-tab-panel">
-                {/* Sección A: Modo máquina de escribir */}
                 <div className="pref-section-group">
                   <div className="pref-row">
                     <div className="pref-row-info">
@@ -621,20 +599,16 @@ export default function ProfileModal({
                   )}
                 </div>
 
-                {/* Separador sutil */}
                 <div className="pref-divider" />
 
-                {/* Sección B: Modo Zen con maqueta reactiva y 3 opciones limpias */}
                 <div className="pref-section-group">
                   <div className="pref-section-header">
                     <span className="pref-section-title">{t.preferences.writing.zenTitle}</span>
                     <span className="pref-section-desc">{t.preferences.writing.zenDesc}</span>
                   </div>
 
-                  {/* Maqueta simulada minimalista integrada (reactiva a cada toggle) */}
                   <div className="zen-mockup-compact-wrapper" aria-hidden="true">
                     <div className="zen-mockup-compact-screen">
-                      {/* Explorador de carpetas */}
                       <div
                         className={`zen-mockup-item-tag zen-mockup-folder ${
                           currentZenFolder ? 'is-visible' : 'is-hidden'
@@ -644,7 +618,6 @@ export default function ProfileModal({
                         <span>{t.preferences.writing.zenFolderTitle}</span>
                       </div>
 
-                      {/* Barra de herramientas */}
                       <div
                         className={`zen-mockup-item-tag zen-mockup-toolbar ${
                           currentZenToolbar ? 'is-visible' : 'is-hidden'
@@ -655,7 +628,6 @@ export default function ProfileModal({
                         <span className="zen-mockup-kbd">Esc</span>
                       </div>
 
-                      {/* Lienzo central simulado */}
                       <div className="zen-mockup-canvas-lines">
                         <span className="zen-mockup-line line-main" />
                         <span className="zen-mockup-line line-sub" />
@@ -663,7 +635,6 @@ export default function ProfileModal({
                         <span className="zen-mockup-cursor" />
                       </div>
 
-                      {/* Estadísticas */}
                       <div
                         className={`zen-mockup-item-tag zen-mockup-stats ${
                           currentZenStats ? 'is-visible' : 'is-hidden'
@@ -675,9 +646,7 @@ export default function ProfileModal({
                     </div>
                   </div>
 
-                  {/* Los 3 toggles directos y limpios solicitados */}
                   <div className="zen-clean-toggles">
-                    {/* Opción 1: Barra de herramientas */}
                     <div className="pref-row">
                       <div className="pref-row-info">
                         <span className="pref-row-title">
@@ -699,7 +668,6 @@ export default function ProfileModal({
                       </div>
                     </div>
 
-                    {/* Opción 2: Estadísticas */}
                     <div className="pref-row">
                       <div className="pref-row-info">
                         <span className="pref-row-title">
@@ -719,7 +687,6 @@ export default function ProfileModal({
                       </div>
                     </div>
 
-                    {/* Opción 3: Explorador de carpetas */}
                     <div className="pref-row">
                       <div className="pref-row-info">
                         <span className="pref-row-title">

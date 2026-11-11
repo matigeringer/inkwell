@@ -1,41 +1,30 @@
 import { app } from 'electron'
-import { promises as fs } from 'fs'
-import { join } from 'path'
-import crypto from 'crypto'
+import { promises as fs } from 'node:fs'
+import { join } from 'node:path'
+import crypto from 'node:crypto'
 import { atomicWrite, createQueue } from './storage'
 import { validateContent } from './fileService'
+import { countWords } from '../shared/textStats'
 
 const serialize = createQueue()
 const snapshotFile = (name) => typeof name === 'string' && /^\d+_[a-z0-9-]+\.md$/.test(name)
 const historyLimit = (value) => Math.min(500, Math.max(5, Math.floor(Number(value) || 50)))
 
-/**
- * Obtiene la ruta del directorio base para el historial de documentos
- */
 function getHistoryBaseDir() {
   return join(app.getPath('userData'), 'fountain_history')
 }
 
-/**
- * Genera un identificador seguro para el sistema de archivos a partir de docKey
- */
 function getDocHash(docKey) {
   if (typeof docKey !== 'string' || !docKey || docKey.length > 4096)
     throw new Error('Identificador de historial inválido')
   return crypto.createHash('sha256').update(String(docKey)).digest('hex').slice(0, 20)
 }
 
-/**
- * Obtiene la ruta del directorio de un documento específico
- */
 function getDocHistoryDir(docKey) {
   const hash = getDocHash(docKey)
   return join(getHistoryBaseDir(), hash)
 }
 
-/**
- * Lee los metadatos de un documento del historial
- */
 async function readDocMeta(docDir) {
   const metaPath = join(docDir, 'meta.json')
   try {
@@ -73,7 +62,7 @@ async function readDocMeta(docDir) {
         file,
         timestamp: Number(id.split('_')[0]),
         trigger: 'recovered',
-        words: content.trim() ? content.trim().split(/\s+/).length : 0,
+        words: countWords(content),
         characters: content.length,
         preview: content.slice(0, 160).replace(/[\r\n]+/g, ' ')
       })
@@ -86,17 +75,23 @@ async function readDocMeta(docDir) {
   }
 }
 
-/**
- * Guarda los metadatos de un documento en su directorio
- */
 async function writeDocMeta(docDir, meta) {
   const metaPath = join(docDir, 'meta.json')
   await atomicWrite(metaPath, JSON.stringify(meta, null, 2))
 }
 
-/**
- * Guarda una nueva instantánea temporal en el historial
- */
+async function commitSnapshotList(docDir, meta, removed) {
+  // Commit the index first so an interruption leaves every listed version readable.
+  await writeDocMeta(docDir, meta)
+  for (const { file } of removed) {
+    try {
+      await fs.rm(join(docDir, file), { force: true })
+    } catch (error) {
+      console.warn('Could not remove an unlisted snapshot:', error.message)
+    }
+  }
+}
+
 async function _saveSnapshot({
   docKey,
   docName,
@@ -129,18 +124,16 @@ async function _saveSnapshot({
       if (filePath) meta.filePath = filePath
     }
 
-    // Verificar si el contenido es exactamente igual a la última instantánea
     if (meta.snapshots.length > 0) {
       const lastSnapshot = meta.snapshots[0]
       const lastFilePath = join(docDir, lastSnapshot.file)
       try {
         const lastContent = await fs.readFile(lastFilePath, 'utf-8')
         if (lastContent === content) {
-          // Si el contenido es 100% idéntico, no duplicamos la snapshot
           return { success: true, duplicate: true, snapshot: lastSnapshot }
         }
       } catch {
-        // Si no se pudo leer el archivo previo, continuamos con el guardado
+        // Keep saving if the previous snapshot file cannot be read.
       }
     }
 
@@ -148,10 +141,8 @@ async function _saveSnapshot({
     const snapshotFileName = `${snapshotId}.md`
     const snapshotFilePath = join(docDir, snapshotFileName)
 
-    // Guardar archivo con el contenido Markdown íntegro
     await atomicWrite(snapshotFilePath, content)
 
-    // Generar un extracto breve para vista previa rápida
     const preview = content
       .trim()
       .slice(0, 160)
@@ -160,33 +151,17 @@ async function _saveSnapshot({
     const newSnapshot = {
       id: snapshotId,
       timestamp: Date.now(),
-      trigger, // 'auto' | 'manual'
+      trigger,
       words: Number(words) || 0,
       characters: Number(characters) || 0,
       preview,
       file: snapshotFileName
     }
 
-    // Insertar al inicio (orden cronológico descendente)
     meta.snapshots.unshift(newSnapshot)
 
-    // Poda FIFO si excede maxEntries
-    const limit = historyLimit(maxEntries)
-    if (meta.snapshots.length > limit) {
-      const toRemove = meta.snapshots.slice(limit)
-      meta.snapshots = meta.snapshots.slice(0, limit)
-
-      await writeDocMeta(docDir, meta)
-      for (const item of toRemove) {
-        try {
-          await fs.unlink(join(docDir, item.file))
-        } catch {
-          // Ignorar si ya fue eliminado
-        }
-      }
-    }
-
-    await writeDocMeta(docDir, meta)
+    const removed = meta.snapshots.splice(historyLimit(maxEntries))
+    await commitSnapshotList(docDir, meta, removed)
 
     return {
       success: true,
@@ -199,9 +174,6 @@ async function _saveSnapshot({
   }
 }
 
-/**
- * Obtiene la lista de instantáneas de un documento
- */
 async function _getSnapshots(docKey) {
   try {
     if (!docKey) return { success: true, snapshots: [] }
@@ -225,9 +197,6 @@ async function _getSnapshots(docKey) {
   }
 }
 
-/**
- * Obtiene el contenido completo de una instantánea específica
- */
 async function _getSnapshotContent({ docKey, snapshotId }) {
   try {
     if (!docKey || !snapshotId) {
@@ -260,9 +229,6 @@ async function _getSnapshotContent({ docKey, snapshotId }) {
   }
 }
 
-/**
- * Elimina una instantánea específica del historial
- */
 async function _deleteSnapshot({ docKey, snapshotId }) {
   try {
     if (!docKey || !snapshotId) {
@@ -278,14 +244,8 @@ async function _deleteSnapshot({ docKey, snapshotId }) {
 
     const targetIndex = meta.snapshots.findIndex((s) => s.id === snapshotId)
     if (targetIndex !== -1) {
-      const [removed] = meta.snapshots.splice(targetIndex, 1)
-      await writeDocMeta(docDir, meta)
-      try {
-        await fs.unlink(join(docDir, removed.file))
-      } catch {
-        // Ignorar si el archivo no existe
-      }
-      await writeDocMeta(docDir, meta)
+      const removed = meta.snapshots.splice(targetIndex, 1)
+      await commitSnapshotList(docDir, meta, removed)
     }
 
     return { success: true, remaining: meta.snapshots.length }
@@ -295,9 +255,6 @@ async function _deleteSnapshot({ docKey, snapshotId }) {
   }
 }
 
-/**
- * Borra todo el historial de un documento
- */
 async function _clearDocHistory(docKey) {
   try {
     if (!docKey) return { success: true }
@@ -310,9 +267,6 @@ async function _clearDocHistory(docKey) {
   }
 }
 
-/**
- * Borra todo el historial de la aplicación
- */
 async function _clearAllHistory() {
   try {
     const baseDir = getHistoryBaseDir()
@@ -324,9 +278,6 @@ async function _clearAllHistory() {
   }
 }
 
-/**
- * Poda el historial de todos los documentos para ajustarse a un nuevo límite máximo
- */
 async function _pruneAllHistory(maxEntries) {
   try {
     const baseDir = getHistoryBaseDir()
@@ -343,18 +294,9 @@ async function _pruneAllHistory(maxEntries) {
       if (entry.isDirectory()) {
         const docDir = join(baseDir, entry.name)
         const meta = await readDocMeta(docDir)
-        if (meta && Array.isArray(meta.snapshots) && meta.snapshots.length > limit) {
-          const toRemove = meta.snapshots.slice(limit)
-          meta.snapshots = meta.snapshots.slice(0, limit)
-          await writeDocMeta(docDir, meta)
-          for (const item of toRemove) {
-            try {
-              await fs.unlink(join(docDir, item.file))
-            } catch {
-              // Ignorar si ya fue eliminado
-            }
-          }
-          await writeDocMeta(docDir, meta)
+        if (meta?.snapshots.length > limit) {
+          const removed = meta.snapshots.splice(limit)
+          await commitSnapshotList(docDir, meta, removed)
         }
       }
     }

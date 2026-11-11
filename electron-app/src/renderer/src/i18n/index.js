@@ -262,7 +262,6 @@ export const translations = {
         appearance: 'Apariencia',
         writing: 'Escritura',
         general: 'General',
-        // Fallbacks para navegación contextual
         typography: 'Apariencia',
         zen: 'Escritura',
         saving: 'General',
@@ -613,7 +612,6 @@ export const translations = {
         appearance: 'Appearance',
         writing: 'Writing',
         general: 'General',
-        // Fallbacks for contextual navigation
         typography: 'Appearance',
         zen: 'Writing',
         saving: 'General',
@@ -702,9 +700,6 @@ export const translations = {
   }
 }
 
-/**
- * Helper para obtener traducciones con fallback a español
- */
 export function getTranslation(lang = 'es') {
   return translations[lang] || translations.es
 }

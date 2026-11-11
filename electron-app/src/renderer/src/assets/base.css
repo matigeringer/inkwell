@@ -1,9 +1,6 @@
-/* ==========================================================================
-   Tokens compartidos
-   ========================================================================== */
+/* Shared tokens */
 
 :root {
-  /* Familias tipográficas (empaquetadas localmente, funcionan sin conexión) */
   --font-ui: 'Schibsted Grotesk Variable', 'Schibsted Grotesk', 'Helvetica Neue', Arial, sans-serif;
   --font-serif: 'Newsreader Variable', 'Newsreader', Georgia, 'Times New Roman', serif;
   --font-mono: 'IBM Plex Mono', 'Courier New', Courier, monospace;
@@ -13,24 +10,16 @@
   --text-align-editor: left;
   --editor-max-width: 800px;
 
-  /* Geometría: esquinas casi rectas, como papel cortado */
   --radius: 2px;
   --radius-sm: 1px;
 
-  /* Etiquetas en versalitas espaciadas */
   --label-tracking: 0.14em;
 
-  /* Compatibilidad con variables legacy */
+  /* Aliases used by existing component styles. */
   --bg-primary: var(--bg-canvas);
   --border-color: var(--border-subtle);
   --font-sans: var(--font-ui);
 }
-
-/* ==========================================================================
-   TEMA 1: GALERA (PURO) · Claro — "Prueba de imprenta"
-   Papel de galera cálido, tinta carbón, lápiz bermellón del corrector
-   y azul no‑reproducible para marcas y selección.
-   ========================================================================== */
 
 :root,
 [data-theme='light'],
@@ -72,7 +61,6 @@
   --mark-danger: #b3261e;
   --mark-danger-subtle: rgba(179, 38, 30, 0.1);
 
-  /* Ficha de escritor: línea de cabecera roja y renglones azules */
   --card-headline: #c2381b;
   --card-ruling: rgba(62, 127, 166, 0.13);
 
@@ -92,11 +80,6 @@
 
   --grain-opacity: 0.05;
 }
-
-/* ==========================================================================
-   TEMA 1: GALERA (PURO) · Oscuro — "Linotipia de noche"
-   Plancha de plomo entintada, papel de galera en penumbra, bermellón vivo.
-   ========================================================================== */
 
 [data-theme='dark'],
 [data-theme='puro-dark'],
@@ -157,9 +140,7 @@
   --grain-opacity: 0.07;
 }
 
-/* ==========================================================================
-   Reset y base
-   ========================================================================== */
+/* Reset and defaults */
 
 *,
 *::before,
@@ -187,7 +168,6 @@ body {
   color: var(--text-primary);
 }
 
-/* Foco visible: trazo sólido de corrector, sin halos difusos */
 :focus-visible {
   outline: 1.5px solid var(--border-focus);
   outline-offset: 2px;
@@ -198,7 +178,6 @@ body {
   width: 100%;
 }
 
-/* Grano de papel sutil sobre toda la interfaz */
 #root::after {
   content: '';
   position: fixed;
@@ -215,9 +194,7 @@ body {
   mix-blend-mode: screen;
 }
 
-/* ==========================================================================
-   Transición suave y sincronizada de temas (View Transitions API)
-   ========================================================================== */
+/* Theme transitions */
 
 ::view-transition-old(root),
 ::view-transition-new(root) {

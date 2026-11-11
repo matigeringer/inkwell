@@ -1,7 +1,4 @@
-/* Temas adicionales. Solo cambian color, tipografía de interfaz y acabado;
-   la estructura, el orden y las preferencias del manuscrito se conservan. */
-
-/* Blanco y negro: superficies neutras, curvas suaves y sombras difusas. */
+/* Mono theme */
 [data-theme='mono-light'],
 [data-theme='mono-dark'] {
   --radius: 12px;
@@ -102,7 +99,7 @@
   --shadow-lg: 0 20px 64px rgb(0 0 0 / 48%);
 }
 
-/* Beige: escritorio clásico, ventanas de tinta y controles mecánicos. */
+/* Beige theme */
 [data-theme='beige-light'],
 [data-theme='beige-dark'] {
   --radius: 0px;
@@ -215,7 +212,6 @@
   --shadow-lg: 7px 7px 0 var(--shadow-ink);
 }
 
-/* Acabados locales y espaciado, conservando la estructura de cada pantalla. */
 :root:is([data-theme^='mono-'], [data-theme^='beige-']) .welcome-action-card {
   padding-inline: 1rem;
 }
@@ -310,7 +306,7 @@
   background-color: var(--bg-canvas);
 }
 
-/* El relieve y las cabeceras pertenecen a la interfaz, no al manuscrito. */
+/* Keep the raised controls outside the manuscript. */
 :root[data-theme^='beige-'] :is(.main-content, .editor-main) {
   background-image: radial-gradient(var(--desktop-dot) 0.65px, transparent 0.65px);
   background-size: 6px 6px;
@@ -658,7 +654,7 @@
   }
 }
 
-/* Cada muestra conserva la geometría de su tema, incluso dentro de otro tema. */
+/* Preview geometry follows the sampled theme rather than the active theme. */
 .theme-mockup-screen[data-theme^='puro-'] {
   border-radius: 2px;
 }

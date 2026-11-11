@@ -1,25 +1,13 @@
-import { BrowserWindow, dialog } from 'electron'
-import { promises as fs } from 'fs'
-import { join, basename, dirname } from 'path'
-import MarkdownIt from 'markdown-it'
+import { BrowserWindow } from 'electron'
+import * as fs from 'node:fs/promises'
+import { basename } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { atomicWrite } from './storage'
-import { validateContent } from './fileService'
-
-// Instancia configurada de Markdown-it con opciones de lectura editorial
-const md = new MarkdownIt({
-  html: false,
-  linkify: true,
-  typographer: true,
-  breaks: false
-})
+import { chooseExportPath, exportMarkdown, getExportSource } from './exportSource'
 
 let cachedFontFacesCss = null
 
-/**
- * Carga e incrusta las fuentes tipográficas locales (Newsreader e IBM Plex Mono) en Base64
- * para asegurar renderizado 100% fiel e independiente de conexión o fuentes del sistema.
- */
+// Embed local fonts so the isolated print window can lay out text offline.
 async function getFontFacesCss() {
   if (cachedFontFacesCss !== null) {
     return cachedFontFacesCss
@@ -67,9 +55,6 @@ async function getFontFacesCss() {
   return cachedFontFacesCss
 }
 
-/**
- * Escapa caracteres HTML peligrosos
- */
 function escapeHtml(str) {
   if (!str) return ''
   return String(str)
@@ -80,28 +65,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;')
 }
 
-/**
- * Obtiene el título legible del documento
- */
-function resolveDocumentTitle(content, fileName, isEn) {
-  if (content) {
-    const headingMatch = content.match(/^#\s+(.+)$/m)
-    if (headingMatch && headingMatch[1]?.trim()) {
-      return headingMatch[1].trim()
-    }
-  }
-
-  if (fileName) {
-    const clean = fileName.replace(/\.[^/.]+$/, '').trim()
-    if (clean) return clean
-  }
-
-  return isEn ? 'Manuscript' : 'Manuscrito'
-}
-
-/**
- * Genera el documento HTML completo maquetado con estilo editorial de lectura (libro / imprenta)
- */
 function generateEditorialReadingHtml({ title, bodyHtml, fontFacesCss, isEn }) {
   return `<!DOCTYPE html>
 <html lang="${isEn ? 'en' : 'es'}">
@@ -310,84 +273,32 @@ function generateEditorialReadingHtml({ title, bodyHtml, fontFacesCss, isEn }) {
 </html>`
 }
 
-/**
- * Exporta un documento de lectura a PDF de forma limpia, directa y con estilo editorial.
- */
 export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') {
   let printWin = null
 
   try {
     const isEn = appLanguage === 'en'
-    let { filePath, fileName, content, title } = data
+    const source = getExportSource(data, isEn)
+    const destinationPdfPath = await chooseExportPath(
+      event.sender,
+      source,
+      {
+        ext: 'pdf',
+        title: isEn ? 'Export reading document to PDF' : 'Exportar archivo de lectura a PDF',
+        filter: { name: 'PDF (*.pdf)', extensions: ['pdf'] }
+      },
+      isEn
+    )
+    if (!destinationPdfPath) return { canceled: true }
 
-    // Si no se proporcionó contenido ni HTML, leer desde el archivo en disco
-    if (content == null && filePath) {
-      try {
-        content = await fs.readFile(filePath, 'utf-8')
-      } catch (readErr) {
-        return {
-          success: false,
-          error: isEn
-            ? `Could not read file: ${readErr.message}`
-            : `No se pudo leer el archivo: ${readErr.message}`
-        }
-      }
-    }
-
-    if (content == null) {
-      return {
-        success: false,
-        error: isEn ? 'No content to export' : 'No hay contenido para exportar'
-      }
-    }
-
-    validateContent(content)
-
-    // Resolver el nombre del archivo y título del manuscrito
-    const effectiveFileName = fileName || (filePath ? basename(filePath) : 'documento.md')
-    const effectiveTitle = title || resolveDocumentTitle(content, effectiveFileName, isEn)
-
-    // Determinar ruta de guardado sugerida (.pdf)
-    const baseNameWithoutExt = effectiveFileName.replace(/\.[^/.]+$/, '')
-    const defaultPdfName = `${baseNameWithoutExt}.pdf`
-    let defaultSavePath = defaultPdfName
-
-    if (filePath) {
-      defaultSavePath = join(dirname(filePath), defaultPdfName)
-    }
-
-    // Diálogo nativo de guardado
-    const win = BrowserWindow.fromWebContents(event.sender)
-    const saveDialogResult = await dialog.showSaveDialog(win, {
-      title: isEn ? 'Export reading document to PDF' : 'Exportar archivo de lectura a PDF',
-      defaultPath: defaultSavePath,
-      filters: [
-        { name: 'PDF (*.pdf)', extensions: ['pdf'] },
-        { name: isEn ? 'All files (*.*)' : 'Todos los archivos (*.*)', extensions: ['*'] }
-      ]
-    })
-
-    if (saveDialogResult.canceled || !saveDialogResult.filePath) {
-      return { canceled: true }
-    }
-
-    const destinationPdfPath = saveDialogResult.filePath
-
-    // Obtener HTML del cuerpo: si viene de Tiptap usarlo, o renderizar el Markdown
-    const bodyHtml = md.render(content)
-
-    // Obtener CSS de fuentes locales incrustadas
-    const fontFacesCss = await getFontFacesCss()
-
-    // Ensamblar el documento completo
     const fullHtml = generateEditorialReadingHtml({
-      title: effectiveTitle,
-      bodyHtml,
-      fontFacesCss,
+      title: source.title,
+      bodyHtml: exportMarkdown.render(source.content),
+      fontFacesCss: await getFontFacesCss(),
       isEn
     })
 
-    // Crear ventana auxiliar oculta para generar el PDF de forma aislada e inalterada
+    // Use an isolated session so print-only network restrictions cannot affect the editor.
     printWin = new BrowserWindow({
       show: false,
       webPreferences: {
@@ -409,13 +320,11 @@ export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') 
       callback({ cancel: !details.url.startsWith('data:') && details.url !== 'about:blank' })
     })
 
-    // Cargar el HTML en la ventana de impresión
     await printWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(fullHtml)}`)
 
-    // Pequeño retardo de seguridad para asegurar renderizado vectorial perfecto
+    // Let Chromium lay out the embedded fonts before printing.
     await new Promise((resolve) => setTimeout(resolve, 80))
 
-    // Configuración editorial para Chromium printToPDF
     const pdfOptions = {
       pageSize: 'A4',
       printBackground: true,
@@ -437,7 +346,6 @@ export async function exportDocumentToPdf(event, data = {}, appLanguage = 'es') 
 
     const pdfBuffer = await printWin.webContents.printToPDF(pdfOptions)
 
-    // Escribir el archivo PDF en disco
     await atomicWrite(destinationPdfPath, pdfBuffer)
 
     return {

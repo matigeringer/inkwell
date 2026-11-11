@@ -49,18 +49,17 @@ export default function FileTree({
   const isEn = language === 'en'
 
   const [expandedFolders, setExpandedFolders] = useState(() => new Set([openedFolder?.path]))
-  const [creatingIn, setCreatingIn] = useState(null) // { parentPath, type: 'file' | 'folder' } | null
+  const [creatingIn, setCreatingIn] = useState(null)
   const [creatingName, setCreatingName] = useState('')
-  const [renamingItem, setRenamingItem] = useState(null) // { path, name, isDirectory } | null
+  const [renamingItem, setRenamingItem] = useState(null)
   const [renamingName, setRenamingName] = useState('')
   const [deletingItem, setDeletingItem] = useState(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [contextMenu, setContextMenu] = useState(null) // { x, y, item } | null
+  const [contextMenu, setContextMenu] = useState(null)
 
   const createInputRef = useRef(null)
   const renameInputRef = useRef(null)
 
-  // Cerrar menú contextual al hacer clic fuera, scroll o Escape
   useEffect(() => {
     if (!contextMenu) return
 
@@ -87,18 +86,15 @@ export default function FileTree({
     }
   }, [contextMenu])
 
-  // Enfocar input al iniciar creación
   useEffect(() => {
     if (creatingIn && createInputRef.current) {
       createInputRef.current.focus()
     }
   }, [creatingIn])
 
-  // Enfocar input al iniciar renombrado
   useEffect(() => {
     if (renamingItem && renameInputRef.current) {
       renameInputRef.current.focus()
-      // Seleccionar nombre sin extensión si es archivo
       const dotIndex = renamingItem.name.lastIndexOf('.')
       if (!renamingItem.isDirectory && dotIndex > 0) {
         renameInputRef.current.setSelectionRange(0, dotIndex)
@@ -122,7 +118,6 @@ export default function FileTree({
 
   const handleStartCreate = (parentPath, type, e) => {
     e?.stopPropagation()
-    // Asegurar que la carpeta padre esté expandida
     setExpandedFolders((prev) => new Set(prev).add(parentPath))
     setCreatingIn({ parentPath, type })
     setCreatingName('')
@@ -164,7 +159,6 @@ export default function FileTree({
         })
         if (res?.success) {
           showToast?.(t.fileTree.toastFolderCreated(res.folderName))
-          // Auto-expandir la nueva carpeta
           setExpandedFolders((prev) => new Set(prev).add(res.folderPath))
           await onRefreshTree()
         } else {
@@ -243,14 +237,13 @@ export default function FileTree({
     try {
       await onRefreshTree()
       showToast?.(isEn ? 'File tree refreshed' : 'Árbol actualizado')
-    } catch {
-      // Ignorar error
+    } catch (error) {
+      showToast?.(error.message || t.common.error, 'error')
     } finally {
       setIsRefreshing(false)
     }
   }
 
-  // Exportar archivo individual en formato seleccionado desde el explorador
   const handleExportDocument = async (item, format = 'pdf') => {
     if (!window.api?.exportDocument || !item?.path) return
 
@@ -288,10 +281,8 @@ export default function FileTree({
     }
   }
 
-  // Alias retrocompatible
   const handleExportPdf = (item) => handleExportDocument(item, 'pdf')
 
-  // Abrir menú contextual nativo/flotante posicionado
   const handleContextMenu = (e, item) => {
     e.preventDefault()
     e.stopPropagation()
@@ -314,7 +305,6 @@ export default function FileTree({
     setContextMenu({ x, y, item })
   }
 
-  // Renderizador recursivo de elementos del árbol
   const renderTreeItems = (items, depth = 0) => {
     return (
       <div className="tree-level" style={{ '--depth': depth }}>
@@ -426,10 +416,8 @@ export default function FileTree({
                   </div>
                 )}
 
-                {/* Subcontenido de la carpeta desplegada */}
                 {isExpanded && (
                   <div className="tree-subgroup">
-                    {/* Formulario en línea para nuevo archivo o subcarpeta dentro de esta carpeta */}
                     {isCreatingInside && (
                       <div className="tree-inline-form" onClick={(e) => e.stopPropagation()}>
                         {creatingIn.type === 'file' ? (
@@ -485,7 +473,6 @@ export default function FileTree({
             )
           }
 
-          // Archivo Markdown / Texto
           return (
             <div key={item.path} className="tree-node tree-file-node">
               {isItemRenaming ? (
@@ -593,7 +580,7 @@ export default function FileTree({
           {openedFolder.warnings.join(' · ')}
         </p>
       )}
-      {/* Cabecera del Espacio de Trabajo */}
+
       <div className="file-tree-header">
         <div className="tree-workspace-title-row">
           <div className="tree-workspace-info" title={openedFolder.path}>
@@ -655,9 +642,7 @@ export default function FileTree({
         </div>
       </div>
 
-      {/* Cuerpo del Árbol de Archivos */}
       <div className="file-tree-body">
-        {/* Formulario en raíz si se está creando algo */}
         {isCreatingInRoot && (
           <div className="tree-inline-form root-inline-form" onClick={(e) => e.stopPropagation()}>
             {creatingIn.type === 'file' ? (
@@ -721,7 +706,6 @@ export default function FileTree({
             )}
       </div>
 
-      {/* Modal de confirmación de eliminación */}
       <DeleteConfirmModal
         isOpen={Boolean(deletingItem)}
         item={deletingItem}
@@ -730,7 +714,6 @@ export default function FileTree({
         language={language}
       />
 
-      {/* Menú contextual flotante para archivos y carpetas */}
       {contextMenu && (
         <div
           className="tree-context-menu"

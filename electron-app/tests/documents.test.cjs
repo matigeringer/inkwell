@@ -1,5 +1,7 @@
 const { test } = require('node:test')
 const assert = require('node:assert/strict')
+const fs = require('node:fs/promises')
+const path = require('node:path')
 const MarkdownIt = require('markdown-it')
 const { Packer, Document } = require('docx')
 const JSZip = require('jszip')
@@ -36,6 +38,43 @@ test('DOCX and ODT preserve soft/hard breaks, nested formatting, lists, tables a
   assert.match(xml, /w:tbl/)
   assert.match(xml, /w:strike/)
   assert.equal(model.tokensToPlainText(md.parse('hola\nmundo', {})), 'hola mundo')
+})
+
+test('document exporters write complete DOCX and ODT packages from Markdown', async (t) => {
+  const directory = await fs.mkdtemp('/tmp/inkwell-format-')
+  t.after(() => fs.rm(directory, { recursive: true, force: true }))
+  let destination
+  const { exportDocument } = load('src/main/documentExporter.js', {
+    electron: {
+      BrowserWindow: { fromWebContents: () => ({}) },
+      dialog: { showSaveDialog: async () => ({ canceled: false, filePath: destination }) }
+    }
+  })
+  for (const format of ['docx', 'odt']) {
+    destination = path.join(directory, `story.${format}`)
+    const result = await exportDocument(
+      { sender: {} },
+      { format, content: '# A story\n\n1. First\n2. Second\n\n**The end**' }
+    )
+    assert.equal(result.success, true)
+    const bytes = await fs.readFile(destination)
+    const zip = await JSZip.loadAsync(bytes)
+    const body = await zip
+      .file(format === 'docx' ? 'word/document.xml' : 'content.xml')
+      .async('string')
+    assert.match(body, /First/)
+    assert.match(body, /The end/)
+    if (format === 'odt') {
+      assert.equal(Object.keys(zip.files)[0], 'mimetype')
+      assert.equal(
+        await zip.file('mimetype').async('string'),
+        'application/vnd.oasis.opendocument.text'
+      )
+      assert.match(await zip.file('meta.xml').async('string'), /<dc:title>A story<\/dc:title>/)
+      const xml = new JSDOM(body, { contentType: 'text/xml' }).window.document
+      assert.equal(xml.querySelectorAll('parsererror').length, 0)
+    }
+  }
 })
 
 test('large diffs preserve exact input without quadratic allocation', () => {

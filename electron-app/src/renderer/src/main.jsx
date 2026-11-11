@@ -11,15 +11,14 @@ import './assets/main.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
-import { loadPreferences } from './lib/preferences'
+import { loadPreferences, resolveColorMode, SYSTEM_DARK_QUERY } from './lib/preferences'
 
+// Apply the saved theme before React mounts to avoid a flash of the default theme.
 const initialPreferences = loadPreferences()
-const initialMode =
-  initialPreferences.mode === 'system'
-    ? window.matchMedia('(prefers-color-scheme: dark)').matches
-      ? 'dark'
-      : 'light'
-    : initialPreferences.mode
+const initialMode = resolveColorMode(
+  initialPreferences.mode,
+  window.matchMedia(SYSTEM_DARK_QUERY).matches
+)
 document.documentElement.setAttribute('data-theme', `${initialPreferences.theme}-${initialMode}`)
 
 createRoot(document.getElementById('root')).render(
