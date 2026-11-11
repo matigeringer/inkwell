@@ -1,20 +1,20 @@
-# Historial de cambios
+# Changelog
 
 ## 1.1.0
 
-- Búsqueda dentro del manuscrito con coincidencias resaltadas y navegación entre resultados.
-- Búsqueda de texto en una carpeta y sus subcarpetas, con fragmentos y ubicación de cada coincidencia.
-- Navegación entre resultados de carpeta con resaltado en el editor y en el panel lateral.
-- Acceso a las búsquedas desde el modo Zen, con el panel de resultados disponible al abrir una coincidencia.
+- Search within a manuscript with highlighted matches and navigation between results.
+- Search for text in a folder and its subfolders, with a snippet and location for each match.
+- Navigate between folder search results with highlights in the editor and sidebar.
+- Search from Zen mode and keep the results panel available when opening a match.
 
 ## 1.0.0
 
-Primera distribución preparada para Linux y Windows x86-64.
+Initial distribution for Linux and Windows on x86-64.
 
-- Editor Markdown con modo visual y fuente, carpetas locales y autoguardado.
-- Recuperación de borradores e historial con comparación de versiones.
-- Modo Zen, temas, tipografía e interfaz en español e inglés.
-- Exportación a PDF, DOCX, ODT, Markdown y texto.
-- Paquetes AppImage y Debian para Linux y ejecutable portable para Windows.
+- Markdown editor with visual and source modes, local folders, and autosave.
+- Draft recovery and version history with version comparison.
+- Zen mode, themes, typography settings, and an interface available in Spanish and English.
+- Export to PDF, DOCX, ODT, Markdown, and plain text.
+- AppImage and Debian packages for Linux and a portable executable for Windows.
 
-El ejecutable Windows se distribuye sin firma digital. Los borradores y el historial se guardan localmente sin cifrado. Consulta el README para los requisitos y límites de exportación.
+The Windows executable is distributed unsigned. Drafts and version history are stored locally without encryption. See the README for requirements and export limits.
