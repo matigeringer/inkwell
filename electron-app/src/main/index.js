@@ -25,12 +25,15 @@ async function initialize() {
   if (process.platform === 'darwin' && app.dock) app.dock.setIcon(icon)
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
+  const [primaryLanguage = ''] = app.getPreferredSystemLanguages()
+  const systemLanguage = /^es(?:$|[-_.@])/i.test(primaryLanguage) ? 'es' : 'en'
   const windows = createWindowManager({
     developmentUrl: is.dev ? process.env.ELECTRON_RENDERER_URL : undefined,
-    icon: process.platform === 'win32' ? iconIco : icon
+    icon: process.platform === 'win32' ? iconIco : icon,
+    systemLanguage
   })
   const ipc = createTrustedIpc(windows.isTrusted)
-  const getLanguage = registerSpellcheckIpc(ipc)
+  const getLanguage = registerSpellcheckIpc(ipc, systemLanguage)
   registerFileIpc(ipc, fileService, getLanguage)
   registerHistoryIpc(ipc)
   const cancelSearch = registerWorkspaceSearchIpc(ipc, fileService)

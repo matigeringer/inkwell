@@ -16,8 +16,14 @@ export default function App() {
   const [addMenuOpen, setAddMenuOpen] = useState(false)
   const showToast = useCallback((message) => setNotice(message), [])
 
-  const { preferences, isDark, updatePreferences, toggleTheme, toggleLanguage } =
-    useAppPreferences(showToast)
+  const {
+    preferences,
+    languagePreference,
+    isDark,
+    updatePreferences,
+    toggleTheme,
+    toggleLanguage
+  } = useAppPreferences(showToast)
   const language = preferences.language
   const t = getTranslation(language)
   const workspace = useWorkspaceFolders(showToast)
@@ -137,6 +143,7 @@ export default function App() {
       isOpen={profileTab !== null}
       onClose={closeProfile}
       preferences={preferences}
+      languagePreference={languagePreference}
       onUpdatePreferences={updatePreferences}
       initialTab={profileTab ?? 'general'}
     />

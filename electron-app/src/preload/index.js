@@ -7,6 +7,7 @@ function subscribe(channel, callback) {
 }
 
 const api = {
+  systemLanguage: process.argv.includes('--inkwell-system-language=es') ? 'es' : 'en',
   onRequestClose: (callback) => {
     const unsubscribe = subscribe('window:request-close', () => {
       Promise.resolve()

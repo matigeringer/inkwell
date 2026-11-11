@@ -1,88 +1,89 @@
 # Inkwell
 
-Inkwell es una aplicación de escritorio para escribir y organizar manuscritos en Markdown. Trabaja con archivos locales y ofrece un espacio de escritura personalizable, recuperación de borradores e historial y exportación a otros formatos. Está construida con Electron, React y Tiptap y es software libre bajo GPL-3.0-only.
+Inkwell is a desktop app for writing and organizing Markdown manuscripts. It works with local files and offers a customizable writing environment, draft recovery, version history, and export to other formats. It is built with Electron, React, and Tiptap and is free software licensed under GPL-3.0-only.
 
 [![Build and release](https://github.com/matigeringer/inkwell/actions/workflows/build.yml/badge.svg)](https://github.com/matigeringer/inkwell/actions/workflows/build.yml)
 
-## Descargar
+## Download
 
-Las versiones se distribuyen en [Releases de GitHub](https://github.com/matigeringer/inkwell/releases). Estos enlaces siempre apuntan a los archivos de la última versión publicada:
+Downloads are available on [GitHub Releases](https://github.com/matigeringer/inkwell/releases). These links point to the files from the latest published release.
 
-| Sistema               | Descarga                                                                                                                        | Uso                                         |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Linux x86-64          | [inkwell-linux-x86_64.AppImage](https://github.com/matigeringer/inkwell/releases/latest/download/inkwell-linux-x86_64.AppImage) | Ejecutable sin instalación                  |
-| Debian / Ubuntu amd64 | [inkwell-linux-amd64.deb](https://github.com/matigeringer/inkwell/releases/latest/download/inkwell-linux-amd64.deb)             | Instalación e integración con el escritorio |
-| Windows 10 / 11 x64   | [inkwell-windows-x64.exe](https://github.com/matigeringer/inkwell/releases/latest/download/inkwell-windows-x64.exe)             | Ejecutable portable, sin instalación        |
+| Platform              | Download                                                                                                                        | Use                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| Linux x86-64          | [inkwell-linux-x86_64.AppImage](https://github.com/matigeringer/inkwell/releases/latest/download/inkwell-linux-x86_64.AppImage) | Run without installation                 |
+| Debian / Ubuntu amd64 | [inkwell-linux-amd64.deb](https://github.com/matigeringer/inkwell/releases/latest/download/inkwell-linux-amd64.deb)             | Install with desktop integration         |
+| Windows 10 / 11 x64   | [inkwell-windows-x64.exe](https://github.com/matigeringer/inkwell/releases/latest/download/inkwell-windows-x64.exe)             | Portable executable without installation |
 
-**Disponibilidad:** los enlaces se habilitan cuando termine correctamente el primer workflow de una etiqueta `vX.Y.Z`. Si todavía no hay una release publicada, usa las instrucciones para compilar desde el código fuente. Los binarios se adjuntan a las releases; no se guardan en Git.
+The links become available once the first successful workflow run for a `vX.Y.Z` tag publishes a release. Until then, follow the instructions for building from source. The binaries are attached to releases and kept out of Git.
 
-No necesitas Node.js ni npm para usar las descargas. Esta distribución incluye únicamente equipos Intel/AMD de 64 bits; no hay paquetes ARM ni de 32 bits. Linux necesita una sesión gráfica y las bibliotecas de escritorio requeridas por Electron. La compatibilidad con cada distribución debe comprobarse antes de anunciarla como soportada.
+The downloads run without Node.js or npm. Packages are available for 64-bit Intel and AMD systems only. Linux requires a graphical session and the desktop libraries Electron depends on. Verify compatibility with each Linux distribution before listing it as supported.
 
-### Linux: AppImage
+### Linux AppImage
 
-Descarga el archivo, abre una terminal en esa carpeta y ejecuta (ajusta el nombre si conservaste el nombre con versión):
+Download the file, open a terminal in the download directory, and run the following commands. Adjust the filename if it includes a version number.
 
 ```bash
 chmod +x inkwell-linux-x86_64.AppImage
 ./inkwell-linux-x86_64.AppImage
 ```
 
-Si el sistema informa que falta FUSE, instala el paquete FUSE 2 de tu distribución (`libfuse2` o `libfuse2t64` en Debian/Ubuntu, según la versión). También puedes extraer el ejecutable sin FUSE:
+If the system reports that FUSE is missing, install your distribution's FUSE 2 package (`libfuse2` or `libfuse2t64` on Debian and Ubuntu, depending on the version). You can also extract and run the app without FUSE.
 
 ```bash
 ./inkwell-linux-x86_64.AppImage --appimage-extract
 ./squashfs-root/AppRun
 ```
 
-El sandbox de Electron permanece activado y requiere namespaces de usuario o un helper de sandbox correctamente instalado. En Ubuntu, si AppArmor bloquea el AppImage, utiliza el paquete `.deb`, que incorpora la integración del sistema. No ejecutes la aplicación como root ni uses `--no-sandbox` como solución.
+Electron's sandbox remains enabled and requires user namespaces or a correctly installed sandbox helper. On Ubuntu, if AppArmor blocks the AppImage, use the `.deb` package, which includes the system integration. Keep the sandbox enabled and run the app as a regular user.
 
-### Debian / Ubuntu: paquete .deb
+### Debian / Ubuntu .deb package
 
-Desde la carpeta de descarga (ajusta el nombre del archivo si contiene la versión):
+Run this command from the download directory. Adjust the filename if it includes a version number.
 
 ```bash
 sudo apt install ./inkwell-linux-amd64.deb
 ```
 
-Abre **Inkwell** desde el menú de aplicaciones o con `inkwell`. Para desinstalar: `sudo apt remove inkwell`.
+Open **Inkwell** from the application menu or by running `inkwell`. To uninstall it, run `sudo apt remove inkwell`.
 
 ### Windows
 
-Descarga `inkwell-windows-x64.exe`, guárdalo en una carpeta propia y ábrelo con doble clic. No requiere instalación ni permisos de administrador. Puedes crear un acceso directo manualmente. El ejecutable extrae sus componentes en una carpeta temporal al arrancar; las preferencias, borradores e historial se conservan en `%APPDATA%\inkwell` entre ejecuciones. Para quitar la aplicación, elimina el `.exe`; los datos locales se conservan.
+Download `inkwell-windows-x64.exe`, save it in its own folder, and double-click it. It runs without installation or administrator permissions. You can create a shortcut manually. The executable extracts its components to a temporary folder at startup. Preferences, drafts, and version history persist in `%APPDATA%\inkwell` between runs. To remove the app, delete the `.exe`. Local data stays on the device.
 
-El ejecutable se distribuye **sin firma digital**: Windows puede mostrar «Editor desconocido» o una advertencia de SmartScreen. Comprueba el origen y la suma SHA-256 antes de abrirlo. El arranque y las operaciones de escritura en un Windows real forman parte de la validación previa a la publicación.
+The executable is **unsigned**, so Windows may display an “Unknown publisher” or SmartScreen warning. Verify the source and SHA-256 checksum before opening it. Release validation includes launching the app and testing write operations on a Windows machine.
 
-### Verificar una descarga
+### Verify a download
 
-Descarga el manifiesto de [Linux](https://github.com/matigeringer/inkwell/releases/latest/download/SHA256SUMS-linux.txt) o [Windows](https://github.com/matigeringer/inkwell/releases/latest/download/SHA256SUMS-windows.txt) **de la misma release** que el ejecutable. Los manifiestos de Releases usan los nombres de descarga sin versión. Conserva esos nombres para la comprobación automática. Los paquetes generados localmente incluyen la versión en el nombre y tienen sus propios manifiestos.
+Download the checksum manifest for [Linux](https://github.com/matigeringer/inkwell/releases/latest/download/SHA256SUMS-linux.txt) or [Windows](https://github.com/matigeringer/inkwell/releases/latest/download/SHA256SUMS-windows.txt) **from the same release** as the executable. The release manifests use filenames without version numbers. Keep those names for automatic verification. Locally built packages include the version in their filenames and have their own manifests.
 
-En Linux, con los dos paquetes y el manifiesto en la misma carpeta:
+On Linux, place both packages and the manifest in the same directory and run the following command.
 
 ```bash
 sha256sum --check SHA256SUMS-linux.txt
 ```
 
-Si descargaste sólo un paquete, compara `sha256sum nombre-del-archivo` con su línea del manifiesto; la comprobación completa informará que falta el otro archivo.
+If you downloaded only one package, run `sha256sum filename` and compare the result with its entry in the manifest. The full check reports the other package as missing.
 
-En PowerShell, sustituye el nombre por el descargado y compara `Hash` con el manifiesto:
+In PowerShell, substitute the name of the downloaded file and compare the reported `Hash` with the manifest.
 
 ```powershell
 Get-FileHash .\inkwell-windows-x64.exe -Algorithm SHA256
 ```
 
-## Funcionalidades
+## Features
 
-- Abrir carpetas y archivos Markdown, crear documentos y explorar manuscritos.
-- Escribir en un editor visual o en modo fuente para conservar tablas, imágenes y HTML.
-- Usar el modo Zen, personalizar temas y tipografía, y elegir español o inglés.
-- Recuperar borradores locales, consultar versiones y comparar cambios.
-- Exportar a PDF, DOCX, ODT, Markdown y texto.
+- Open Markdown folders and files, create documents, and browse manuscripts.
+- Write in a visual editor or use source mode to preserve tables, images, and HTML.
+- Use Zen mode and customize themes and typography.
+- Use the device's primary language by default. Inkwell uses Spanish for any Spanish variant and English for all other languages. You can also choose either language in Preferences.
+- Recover local drafts, browse version history, and compare changes.
+- Export to PDF, DOCX, ODT, Markdown, and plain text.
 
-Los manuscritos se guardan en las ubicaciones que elijas. Las preferencias, borradores e historial se almacenan en `~/.config/inkwell` en Linux (o `$XDG_CONFIG_HOME/inkwell`) y `%APPDATA%\inkwell` en Windows. No se eliminan automáticamente al desinstalar. Borradores e historial se conservan **sin cifrado** y no sustituyen una copia de seguridad externa. Los documentos están limitados a 10 MiB. Consulta la [guía técnica](electron-app/README.md) para conocer el guardado, la recuperación, los conflictos y los límites de exportación.
+Manuscripts are saved wherever you choose. Preferences, drafts, and version history are stored in `~/.config/inkwell` on Linux (or `$XDG_CONFIG_HOME/inkwell`) and `%APPDATA%\inkwell` on Windows. These files stay on the device after uninstalling. Drafts and version history are **unencrypted** and cannot replace an external backup. Documents are limited to 10 MiB. For details on saving, recovery, conflicts, and export limits, see the [technical guide](electron-app/README.md).
 
-## Desarrollo
+## Development
 
-Necesitas [Node.js](https://nodejs.org/) 22.12.0 o posterior y npm. Para abrir la aplicación necesitas además un entorno gráfico compatible con Electron.
+You need [Node.js](https://nodejs.org/) 22.12.0 or later and npm. Running the app also requires a graphical environment compatible with Electron.
 
 ```bash
 git clone https://github.com/matigeringer/inkwell.git
@@ -91,44 +92,44 @@ npm ci
 npm run dev
 ```
 
-`npm ci` descarga Electron y las dependencias fijadas en el lockfile. Ejecuta desde `electron-app/`:
+`npm ci` downloads Electron and installs the dependencies pinned in the lockfile. Run these commands from `electron-app/`.
 
 ```bash
-npm run check          # lint sin advertencias, pruebas y compilación
-npm run test:electron  # prueba nativa de Electron en Linux, con perfil temporal
-npm run test:packaged  # misma prueba sobre el ASAR generado por build:linux
-npm run build:unpack   # aplicación desempaquetada para inspección
-npm run build:linux    # AppImage, deb y SHA256SUMS-linux.txt (x64)
-npm run build:win      # ejecutable portable y SHA256SUMS-windows.txt (x64)
+npm run check          # warning-free linting, tests, and build
+npm run test:electron  # native Electron test on Linux with a temporary profile
+npm run test:packaged  # same test against the ASAR produced by build:linux
+npm run build:unpack   # unpacked application for inspection
+npm run build:linux    # AppImage, deb, and SHA256SUMS-linux.txt (x64)
+npm run build:win      # portable executable and SHA256SUMS-windows.txt (x64)
 ```
 
-Los paquetes se generan en `electron-app/dist/`. Compila Linux en Linux. El ejecutable portable de Windows puede generarse en Windows o en Linux con las herramientas de electron-builder fijadas en el lockfile. GitHub Actions compila Linux en Ubuntu y Windows en un runner Windows, con Node 22. La publicación usa el token automático de GitHub Actions; no requiere un token personal. Los comandos de compilación locales nunca publican archivos.
+Packages are written to `electron-app/dist/`. Build Linux packages on Linux. You can build the portable Windows executable on Windows or Linux with the electron-builder tools pinned in the lockfile. GitHub Actions builds Linux packages on Ubuntu and Windows packages on a Windows runner, both using Node 22. Publishing uses the automatic GitHub Actions token. Local build commands never publish files.
 
-Para reproducir los paquetes en un equipo con Docker, desde la raíz del repositorio:
+To reproduce the packages on a machine with Docker, run the following command from the repository root.
 
 ```bash
 docker run --rm -v "$PWD:/project" -w /project/electron-app electronuserland/builder:22-wine /bin/bash -lc 'npm ci && npm run build:linux && npm run build:win'
 ```
 
-El contenedor puede crear archivos con propietario root. Evita compartir `node_modules` entre el host y el contenedor: usa una copia de trabajo dedicada para este comando.
+The container can create root-owned files. Use a dedicated working copy for this command to keep `node_modules` separate from the host's copy.
 
-## Publicar una versión
+## Publish a release
 
-La [guía de publicación](docs/RELEASING.md) detalla los requisitos de GitHub Actions, la validación de paquetes, la firma opcional y cómo generar además un instalador NSIS en Windows. El workflow ejecuta controles y empaqueta Linux y Windows también en ramas y pull requests; conserva esos artefactos durante 14 días. Sólo una etiqueta estable `vX.Y.Z` publica paquetes permanentes y crea una release con los enlaces del README.
+The [release guide](docs/RELEASING.md) covers GitHub Actions requirements, package validation, optional signing, and how to build an additional NSIS installer on Windows. The workflow runs checks and builds Linux and Windows packages on branches and pull requests, keeping those artifacts for 14 days. Only stable `vX.Y.Z` tags publish permanent packages and create a release with the download links from this README.
 
-Para la primera versión, después de revisar, guardar y subir estos cambios a `main` y validar los paquetes:
+For the first release, review, commit, and push the changes to `main`, then validate the packages before tagging.
 
 ```bash
 git tag -a v1.0.0 -m "Inkwell 1.0.0"
 git push origin v1.0.0
 ```
 
-La etiqueta debe coincidir con `version` en `electron-app/package.json` y su lockfile. El job `release` verifica todos los archivos y sus sumas antes de adjuntarlos a GitHub Releases. No reemplaza una release existente: para corregirla, publica una versión nueva. Las notas están en [CHANGELOG.md](CHANGELOG.md).
+The tag must match the `version` in `electron-app/package.json` and its lockfile. The `release` job verifies all files and checksums before attaching the files to GitHub Releases. Publish a new version to correct an existing release. Release notes are in [CHANGELOG.md](CHANGELOG.md).
 
-## Contribuir y pedir ayuda
+## Contribute and get help
 
-Abre una [incidencia en GitHub](https://github.com/matigeringer/inkwell/issues) con la versión, el sistema operativo y los pasos para reproducir el problema. Para contribuir, crea una rama, realiza los cambios, ejecuta `npm run check` desde `electron-app/` y abre una pull request. Evita incluir manuscritos personales, datos sensibles, dependencias o archivos generados.
+Open a [GitHub issue](https://github.com/matigeringer/inkwell/issues) with the app version, your operating system, and steps to reproduce the problem. To contribute, create a branch, make your changes, run `npm run check` from `electron-app/`, and open a pull request. Keep personal manuscripts, sensitive data, dependencies, and generated files out of the pull request.
 
-## Licencia
+## License
 
-[Licencia Pública General de GNU, versión 3](LICENSE) (GPL-3.0-only). Cada paquete incluye la licencia; el código fuente correspondiente está disponible en la etiqueta de su release.
+[GNU General Public License, version 3](LICENSE) (GPL-3.0-only). Each package includes the license. The corresponding source code is available under the release tag.

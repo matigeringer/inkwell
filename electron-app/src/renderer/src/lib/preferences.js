@@ -22,7 +22,7 @@ export const DEFAULT_PREFERENCES = {
   typewriterMode: false,
   typewriterPosition: 'center',
   typewriterBehavior: 'deadzone',
-  language: 'es',
+  language: 'system',
   spellcheckEnabled: true,
   autoSaveEnabled: true,
   autoSaveDelay: 2500,
@@ -40,7 +40,7 @@ const choices = {
   textAlign: ['left', 'justify', 'center'],
   typewriterPosition: ['center', 'eye'],
   typewriterBehavior: ['deadzone', 'strict'],
-  language: ['es', 'en'],
+  language: ['system', 'es', 'en'],
   fontSize: FONT_SIZES
 }
 export function normalizePreferences(input) {

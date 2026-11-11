@@ -62,13 +62,21 @@ const waitFor = async (condition) => {
     await window.webContents.insertText(query)
   }
   await waitFor(() => evaluate('Boolean(document.querySelector(".welcome-actions"))'))
+  const [primaryLanguage = ''] = app.getPreferredSystemLanguages()
+  const expectedLanguage = primaryLanguage.toLowerCase().split(/[-_.@]/)[0] === 'es' ? 'es' : 'en'
+  await waitFor(() => evaluate(`document.documentElement.lang === '${expectedLanguage}'`))
+  assert.equal(
+    (await evaluate('window.api.getSpellCheckerConfig()')).currentAppLanguage,
+    expectedLanguage
+  )
   await evaluate(
-    'localStorage.setItem("fountain_preferences", JSON.stringify({ version: 1, autoSaveEnabled: false }))'
+    'localStorage.setItem("fountain_preferences", JSON.stringify({ version: 1, language: "es", autoSaveEnabled: false }))'
   )
   const reloaded = new Promise((resolve) => window.webContents.once('did-finish-load', resolve))
   window.webContents.reload()
   await reloaded
   await waitFor(() => evaluate('Boolean(document.querySelector(".welcome-actions"))'))
+  await waitFor(() => evaluate('document.documentElement.lang === "es"'))
   assert.equal(window.webContents.getLastWebPreferences().sandbox, true)
   assert.equal(await evaluate('typeof window.electron'), 'undefined')
   assert.equal(await evaluate('typeof window.require'), 'undefined')

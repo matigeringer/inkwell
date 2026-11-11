@@ -91,7 +91,7 @@ async function mount(overrides = {}, apiOverrides = {}) {
     root.render(
       React.createElement(Editor, {
         initialDoc: { id: 'doc', filePath: '/a.md', fileName: 'a.md', content: 'original' },
-        preferences: { ...DEFAULT_PREFERENCES, autoSaveEnabled: false },
+        preferences: { ...DEFAULT_PREFERENCES, language: 'es', autoSaveEnabled: false },
         onNewDoc: () => {
           created++
         },
@@ -537,6 +537,7 @@ test('folder search has one field and discards batches from superseded queries',
   const canceled = []
   let onBatch
   window.api = {
+    systemLanguage: 'es',
     onRequestClose: () => () => {},
     setWindowTheme() {},
     readFolderTree: async (folderPath) => ({
@@ -621,6 +622,36 @@ test('folder search has one field and discards batches from superseded queries',
   assert.equal(document.querySelector('.workspace-search-hit mark').textContent, 'actual')
 })
 
+test('the interface follows the system language until a manual language is selected', async () => {
+  window.api = { systemLanguage: 'en', onRequestClose: () => () => {} }
+  const App = load('src/renderer/src/App.jsx').default
+  const start = async () => {
+    root = createRoot(document.getElementById('root'))
+    await act(async () => root.render(React.createElement(App)))
+    await act(async () => document.querySelector('.sidebar-settings-btn').click())
+  }
+  const chooseLanguage = async (name) => {
+    const button = [...document.querySelectorAll('.pref-segment-btn')].find(
+      (button) => button.textContent === name
+    )
+    await act(async () => button.click())
+  }
+  const savedLanguage = () => JSON.parse(localStorage.getItem('fountain_preferences')).language
+
+  await start()
+  assert.equal(document.documentElement.lang, 'en')
+  assert.equal(savedLanguage(), 'system')
+  await chooseLanguage('Español')
+  assert.equal(document.documentElement.lang, 'es')
+  assert.equal(savedLanguage(), 'es')
+  await act(async () => root.unmount())
+  await start()
+  assert.equal(document.documentElement.lang, 'es')
+  await chooseLanguage('Sistema')
+  assert.equal(document.documentElement.lang, 'en')
+  assert.equal(savedLanguage(), 'system')
+})
+
 for (const theme of ['mono', 'beige']) {
   test(`${theme} selection preserves content and writing settings across modes and restart`, async () => {
     const originalMatchMedia = window.matchMedia
@@ -635,7 +666,7 @@ for (const theme of ['mono', 'beige']) {
     window.matchMedia = (query) =>
       query === '(prefers-color-scheme: dark)' ? systemQuery : originalMatchMedia(query)
     try {
-      window.api = { onRequestClose: () => () => {}, setWindowTheme() {} }
+      window.api = { systemLanguage: 'es', onRequestClose: () => () => {}, setWindowTheme() {} }
       const App = load('src/renderer/src/App.jsx').default
       const start = async () => {
         root = createRoot(document.getElementById('root'))

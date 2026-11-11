@@ -1,12 +1,12 @@
 import { Menu, MenuItem, session } from 'electron'
 
-export function registerSpellcheckIpc({ handle }) {
+export function registerSpellcheckIpc({ handle }, systemLanguage) {
   const spellchecker = session.defaultSession
-  let language = 'es'
+  let language = systemLanguage
   const getLanguage = () => language
 
   const setLanguage = (value) => {
-    language = value === 'en' ? 'en' : 'es'
+    language = value === 'en' || value === 'es' ? value : systemLanguage
     try {
       spellchecker.setSpellCheckerLanguages(language === 'en' ? ['en-US', 'en'] : ['es-ES', 'es'])
     } catch (error) {
@@ -29,7 +29,7 @@ export function registerSpellcheckIpc({ handle }) {
   })
   handle('spellcheck:get-config', () => ({
     ...getConfig(),
-    available: spellchecker.getAvailableSpellCheckerLanguages()
+    available: spellchecker.availableSpellCheckerLanguages
   }))
   handle('app:set-language', (_event, value) => {
     setLanguage(value)

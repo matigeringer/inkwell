@@ -24,6 +24,7 @@ test('main enforces IPC grants and the close handshake with sandbox enabled', as
     requestSingleInstanceLock: () => true,
     setPath() {},
     getPath: () => directory,
+    getPreferredSystemLanguages: () => ['es-AR', 'en-US'],
     whenReady: () => ({
       then: (callback) => {
         ready = callback()
@@ -108,6 +109,9 @@ test('main enforces IPC grants and the close handshake with sandbox enabled', as
   await ready
   const window = windows[0]
   const event = { sender: window.webContents, senderFrame: window.webContents.mainFrame }
+  assert.deepEqual(window.options.webPreferences.additionalArguments, [
+    '--inkwell-system-language=es'
+  ])
   assert.equal(window.options.webPreferences.sandbox, true)
   assert.equal(window.options.webPreferences.contextIsolation, true)
   assert.equal((await handlers.get('file:read')(event, privateFile)).success, false)

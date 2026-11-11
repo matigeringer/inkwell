@@ -320,6 +320,7 @@ export const translations = {
       },
       general: {
         languageTitle: 'Idioma de la interfaz',
+        systemLanguageName: 'Sistema',
         spanishName: 'Español',
         englishName: 'English',
         spellSectionTitle: 'Corrector ortográfico',
@@ -670,6 +671,7 @@ export const translations = {
       },
       general: {
         languageTitle: 'Interface Language',
+        systemLanguageName: 'System',
         spanishName: 'Español',
         englishName: 'English',
         spellSectionTitle: 'Spell Checker',

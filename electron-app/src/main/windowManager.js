@@ -7,7 +7,7 @@ import { installContextMenu } from './spellcheck'
 const rendererFile = join(__dirname, '../renderer/index.html')
 const windowBackground = (dark) => (dark ? '#161814' : '#efeee8')
 
-export function createWindowManager({ developmentUrl, icon }) {
+export function createWindowManager({ developmentUrl, icon, systemLanguage }) {
   const rendererUrl = developmentUrl || pathToFileURL(rendererFile).href
   const trustedWindows = new Set()
   const closeRequests = new Map()
@@ -79,6 +79,7 @@ export function createWindowManager({ developmentUrl, icon }) {
       ...(process.platform === 'darwin' ? {} : { icon }),
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
+        additionalArguments: [`--inkwell-system-language=${systemLanguage}`],
         sandbox: true,
         contextIsolation: true,
         nodeIntegration: false,

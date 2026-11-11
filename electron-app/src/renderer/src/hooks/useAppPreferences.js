@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { flushSync } from 'react-dom'
 import {
   loadPreferences,
@@ -28,7 +28,11 @@ function withThemeTransition(update) {
 export default function useAppPreferences(onError) {
   const [preferences, setPreferences] = useState(loadPreferences)
   const [systemDark, setSystemDark] = useState(() => window.matchMedia(SYSTEM_DARK_QUERY).matches)
-  const { theme, mode, fontFamily, fontSize, textAlign, language, spellcheckEnabled } = preferences
+  const { theme, mode, fontFamily, fontSize, textAlign, spellcheckEnabled } = preferences
+  const languagePreference = preferences.language
+  const language =
+    languagePreference === 'system' ? (window.api?.systemLanguage ?? 'en') : languagePreference
+  const resolvedPreferences = useMemo(() => ({ ...preferences, language }), [preferences, language])
   const isDark = resolveColorMode(mode, systemDark) === 'dark'
 
   useLayoutEffect(() => {
@@ -83,8 +87,14 @@ export default function useAppPreferences(onError) {
   )
 
   const toggleTheme = () => updatePreferences({ mode: isDark ? 'light' : 'dark' })
-  const toggleLanguage = () =>
-    setPreferences((current) => ({ ...current, language: current.language === 'en' ? 'es' : 'en' }))
+  const toggleLanguage = () => updatePreferences({ language: language === 'en' ? 'es' : 'en' })
 
-  return { preferences, isDark, updatePreferences, toggleTheme, toggleLanguage }
+  return {
+    preferences: resolvedPreferences,
+    languagePreference,
+    isDark,
+    updatePreferences,
+    toggleTheme,
+    toggleLanguage
+  }
 }

@@ -23,6 +23,7 @@ export default function ProfileModal({
   isOpen,
   onClose,
   preferences,
+  languagePreference,
   onUpdatePreferences,
   initialTab = 'general'
 }) {
@@ -251,14 +252,21 @@ export default function ProfileModal({
                     <div className="pref-segment-group">
                       <button
                         type="button"
-                        className={`pref-segment-btn ${currentLang === 'es' ? 'is-selected' : ''}`}
+                        className={`pref-segment-btn ${languagePreference === 'system' ? 'is-selected' : ''}`}
+                        onClick={() => onUpdatePreferences({ language: 'system' })}
+                      >
+                        <span>{t.preferences.general.systemLanguageName}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`pref-segment-btn ${languagePreference === 'es' ? 'is-selected' : ''}`}
                         onClick={() => onUpdatePreferences({ language: 'es' })}
                       >
                         <span>{t.preferences.general.spanishName}</span>
                       </button>
                       <button
                         type="button"
-                        className={`pref-segment-btn ${currentLang === 'en' ? 'is-selected' : ''}`}
+                        className={`pref-segment-btn ${languagePreference === 'en' ? 'is-selected' : ''}`}
                         onClick={() => onUpdatePreferences({ language: 'en' })}
                       >
                         <span>{t.preferences.general.englishName}</span>
