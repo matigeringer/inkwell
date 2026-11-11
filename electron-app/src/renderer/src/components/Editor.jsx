@@ -39,6 +39,7 @@ import HistoryModal from './HistoryModal'
 import ManuscriptSearch from './ManuscriptSearch'
 import SourceEditor from './SourceEditor'
 import ZenFloatingFolder from './ZenFloatingFolder'
+import ZenOutlineSearch from './ZenOutlineSearch'
 import WorkspaceSearch from './WorkspaceSearch'
 import { getTranslation } from '../i18n'
 import useDocumentPersistence from '../hooks/useDocumentPersistence'
@@ -184,7 +185,7 @@ export default function Editor({
     setIsOutlineOpen(false)
     outlineToggleRef.current?.focus({ preventScroll: true })
   }
-  const canShowOutline = !isZenMode && !/\.txt$/i.test(fileName)
+  const isMarkdown = !/\.txt$/i.test(fileName)
 
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
@@ -1701,21 +1702,6 @@ export default function Editor({
         <div className="header-right">
           {errorMessage && <span className="error-badge">{errorMessage}</span>}
 
-          {canShowOutline && (
-            <button
-              type="button"
-              ref={outlineToggleRef}
-              className={`btn-icon-sober ${isOutlineOpen ? 'active' : ''}`}
-              onClick={() => setIsOutlineOpen((open) => !open)}
-              title={t.outline.title}
-              aria-label={t.outline.title}
-              aria-expanded={isOutlineOpen}
-              aria-controls={isOutlineOpen ? 'document-outline' : undefined}
-            >
-              <OutlineIcon aria-hidden="true" />
-            </button>
-          )}
-
           <button
             type="button"
             className={`btn-icon-sober ${isSearchOpen ? 'active' : ''}`}
@@ -1729,6 +1715,21 @@ export default function Editor({
           >
             <SearchIcon size={16} aria-hidden="true" />
           </button>
+
+          {!isZenMode && isMarkdown && (
+            <button
+              type="button"
+              ref={outlineToggleRef}
+              className={`btn-icon-sober ${isOutlineOpen ? 'active' : ''}`}
+              onClick={() => setIsOutlineOpen((open) => !open)}
+              title={t.outline.title}
+              aria-label={t.outline.title}
+              aria-expanded={isOutlineOpen}
+              aria-controls={isOutlineOpen ? 'document-outline' : undefined}
+            >
+              <OutlineIcon aria-hidden="true" />
+            </button>
+          )}
 
           <button
             className={`btn-icon-sober ${preferences?.typewriterMode ? 'active' : ''}`}
@@ -1929,6 +1930,19 @@ export default function Editor({
             >
               <SearchIcon size={15} aria-hidden="true" />
             </button>
+            {isMarkdown && (
+              <ZenOutlineSearch
+                labels={t.outline}
+                editor={editor}
+                source={source}
+                sourceRef={sourceRef}
+                scrollRef={scrollContainerRef}
+                onJump={cancelScrollAnimation}
+                onOpen={() => {
+                  if (isSearchOpen) closeSearch()
+                }}
+              />
+            )}
             <button
               className={`zen-pill-btn zen-pill-icon-only ${preferences?.typewriterMode ? 'active' : ''}`}
               onClick={toggleTypewriterMode}
@@ -2526,7 +2540,7 @@ export default function Editor({
                 />
               </div>
             </main>
-            {canShowOutline && (
+            {!isZenMode && isMarkdown && (
               <DocumentOutline
                 open={isOutlineOpen}
                 onClose={closeOutline}

@@ -1176,7 +1176,8 @@
 
 .zen-floating-toolbar.visible,
 .zen-floating-toolbar:hover,
-.zen-floating-toolbar:focus-within {
+.zen-floating-toolbar:focus-within,
+.zen-floating-toolbar:has(.zen-outline-search) {
   opacity: 1;
   pointer-events: auto;
   transform: none;
@@ -2654,13 +2655,37 @@
 }
 
 @container (max-width: 46rem) {
-  .document-outline.is-expanded {
+  .document-outline.is-expanded:not(.is-search-only) {
     position: absolute;
     inset: 0 0 0 auto;
     z-index: 3;
     max-width: calc(100% - var(--outline-rail-width) - var(--outline-rail-gap));
     box-shadow: var(--shadow-md);
   }
+}
+
+.zen-outline-control {
+  display: flex;
+}
+
+.zen-outline-search {
+  position: absolute;
+  inset-block-start: calc(100% + 0.5rem);
+  inset-inline-end: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(23rem, calc(100vw - 44px));
+  max-height: min(24rem, calc(100vh - 5.5rem));
+}
+
+.document-outline.is-search-only {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  border: 1px solid var(--border-medium);
+  border-top: 2px solid var(--accent-primary);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
 }
 
 .manuscript-search {

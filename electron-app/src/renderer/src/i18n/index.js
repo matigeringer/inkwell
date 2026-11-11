@@ -103,6 +103,8 @@ export const translations = {
     outline: {
       title: 'Índice del documento',
       close: 'Cerrar índice',
+      search: 'Buscar en el índice',
+      closeSearch: 'Cerrar búsqueda en el índice',
       filter: 'Filtrar encabezados…',
       noResults: 'No hay encabezados que coincidan.',
       empty: 'Los títulos y subtítulos del Markdown aparecerán acá.'
@@ -460,6 +462,8 @@ export const translations = {
     outline: {
       title: 'Document outline',
       close: 'Close outline',
+      search: 'Search the outline',
+      closeSearch: 'Close outline search',
       filter: 'Filter headings…',
       noResults: 'No matching headings.',
       empty: 'Your Markdown headings will appear here.'

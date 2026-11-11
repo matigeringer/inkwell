@@ -7,6 +7,7 @@ const searchText = (text) => text.normalize('NFD').replace(/\p{M}/gu, '').toLowe
 
 export default function DocumentOutline({
   open,
+  searchOnly = false,
   onClose,
   labels,
   scrollRef,
@@ -21,8 +22,10 @@ export default function DocumentOutline({
   const filterRef = useRef(null)
   const listRef = useRef(null)
   const currentRef = useRef(null)
+  const searchTerms = useMemo(() => searchText(query).match(/\S+/g), [query])
   const entries = useMemo(() => {
-    const terms = open ? searchText(query).match(/\S+/g) : null
+    const terms = open ? searchTerms : null
+    if (searchOnly && !terms) return []
     return headings.flatMap((heading, index) => {
       if (terms) {
         const title = searchText(heading.title)
@@ -30,7 +33,7 @@ export default function DocumentOutline({
       }
       return [{ ...heading, index }]
     })
-  }, [headings, open, query])
+  }, [headings, open, searchOnly, searchTerms])
 
   useLayoutEffect(() => {
     if (open) filterRef.current?.focus()
@@ -95,19 +98,21 @@ export default function DocumentOutline({
   if (!open && !hasHeadings) return null
 
   const navigate = (index) => {
-    if (open && getComputedStyle(navRef.current).position === 'absolute') onClose()
+    if (searchOnly || (open && getComputedStyle(navRef.current).position === 'absolute')) onClose()
     jumpTo(index)
   }
 
+  const Landmark = searchOnly ? 'div' : 'nav'
   return (
-    <div className="document-outline-slot">
-      <nav
-        id="document-outline"
+    <div className={searchOnly ? 'zen-outline-search' : 'document-outline-slot'}>
+      <Landmark
+        id={searchOnly ? 'zen-outline-search' : 'document-outline'}
         ref={navRef}
-        className={`document-outline ${open ? 'is-expanded' : 'is-compact'}`}
-        aria-label={labels.title}
+        className={`document-outline ${open ? 'is-expanded' : 'is-compact'}${searchOnly ? ' is-search-only' : ''}`}
+        role={searchOnly ? 'search' : undefined}
+        aria-label={searchOnly ? labels.search : labels.title}
         onKeyDown={(event) => {
-          if (open && event.key === 'Escape' && !event.nativeEvent.isComposing) {
+          if (open && !searchOnly && event.key === 'Escape' && !event.nativeEvent.isComposing) {
             event.preventDefault()
             event.stopPropagation()
             onClose()
@@ -117,12 +122,12 @@ export default function DocumentOutline({
         {open && (
           <>
             <div className="document-outline-header">
-              <h2>{labels.title}</h2>
+              <h2>{searchOnly ? labels.search : labels.title}</h2>
               <button
                 type="button"
                 className="btn-icon-sober"
                 onClick={onClose}
-                aria-label={labels.close}
+                aria-label={searchOnly ? labels.closeSearch : labels.close}
               >
                 <CloseIcon size={15} aria-hidden="true" />
               </button>
@@ -166,11 +171,13 @@ export default function DocumentOutline({
             ))}
           </ul>
         ) : (
-          <p className="document-outline-empty" role="status">
-            {headings.length ? labels.noResults : labels.empty}
-          </p>
+          (!searchOnly || !hasHeadings || searchTerms) && (
+            <p className="document-outline-empty" role="status">
+              {headings.length ? labels.noResults : labels.empty}
+            </p>
+          )
         )}
-      </nav>
+      </Landmark>
     </div>
   )
 }
