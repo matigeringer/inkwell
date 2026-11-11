@@ -179,6 +179,7 @@ test('the outline filters live rich-text headings and distinguishes duplicate ti
       content: '# Prólogo\n\n## **Introducción**\n\n## Introducción\n\n# Epílogo'
     }
   })
+  await act(async () => new Promise((resolve) => requestAnimationFrame(resolve)))
   const headings = () => [...document.querySelectorAll('#document-outline li button')]
   assert.deepEqual(
     headings().map((button) => button.title),
@@ -202,7 +203,7 @@ test('the outline filters live rich-text headings and distinguishes duplicate ti
   const toggle = document.querySelector('button[aria-label="Índice del documento"]')
   await act(async () => toggle.click())
   const filter = document.querySelector('#document-outline input')
-  assert.equal(document.activeElement, filter)
+  assert.ok(document.activeElement === filter, 'The outline filter should receive focus')
   await act(async () => {
     Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(
       filter,
@@ -225,7 +226,7 @@ test('the outline filters live rich-text headings and distinguishes duplicate ti
   await act(async () =>
     filter.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
   )
-  assert.equal(document.activeElement, toggle)
+  assert.ok(document.activeElement === toggle, 'Closing the outline should restore toggle focus')
   assert.equal(toggle.getAttribute('aria-expanded'), 'false')
   assert.deepEqual(
     headings().map((button) => button.title),
@@ -336,6 +337,7 @@ test('manuscript search navigates across inline formatting without changing the 
 test('source search matches literal text and refreshes while editing', async () => {
   const content = 'Intro\r\n[a.b] literal\r\n[A.B] literal'
   await mount({ initialDoc: { id: 'source', filePath: '/a.txt', fileName: 'a.txt', content } })
+  await act(async () => new Promise((resolve) => requestAnimationFrame(resolve)))
   await act(async () =>
     document.querySelector('button[aria-label="Buscar en el manuscrito"]').click()
   )
@@ -362,7 +364,7 @@ test('source search matches literal text and refreshes while editing', async () 
     )
     textarea.dispatchEvent(new Event('input', { bubbles: true }))
   })
-  assert.equal(document.activeElement, textarea)
+  assert.ok(document.activeElement === textarea, 'Editing should keep focus on the source textarea')
   assert.equal(document.querySelector('.manuscript-search-count').textContent, 'Sin coincidencias')
   assert.equal(document.querySelector('.source-search-overlay'), null)
 })

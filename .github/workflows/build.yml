@@ -5,17 +5,25 @@ on:
     branches: ["main"]
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Existing stable tag to publish (optional)"
+        type: string
+        required: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: build-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+  group: build-${{ github.workflow }}-${{ inputs.release_tag && format('refs/tags/{0}', inputs.release_tag) || github.ref }}
+  cancel-in-progress: ${{ !inputs.release_tag && !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
   quality:
     runs-on: ubuntu-22.04
+    outputs:
+      release_tag: ${{ steps.release_target.outputs.tag }}
+      source_sha: ${{ steps.release_target.outputs.sha }}
     defaults:
       run:
         working-directory: electron-app
@@ -23,12 +31,45 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
           cache: npm
           cache-dependency-path: electron-app/package-lock.json
-      - run: npm run release:check
+      - name: Verify release target
+        id: release_target
+        shell: bash
+        env:
+          REQUESTED_TAG: ${{ inputs.release_tag }}
+        run: |
+          tag=
+          sha=$(git rev-parse HEAD)
+          if [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF_TYPE" == tag ]]; then
+            tag="$GITHUB_REF_NAME"
+          elif [[ -n "$REQUESTED_TAG" ]]; then
+            if [[ "$GITHUB_REF" != refs/heads/main ]]; then
+              echo "::error::Manual releases must run from main"
+              exit 1
+            fi
+            tag="$REQUESTED_TAG"
+            if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+              echo "::error::Expected a stable tag in vX.Y.Z format"
+              exit 1
+            fi
+            sha=$(git rev-parse --verify "refs/tags/$tag^{commit}")
+            git merge-base --is-ancestor "$sha" HEAD
+            if ! git -C .. diff --quiet "$sha" HEAD -- . ':(exclude).github/workflows/build.yml' ':(exclude)electron-app/tests'; then
+              echo "::error::main and the release tag must match outside this workflow and the tests"
+              exit 1
+            fi
+          fi
+          if [[ -n "$tag" ]]; then
+            GITHUB_REF_TYPE=tag GITHUB_REF_NAME="$tag" npm run release:check
+          else
+            npm run release:check
+          fi
+          printf 'tag=%s\nsha=%s\n' "$tag" "$sha" >> "$GITHUB_OUTPUT"
       - run: npm ci
       - run: npm run check
       - run: npm audit --omit=dev --audit-level=low
@@ -54,6 +95,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          ref: ${{ needs.quality.outputs.source_sha }}
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
@@ -74,7 +116,7 @@ jobs:
             electron-app/dist/SHA256SUMS-*.txt
 
   release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: needs.quality.outputs.release_tag != ''
     needs: [quality, package]
     runs-on: ubuntu-22.04
     permissions:
@@ -83,6 +125,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           persist-credentials: false
+          ref: ${{ needs.quality.outputs.source_sha }}
       - uses: actions/setup-node@v6
         with:
           node-version: "22"
@@ -92,7 +135,8 @@ jobs:
           pattern: inkwell-*
           path: electron-app/dist
           merge-multiple: true
-      - run: npm run release:publish
+      - run: GITHUB_REF_TYPE=tag GITHUB_REF_NAME="$RELEASE_TAG" npm run release:publish
         working-directory: electron-app
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ needs.quality.outputs.release_tag }}
