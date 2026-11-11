@@ -135,6 +135,32 @@ const waitFor = async (condition) => {
 
   await key('F11')
   await waitFor(() => evaluate('Boolean(document.querySelector(".zen-mode-active"))'))
+  const openOutlineSearch = () =>
+    evaluate('document.querySelector(".zen-floating-toolbar .zen-outline-control button").click()')
+  const zenOutlineSearchFocused = () =>
+    evaluate('document.activeElement.matches("#zen-outline-search input")')
+  assert.ok(await evaluate('!document.querySelector("#document-outline, #zen-outline-search")'))
+  await openOutlineSearch()
+  await waitFor(zenOutlineSearchFocused)
+  assert.ok(await evaluate('!document.querySelector("#zen-outline-search ul")'))
+  await window.webContents.insertText('native test')
+  await waitFor(() =>
+    evaluate(
+      'document.querySelector("#zen-outline-search .document-outline-heading")?.title === "Native test"'
+    )
+  )
+  await evaluate('document.querySelector("#zen-outline-search .document-outline-heading").click()')
+  assert.ok(await evaluate('!document.querySelector("#document-outline, #zen-outline-search")'))
+  assert.ok(await evaluate('document.activeElement.matches(".zen-outline-control button")'))
+  await openOutlineSearch()
+  await waitFor(zenOutlineSearchFocused)
+  await key('Escape')
+  assert.ok(
+    await evaluate(
+      '!document.querySelector("#zen-outline-search") && Boolean(document.querySelector(".zen-mode-active"))'
+    )
+  )
+
   await fileQuery('brisa')
   await waitFor(() => evaluate('document.querySelectorAll(".workspace-search-hit").length === 2'))
   assert.ok(await evaluate('!document.querySelector(".tiptap .workspace-editor-match")'))

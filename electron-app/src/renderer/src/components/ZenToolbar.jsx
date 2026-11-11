@@ -16,6 +16,7 @@ export default function ZenToolbar({
   visible,
   isSearchOpen,
   openSearch,
+  outlineSearch,
   toggleTypewriterMode,
   cycleTextAlign,
   onOpenHistory,
@@ -41,6 +42,7 @@ export default function ZenToolbar({
         >
           <SearchIcon size={15} aria-hidden="true" />
         </button>
+        {outlineSearch}
         <button
           className={`zen-pill-btn zen-pill-icon-only ${preferences?.typewriterMode ? 'active' : ''}`}
           onClick={toggleTypewriterMode}

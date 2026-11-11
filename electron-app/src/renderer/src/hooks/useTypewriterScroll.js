@@ -106,14 +106,15 @@ export default function useTypewriterScroll(containerRef, { enabled, position, b
     [animateScroll, containerRef]
   )
 
+  const pauseForManualScroll = useCallback(() => {
+    if (!settings.current.enabled) return
+    cancelScroll()
+    manualScroll.current = true
+  }, [cancelScroll])
+
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
-    const pauseForManualScroll = () => {
-      if (!settings.current.enabled) return
-      cancelScroll()
-      manualScroll.current = true
-    }
     const onScrollbarClick = (event) => {
       if (event.clientX >= container.getBoundingClientRect().left + container.clientWidth) {
         pauseForManualScroll()
@@ -131,11 +132,12 @@ export default function useTypewriterScroll(containerRef, { enabled, position, b
       window.removeEventListener('mouseup', releaseMouse)
       cancelScroll()
     }
-  }, [cancelScroll, containerRef])
+  }, [cancelScroll, containerRef, pauseForManualScroll])
 
   return {
     cancelScroll,
     centerCaret,
+    pauseForManualScroll,
     onKeyDown(_view, event) {
       if (!settings.current.enabled) return false
       const primary = event.ctrlKey || event.metaKey

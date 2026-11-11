@@ -15,8 +15,10 @@ import {
   AlignJustifyIcon,
   AlignCenterIcon,
   HistoryIcon,
-  SearchIcon
+  SearchIcon,
+  OutlineIcon
 } from './Icons'
+import DocumentOutline from './DocumentOutline'
 import FileTree from './FileTree'
 import EditorFileMenu from './EditorFileMenu'
 import EditorActionsMenu from './EditorActionsMenu'
@@ -26,6 +28,7 @@ import ShortcutsModal from './ShortcutsModal'
 import ManuscriptSearch from './ManuscriptSearch'
 import SourceEditor from './SourceEditor'
 import ZenFloatingFolder from './ZenFloatingFolder'
+import ZenOutlineSearch from './ZenOutlineSearch'
 import WorkspaceSearch from './WorkspaceSearch'
 import { getTranslation } from '../i18n'
 import useDocumentPersistence from '../hooks/useDocumentPersistence'
@@ -129,6 +132,13 @@ export default function Editor({
     [isSidebarOpen, openedFolder?.path]
   )
   const [isManuscriptDropdownOpen, setIsManuscriptDropdownOpen] = useState(false)
+  const [isOutlineOpen, setIsOutlineOpen] = useState(false)
+  const outlineToggleRef = useRef(null)
+  const closeOutline = () => {
+    setIsOutlineOpen(false)
+    outlineToggleRef.current?.focus({ preventScroll: true })
+  }
+  const isMarkdown = !/\.txt$/i.test(fileName)
 
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
@@ -150,7 +160,7 @@ export default function Editor({
     position: typewriterPosition,
     behavior: typewriterBehavior
   })
-  const { centerCaret, cancelScroll } = typewriter
+  const { centerCaret, cancelScroll, pauseForManualScroll } = typewriter
 
   useEffect(() => {
     if (!actionsMenuOpen && !exportMenuOpen && !isManuscriptDropdownOpen) return
@@ -902,6 +912,21 @@ export default function Editor({
             <SearchIcon size={16} aria-hidden="true" />
           </button>
 
+          {!isZenMode && isMarkdown && (
+            <button
+              type="button"
+              ref={outlineToggleRef}
+              className={`btn-icon-sober ${isOutlineOpen ? 'active' : ''}`}
+              onClick={() => setIsOutlineOpen((open) => !open)}
+              title={t.outline.title}
+              aria-label={t.outline.title}
+              aria-expanded={isOutlineOpen}
+              aria-controls={isOutlineOpen ? 'document-outline' : undefined}
+            >
+              <OutlineIcon aria-hidden="true" />
+            </button>
+          )}
+
           <button
             className={`btn-icon-sober ${preferences?.typewriterMode ? 'active' : ''}`}
             onClick={toggleTypewriterMode}
@@ -977,6 +1002,21 @@ export default function Editor({
           visible={isMouseActive}
           isSearchOpen={isSearchOpen}
           openSearch={openSearch}
+          outlineSearch={
+            isMarkdown && (
+              <ZenOutlineSearch
+                labels={t.outline}
+                editor={editor}
+                source={source}
+                sourceRef={sourceRef}
+                scrollRef={scrollContainerRef}
+                onJump={cancelScroll}
+                onOpen={() => {
+                  if (isSearchOpen) closeSearch()
+                }}
+              />
+            )
+          }
           toggleTypewriterMode={toggleTypewriterMode}
           cycleTextAlign={cycleTextAlign}
           onOpenHistory={() => setIsHistoryModalOpen(true)}
@@ -1152,37 +1192,52 @@ export default function Editor({
 
         <div className="editor-document-panel">
           {isSearchOpen && <ManuscriptSearch search={search} labels={t.search} />}
-          <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
-            <div
-              className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
-              onClick={handleCanvasClick}
-            >
-              {isSourceMode && (
-                <>
-                  <p role="status" className="source-editor-notice">
-                    {currentLang === 'en'
-                      ? 'Source editing preserves the document’s original text and Markdown syntax.'
-                      : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
-                  </p>
-                  <SourceEditor
-                    content={source}
-                    search={search}
-                    workspaceMatch={workspaceMatch}
-                    onReveal={revealSearchMatch}
-                    spellCheck={preferences.spellcheckEnabled !== false}
-                    onChange={(event) => {
-                      if (!transitionRef.current) session.change(event.target.value)
-                    }}
-                  />
-                </>
-              )}
-              <EditorContent
-                style={isSourceMode ? { display: 'none' } : undefined}
+          <div className="editor-document-body">
+            <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
+              <div
+                className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
+                onClick={handleCanvasClick}
+              >
+                {isSourceMode && (
+                  <>
+                    <p role="status" className="source-editor-notice">
+                      {currentLang === 'en'
+                        ? 'Source editing preserves the document’s original text and Markdown syntax.'
+                        : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
+                    </p>
+                    <SourceEditor
+                      content={source}
+                      search={search}
+                      workspaceMatch={workspaceMatch}
+                      onReveal={revealSearchMatch}
+                      spellCheck={preferences.spellcheckEnabled !== false}
+                      onChange={(event) => {
+                        if (!transitionRef.current) session.change(event.target.value)
+                      }}
+                    />
+                  </>
+                )}
+                <EditorContent
+                  style={isSourceMode ? { display: 'none' } : undefined}
+                  editor={editor}
+                  className="tiptap-wrapper"
+                />
+              </div>
+            </main>
+            {!isZenMode && isMarkdown && (
+              <DocumentOutline
+                open={isOutlineOpen}
+                onClose={closeOutline}
+                labels={t.outline}
                 editor={editor}
-                className="tiptap-wrapper"
+                source={source}
+                sourceRef={sourceRef}
+                scrollRef={scrollContainerRef}
+                onJump={cancelScroll}
+                onManualScroll={pauseForManualScroll}
               />
-            </div>
-          </main>
+            )}
+          </div>
         </div>
       </div>
 

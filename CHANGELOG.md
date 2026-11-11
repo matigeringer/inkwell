@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0
+
+- Navigate Markdown headings with a compact, scroll-synced outline and a searchable panel.
+- Find and jump to headings from the Zen toolbar.
+- Use the system language by default when it is supported.
+
 ## 1.1.0
 
 - Search within a manuscript with highlighted matches and navigation between results.

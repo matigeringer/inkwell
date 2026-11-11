@@ -115,7 +115,7 @@ The container can create root-owned files. Use a dedicated working copy for this
 
 ## Publish a release
 
-The [release guide](docs/RELEASING.md) covers GitHub Actions requirements, package validation, optional signing, and how to build an additional NSIS installer on Windows. The workflow runs checks and builds Linux and Windows packages on branches and pull requests, keeping those artifacts for 14 days. Only stable `vX.Y.Z` tags publish permanent packages and create a release with the download links from this README.
+The [release guide](docs/RELEASING.md) covers GitHub Actions requirements, package validation, optional signing, and how to build an additional NSIS installer on Windows. The workflow runs checks and builds Linux and Windows packages when changes are pushed to `main` or a version tag is pushed, keeping those artifacts for 14 days. Only stable `vX.Y.Z` tags publish permanent packages and create a release with the download links from this README.
 
 For the first release, review, commit, and push the changes to `main`, then validate the packages before tagging.
 

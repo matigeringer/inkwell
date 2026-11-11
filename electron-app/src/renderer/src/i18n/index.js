@@ -100,6 +100,15 @@ export const translations = {
       next: 'Coincidencia siguiente',
       close: 'Cerrar búsqueda'
     },
+    outline: {
+      title: 'Índice del documento',
+      close: 'Cerrar índice',
+      search: 'Buscar en el índice',
+      closeSearch: 'Cerrar búsqueda en el índice',
+      filter: 'Filtrar encabezados…',
+      noResults: 'No hay encabezados que coincidan.',
+      empty: 'Los títulos y subtítulos del Markdown aparecerán acá.'
+    },
     editor: {
       homeBtn: 'Inicio',
       homeBtnTitle: 'Volver a la portada (Ctrl+Esc)',
@@ -449,6 +458,15 @@ export const translations = {
       previous: 'Previous match',
       next: 'Next match',
       close: 'Close search'
+    },
+    outline: {
+      title: 'Document outline',
+      close: 'Close outline',
+      search: 'Search the outline',
+      closeSearch: 'Close outline search',
+      filter: 'Filter headings…',
+      noResults: 'No matching headings.',
+      empty: 'Your Markdown headings will appear here.'
     },
     editor: {
       homeBtn: 'Home',

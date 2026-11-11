@@ -43,7 +43,8 @@
 
 .zen-floating-toolbar.visible,
 .zen-floating-toolbar:hover,
-.zen-floating-toolbar:focus-within {
+.zen-floating-toolbar:focus-within,
+.zen-floating-toolbar:has(.zen-outline-search) {
   opacity: 1;
   pointer-events: auto;
   transform: none;
