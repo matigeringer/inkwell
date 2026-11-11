@@ -559,6 +559,25 @@ export function SearchIcon({ className = '', size = 16, ...props }) {
   )
 }
 
+export function OutlineIcon({ className = '', size = 16, ...props }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      className={className}
+      {...props}
+    >
+      <path d="M4 6h16M8 12h12M12 18h8" />
+    </svg>
+  )
+}
+
 export function ChevronRightIcon({ className = '', size = 16, ...props }) {
   return (
     <svg

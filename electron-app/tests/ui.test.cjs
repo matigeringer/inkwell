@@ -170,6 +170,109 @@ test('source editing preserves unsupported Markdown through navigation', async (
   assert.equal(fixture.writes.at(-1)?.content, edited)
 })
 
+test('the outline filters live rich-text headings and distinguishes duplicate titles', async () => {
+  const fixture = await mount({
+    initialDoc: {
+      id: 'outline',
+      fileName: 'a.md',
+      filePath: '/a.md',
+      content: '# Prólogo\n\n## **Introducción**\n\n## Introducción\n\n# Epílogo'
+    }
+  })
+  const headings = () => [...document.querySelectorAll('#document-outline li button')]
+  assert.deepEqual(
+    headings().map((button) => button.title),
+    ['Prólogo', 'Introducción', 'Introducción', 'Epílogo']
+  )
+  assert.deepEqual(
+    headings().map((button) => button.parentElement.style.getPropertyValue('--outline-level')),
+    ['1', '2', '2', '1']
+  )
+  const editorMain = document.querySelector('.editor-main')
+  editorMain.scrollTop = 0
+  const wheel = new dom.window.WheelEvent('wheel', {
+    bubbles: true,
+    cancelable: true,
+    deltaY: 120
+  })
+  await act(async () => headings()[0].dispatchEvent(wheel))
+  assert.equal(wheel.defaultPrevented, true)
+  assert.equal(editorMain.scrollTop, 120)
+
+  const toggle = document.querySelector('button[aria-label="Índice del documento"]')
+  await act(async () => toggle.click())
+  const filter = document.querySelector('#document-outline input')
+  assert.equal(document.activeElement, filter)
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(dom.window.HTMLInputElement.prototype, 'value').set.call(
+      filter,
+      'introduccion'
+    )
+    filter.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  assert.equal(headings().length, 2)
+  assert.equal(headings()[0].parentElement.style.getPropertyValue('--outline-depth'), '1')
+
+  const { doc, selection } = activeEditor.state
+  await act(async () => headings()[1].click())
+  assert.equal(headings()[1].getAttribute('aria-current'), 'location')
+  assert.equal(activeEditor.state.doc, doc)
+  assert.ok(activeEditor.state.selection.eq(selection))
+  assert.equal(fixture.writes.length, 0)
+
+  await act(async () => activeEditor.commands.setContent('# Una sección', { emitUpdate: false }))
+  assert.match(document.querySelector('#document-outline [role="status"]').textContent, /coincidan/)
+  await act(async () =>
+    filter.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  )
+  assert.equal(document.activeElement, toggle)
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+  assert.deepEqual(
+    headings().map((button) => button.title),
+    ['Una sección']
+  )
+})
+
+test('the source outline reads Markdown headings and skips fenced code and table cells', async () => {
+  const content = [
+    '# Inicio',
+    '',
+    '| # Celda |',
+    '| --- |',
+    '',
+    '```md',
+    '# Ejemplo',
+    '```',
+    '',
+    '**Apéndice** [y notas](https://example.org)',
+    '---',
+    '',
+    '###### Referencias'
+  ].join('\r\n')
+  const fixture = await mount({
+    initialDoc: { id: 'source-outline', filePath: '/a.md', fileName: 'a.md', content }
+  })
+  const textarea = document.querySelector('textarea[aria-label="Markdown"]')
+  const headings = () => [...document.querySelectorAll('#document-outline li button')]
+  assert.deepEqual(
+    headings().map((button) => button.title),
+    ['Inicio', 'Apéndice y notas', 'Referencias']
+  )
+  await act(async () => headings()[2].click())
+  assert.equal(headings()[2].getAttribute('aria-current'), 'location')
+  assert.equal(textarea.value, content.replaceAll('\r\n', '\n'))
+  assert.equal(fixture.writes.length, 0)
+
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(
+      textarea,
+      textarea.value + '\n\n## Nuevo subtítulo'
+    )
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  assert.equal(headings().at(-1).title, 'Nuevo subtítulo')
+})
+
 test('manuscript search navigates across inline formatting without changing the document', async () => {
   const fixture = await mount({
     initialDoc: {

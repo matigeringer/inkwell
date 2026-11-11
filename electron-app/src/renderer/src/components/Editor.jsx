@@ -30,8 +30,10 @@ import {
   FeatherIcon,
   FolderTreeIcon,
   FolderIcon,
-  SearchIcon
+  SearchIcon,
+  OutlineIcon
 } from './Icons'
+import DocumentOutline from './DocumentOutline'
 import FileTree from './FileTree'
 import HistoryModal from './HistoryModal'
 import ManuscriptSearch from './ManuscriptSearch'
@@ -176,6 +178,13 @@ export default function Editor({
     [isSidebarOpen, openedFolder?.path]
   )
   const [isManuscriptDropdownOpen, setIsManuscriptDropdownOpen] = useState(false)
+  const [isOutlineOpen, setIsOutlineOpen] = useState(false)
+  const outlineToggleRef = useRef(null)
+  const closeOutline = () => {
+    setIsOutlineOpen(false)
+    outlineToggleRef.current?.focus({ preventScroll: true })
+  }
+  const canShowOutline = !isZenMode && !/\.txt$/i.test(fileName)
 
   const [showStatsHud, setShowStatsHud] = useState(false)
   const [isShortcutsModalOpen, setIsShortcutsModalOpen] = useState(false)
@@ -425,35 +434,33 @@ export default function Editor({
     [smoothScrollTo]
   )
 
+  const beginManualScroll = useCallback(() => {
+    if (!typewriterModeRef.current) return
+    cancelScrollAnimation()
+    isUserManualScrollingRef.current = true
+  }, [cancelScrollAnimation])
+
   // Coexistencia con scroll manual: desacople limpio con rueda o arrastre directo de la barra de scroll
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
 
-    const handleWheel = () => {
-      if (!typewriterModeRef.current) return
-      cancelScrollAnimation()
-      isUserManualScrollingRef.current = true
-    }
-
     const handleMouseDown = (e) => {
-      if (!typewriterModeRef.current) return
       // Detectar si el clic es sobre la barra de desplazamiento vertical en el borde derecho
       if (e.clientX >= container.getBoundingClientRect().left + container.clientWidth) {
-        cancelScrollAnimation()
-        isUserManualScrollingRef.current = true
+        beginManualScroll()
       }
     }
 
-    container.addEventListener('wheel', handleWheel, { passive: true })
+    container.addEventListener('wheel', beginManualScroll, { passive: true })
     container.addEventListener('mousedown', handleMouseDown)
 
     return () => {
-      container.removeEventListener('wheel', handleWheel)
+      container.removeEventListener('wheel', beginManualScroll)
       container.removeEventListener('mousedown', handleMouseDown)
       cancelScrollAnimation()
     }
-  }, [cancelScrollAnimation])
+  }, [beginManualScroll, cancelScrollAnimation])
 
   const editor = useEditor({
     extensions: [
@@ -1694,6 +1701,21 @@ export default function Editor({
         <div className="header-right">
           {errorMessage && <span className="error-badge">{errorMessage}</span>}
 
+          {canShowOutline && (
+            <button
+              type="button"
+              ref={outlineToggleRef}
+              className={`btn-icon-sober ${isOutlineOpen ? 'active' : ''}`}
+              onClick={() => setIsOutlineOpen((open) => !open)}
+              title={t.outline.title}
+              aria-label={t.outline.title}
+              aria-expanded={isOutlineOpen}
+              aria-controls={isOutlineOpen ? 'document-outline' : undefined}
+            >
+              <OutlineIcon aria-hidden="true" />
+            </button>
+          )}
+
           <button
             type="button"
             className={`btn-icon-sober ${isSearchOpen ? 'active' : ''}`}
@@ -2472,37 +2494,52 @@ export default function Editor({
 
         <div className="editor-document-panel">
           {isSearchOpen && <ManuscriptSearch search={search} labels={t.search} />}
-          <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
-            <div
-              className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
-              onClick={handleCanvasClick}
-            >
-              {isSourceMode && (
-                <>
-                  <p role="status" className="source-editor-notice">
-                    {currentLang === 'en'
-                      ? 'Source editing preserves the document’s original text and Markdown syntax.'
-                      : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
-                  </p>
-                  <SourceEditor
-                    content={source}
-                    search={search}
-                    workspaceMatch={workspaceMatch}
-                    onReveal={revealSearchMatch}
-                    spellCheck={preferences.spellcheckEnabled !== false}
-                    onChange={(event) => {
-                      if (!transitionRef.current) session.change(event.target.value)
-                    }}
-                  />
-                </>
-              )}
-              <EditorContent
-                style={isSourceMode ? { display: 'none' } : undefined}
+          <div className="editor-document-body">
+            <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
+              <div
+                className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
+                onClick={handleCanvasClick}
+              >
+                {isSourceMode && (
+                  <>
+                    <p role="status" className="source-editor-notice">
+                      {currentLang === 'en'
+                        ? 'Source editing preserves the document’s original text and Markdown syntax.'
+                        : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
+                    </p>
+                    <SourceEditor
+                      content={source}
+                      search={search}
+                      workspaceMatch={workspaceMatch}
+                      onReveal={revealSearchMatch}
+                      spellCheck={preferences.spellcheckEnabled !== false}
+                      onChange={(event) => {
+                        if (!transitionRef.current) session.change(event.target.value)
+                      }}
+                    />
+                  </>
+                )}
+                <EditorContent
+                  style={isSourceMode ? { display: 'none' } : undefined}
+                  editor={editor}
+                  className="tiptap-wrapper"
+                />
+              </div>
+            </main>
+            {canShowOutline && (
+              <DocumentOutline
+                open={isOutlineOpen}
+                onClose={closeOutline}
+                labels={t.outline}
                 editor={editor}
-                className="tiptap-wrapper"
+                source={source}
+                sourceRef={sourceRef}
+                scrollRef={scrollContainerRef}
+                onJump={cancelScrollAnimation}
+                onManualScroll={beginManualScroll}
               />
-            </div>
-          </main>
+            )}
+          </div>
         </div>
       </div>
 
