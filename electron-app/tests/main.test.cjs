@@ -119,6 +119,12 @@ test('main enforces IPC grants and the close handshake with sandbox enabled', as
   assert.equal((await handlers.get('file:read')(event, selected)).content, 'chosen by user')
   const untrusted = { ...event, senderFrame: { url: event.senderFrame.url } }
   assert.equal((await handlers.get('file:read')(untrusted, selected)).success, false)
+  assert.equal((await handlers.get('comments:get')(untrusted, selected)).success, false)
+  assert.equal(
+    (await handlers.get('comments:save')(untrusted, { docKey: selected, threads: [] })).success,
+    false
+  )
+  assert.equal((await handlers.get('context-menu:edit-action')(untrusted, 'copy')).success, false)
   assert.equal(
     (
       await handlers.get('file:export')(event, {

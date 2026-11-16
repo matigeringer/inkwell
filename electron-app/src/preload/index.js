@@ -60,7 +60,16 @@ const api = {
   historyDeleteSnapshot: (data) => ipcRenderer.invoke('history:delete-snapshot', data),
   historyClear: (docKey) => ipcRenderer.invoke('history:clear', docKey),
   historyClearAll: () => ipcRenderer.invoke('history:clear-all'),
-  historyPruneAll: (maxEntries) => ipcRenderer.invoke('history:prune-all', maxEntries)
+  historyPruneAll: (maxEntries) => ipcRenderer.invoke('history:prune-all', maxEntries),
+
+  commentsGet: (docKey) => ipcRenderer.invoke('comments:get', docKey),
+  commentsSave: (data) => ipcRenderer.invoke('comments:save', data),
+  commentsMove: (data) => ipcRenderer.invoke('comments:move', data),
+
+  onEditorContextMenu: (callback) => subscribe('editor:context-menu', callback),
+  replaceMisspelling: (word) => ipcRenderer.invoke('context-menu:replace-misspelling', word),
+  addToDictionary: (word) => ipcRenderer.invoke('context-menu:add-to-dictionary', word),
+  execEditAction: (action) => ipcRenderer.invoke('context-menu:edit-action', action)
 }
 
 contextBridge.exposeInMainWorld('api', api)

@@ -31,7 +31,8 @@ export const DEFAULT_PREFERENCES = {
   historySnapshotInterval: 120000,
   zenShowToolbar: true,
   zenShowStats: true,
-  zenShowFolder: true
+  zenShowFolder: true,
+  commentsVisible: true
 }
 const choices = {
   theme: THEME_IDS,

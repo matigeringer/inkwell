@@ -26,6 +26,7 @@ const SHORTCUTS = {
     ['toggleSidebar', ['Ctrl', '\\']],
     ['exportDoc', ['Ctrl', 'Shift', 'E'], ['Ctrl', 'P']],
     ['toggleZen', ['F11'], ['Ctrl', 'Shift', 'F']],
+    ['addComment', ['Ctrl', 'Alt', 'M']],
     ['versionHistory', ['Ctrl', 'H']],
     ['preferencesGeneral', ['Ctrl', ',']]
   ]

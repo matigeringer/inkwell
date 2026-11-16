@@ -182,6 +182,38 @@ export const translations = {
       zenFilesHint: '↑ ↓ para navegar • Enter para abrir • Esc para cerrar',
       zenFilesActiveBadge: 'Activo'
     },
+    comments: {
+      toggleShow: 'Mostrar comentarios',
+      toggleHide: 'Ocultar comentarios',
+      toggleAria: 'Mostrar u ocultar comentarios',
+      addTitle: 'Comentar (Ctrl+Alt+M)',
+      addButton: 'Comentar',
+      addAnother: 'Agregar comentario',
+      placeholder: 'Escribí un comentario...',
+      save: 'Comentar',
+      saveEdit: 'Guardar',
+      cancel: 'Cancelar',
+      edit: 'Editar comentario',
+      delete: 'Eliminar comentario',
+      deleteThread: 'Eliminar comentarios',
+      orphanedNotice: 'Fragmento original modificado o eliminado',
+      panelTitle: 'Comentarios',
+      empty: 'Todavía no hay comentarios.',
+      justNow: 'Ahora',
+      minutesAgo: (n) => `Hace ${n} min`,
+      hoursAgo: (n) => `Hace ${n} h`
+    },
+    contextMenu: {
+      comment: 'Comentar',
+      noSuggestions: 'Sin sugerencias ortográficas',
+      addToDictionary: (word) => `Agregar "${word}" al diccionario`,
+      undo: 'Deshacer',
+      redo: 'Rehacer',
+      cut: 'Cortar',
+      copy: 'Copiar',
+      paste: 'Pegar',
+      selectAll: 'Seleccionar todo'
+    },
     history: {
       title: 'Historial de Versiones',
       tabCompare: 'Lado a lado',
@@ -261,7 +293,8 @@ export const translations = {
         openMarkdown: 'Abrir archivo Markdown',
         openWorkspace: 'Abrir carpeta de trabajo',
         toggleSidebar: 'Alternar barra del explorador',
-        exportDoc: 'Exportar documento'
+        exportDoc: 'Exportar documento',
+        addComment: 'Comentar texto seleccionado'
       }
     },
     preferences: {
@@ -542,6 +575,38 @@ export const translations = {
       zenFilesHint: '↑ ↓ to navigate • Enter to open • Esc to close',
       zenFilesActiveBadge: 'Active'
     },
+    comments: {
+      toggleShow: 'Show comments',
+      toggleHide: 'Hide comments',
+      toggleAria: 'Show or hide comments',
+      addTitle: 'Comment (Ctrl+Alt+M)',
+      addButton: 'Comment',
+      addAnother: 'Add comment',
+      placeholder: 'Write a comment...',
+      save: 'Comment',
+      saveEdit: 'Save',
+      cancel: 'Cancel',
+      edit: 'Edit comment',
+      delete: 'Delete comment',
+      deleteThread: 'Delete comments',
+      orphanedNotice: 'Original excerpt was edited or removed',
+      panelTitle: 'Comments',
+      empty: 'No comments yet.',
+      justNow: 'Just now',
+      minutesAgo: (n) => `${n}m ago`,
+      hoursAgo: (n) => `${n}h ago`
+    },
+    contextMenu: {
+      comment: 'Comment',
+      noSuggestions: 'No spelling suggestions',
+      addToDictionary: (word) => `Add "${word}" to dictionary`,
+      undo: 'Undo',
+      redo: 'Redo',
+      cut: 'Cut',
+      copy: 'Copy',
+      paste: 'Paste',
+      selectAll: 'Select All'
+    },
     history: {
       title: 'Version History',
       tabCompare: 'Side by side',
@@ -621,7 +686,8 @@ export const translations = {
         openMarkdown: 'Open Markdown file',
         openWorkspace: 'Open workspace folder',
         toggleSidebar: 'Toggle explorer sidebar',
-        exportDoc: 'Export document'
+        exportDoc: 'Export document',
+        addComment: 'Comment on selected text'
       }
     },
     preferences: {

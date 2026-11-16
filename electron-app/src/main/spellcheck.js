@@ -1,5 +1,7 @@
 import { Menu, MenuItem, session } from 'electron'
 
+const ALLOWED_EDIT_ACTIONS = new Set(['undo', 'redo', 'cut', 'copy', 'paste', 'selectAll'])
+
 export function registerSpellcheckIpc({ handle }, systemLanguage) {
   const spellchecker = session.defaultSession
   let language = systemLanguage
@@ -35,6 +37,21 @@ export function registerSpellcheckIpc({ handle }, systemLanguage) {
     setLanguage(value)
     return { success: true, currentAppLanguage: language }
   })
+  handle('context-menu:replace-misspelling', ({ sender }, word) => {
+    if (typeof word !== 'string' || !word) throw new Error('Palabra de reemplazo inválida')
+    sender.replaceMisspelling(word)
+    return { success: true }
+  })
+  handle('context-menu:add-to-dictionary', ({ sender }, word) => {
+    if (typeof word !== 'string' || !word.trim()) throw new Error('Palabra inválida')
+    const added = sender.session.addWordToSpellCheckerDictionary(word.trim())
+    return { success: Boolean(added) }
+  })
+  handle('context-menu:edit-action', ({ sender }, action) => {
+    if (!ALLOWED_EDIT_ACTIONS.has(action)) throw new Error('Acción de edición inválida')
+    sender[action]()
+    return { success: true }
+  })
 
   return getLanguage
 }
@@ -42,45 +59,35 @@ export function registerSpellcheckIpc({ handle }, systemLanguage) {
 export function installContextMenu(window, getLanguage) {
   const contents = window.webContents
   contents.on('context-menu', (_event, params) => {
+    const { misspelledWord, dictionarySuggestions, isEditable, editFlags, selectionText, x, y } =
+      params
+
+    if (isEditable) {
+      contents.send('editor:context-menu', {
+        x,
+        y,
+        misspelledWord: misspelledWord || '',
+        dictionarySuggestions: Array.isArray(dictionarySuggestions) ? dictionarySuggestions : [],
+        selectionText: selectionText || '',
+        editFlags: {
+          canUndo: Boolean(editFlags?.canUndo),
+          canRedo: Boolean(editFlags?.canRedo),
+          canCut: Boolean(editFlags?.canCut),
+          canCopy: Boolean(editFlags?.canCopy),
+          canPaste: Boolean(editFlags?.canPaste),
+          canSelectAll: Boolean(editFlags?.canSelectAll)
+        }
+      })
+      return
+    }
+
     const menu = new Menu()
     const english = getLanguage() === 'en'
     const add = (options) => menu.append(new MenuItem(options))
-    const separator = () => add({ type: 'separator' })
     const command = (role, englishLabel, spanishLabel, enabled = true) =>
       add({ role, label: english ? englishLabel : spanishLabel, enabled })
-    const { misspelledWord, dictionarySuggestions, isEditable, editFlags, selectionText } = params
 
-    if (misspelledWord) {
-      if (dictionarySuggestions?.length) {
-        for (const suggestion of dictionarySuggestions) {
-          add({ label: suggestion, click: () => contents.replaceMisspelling(suggestion) })
-        }
-      } else {
-        add({
-          label: english ? 'No spelling suggestions' : 'Sin sugerencias ortográficas',
-          enabled: false
-        })
-      }
-      separator()
-      add({
-        label: english
-          ? `Add "${misspelledWord}" to dictionary`
-          : `Agregar "${misspelledWord}" al diccionario`,
-        click: () => contents.session.addWordToSpellCheckerDictionary(misspelledWord)
-      })
-      separator()
-    }
-
-    if (isEditable) {
-      command('undo', 'Undo', 'Deshacer')
-      command('redo', 'Redo', 'Rehacer')
-      separator()
-      command('cut', 'Cut', 'Cortar', Boolean(editFlags?.canCut))
-      command('copy', 'Copy', 'Copiar', Boolean(editFlags?.canCopy))
-      command('paste', 'Paste', 'Pegar', Boolean(editFlags?.canPaste))
-      separator()
-      command('selectAll', 'Select All', 'Seleccionar todo')
-    } else if (selectionText?.trim()) {
+    if (selectionText?.trim()) {
       command('copy', 'Copy', 'Copiar')
       command('selectAll', 'Select All', 'Seleccionar todo')
     }

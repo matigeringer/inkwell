@@ -12,6 +12,11 @@ function getCommand(event, isZenMode, commands) {
   if (key === '-' || key === '_') return commands.decreaseFontSize
   if (key === '0') return commands.resetFontSize
 
+  if (event.altKey) {
+    if (!isZenMode && key === 'm') return commands.addComment
+    return
+  }
+
   if (event.shiftKey) {
     if (key === 'y') return commands.toggleTypewriter
     if (key === 'c') return commands.toggleStats
@@ -19,7 +24,7 @@ function getCommand(event, isZenMode, commands) {
     if (key === 'l') return commands.cycleFont
     if (!isZenMode && key === 'e') return commands.toggleExport
   } else {
-    if (key === 'f' && !event.altKey) return commands.openSearch
+    if (key === 'f') return commands.openSearch
     if (key === 'h') return commands.openHistory
     if (key === ',' || key === '<') return commands.openPreferences
     if (!isZenMode && key === 'n') return commands.newDocument

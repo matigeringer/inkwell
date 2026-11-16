@@ -13,6 +13,12 @@ import {
   pruneAllHistory,
   saveSnapshot
 } from './historyManager'
+import {
+  getDocComments,
+  moveCommentsPaths,
+  moveDocComments,
+  saveDocComments
+} from './commentsManager'
 
 export function registerFileIpc({ handle }, fileService, getLanguage) {
   const title = (english, spanish) => (getLanguage() === 'en' ? english : spanish)
@@ -86,6 +92,12 @@ export function registerFileIpc({ handle }, fileService, getLanguage) {
     } catch (error) {
       result.warning = error.message
     }
+    try {
+      const comments = await moveCommentsPaths(result.oldPath, result.newPath)
+      if (!comments.success) result.warning = result.warning || comments.error
+    } catch (error) {
+      result.warning = result.warning || error.message
+    }
     return result
   })
   handle('item:delete', (_event, path) => fileService.delete(path))
@@ -104,4 +116,10 @@ export function registerHistoryIpc({ handle }) {
   handle('history:clear', (_event, docKey) => clearDocHistory(docKey))
   handle('history:clear-all', () => clearAllHistory())
   handle('history:prune-all', (_event, maxEntries) => pruneAllHistory(maxEntries))
+}
+
+export function registerCommentsIpc({ handle }) {
+  handle('comments:get', (_event, docKey) => getDocComments(docKey))
+  handle('comments:save', (_event, data) => saveDocComments(data))
+  handle('comments:move', (_event, data) => moveDocComments(data))
 }

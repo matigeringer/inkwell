@@ -5,7 +5,7 @@ import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
 import { FileService } from './fileService'
 import { createTrustedIpc } from './ipc'
-import { registerFileIpc, registerHistoryIpc } from './fileIpc'
+import { registerCommentsIpc, registerFileIpc, registerHistoryIpc } from './fileIpc'
 import { registerSpellcheckIpc } from './spellcheck'
 import { createWindowManager } from './windowManager'
 import { registerWorkspaceSearchIpc } from './workspaceSearchIpc'
@@ -36,6 +36,7 @@ async function initialize() {
   const getLanguage = registerSpellcheckIpc(ipc, systemLanguage)
   registerFileIpc(ipc, fileService, getLanguage)
   registerHistoryIpc(ipc)
+  registerCommentsIpc(ipc)
   const cancelSearch = registerWorkspaceSearchIpc(ipc, fileService)
   windows.registerIpc(ipc)
 

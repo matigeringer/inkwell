@@ -16,9 +16,13 @@ import {
   AlignCenterIcon,
   HistoryIcon,
   SearchIcon,
-  OutlineIcon
+  OutlineIcon,
+  CommentIcon
 } from './Icons'
 import DocumentOutline from './DocumentOutline'
+import CommentBubblesLayer from './CommentBubblesLayer'
+import CommentSelectionBubble from './CommentSelectionBubble'
+import EditorContextMenu from './EditorContextMenu'
 import FileTree from './FileTree'
 import EditorFileMenu from './EditorFileMenu'
 import EditorActionsMenu from './EditorActionsMenu'
@@ -32,6 +36,7 @@ import ZenOutlineSearch from './ZenOutlineSearch'
 import WorkspaceSearch from './WorkspaceSearch'
 import { getTranslation } from '../i18n'
 import useDocumentPersistence from '../hooks/useDocumentPersistence'
+import useDocumentComments from '../hooks/useDocumentComments'
 import useManuscriptSearch from '../hooks/useManuscriptSearch'
 import useTypewriterScroll from '../hooks/useTypewriterScroll'
 import useEditorShortcuts from '../hooks/useEditorShortcuts'
@@ -45,6 +50,7 @@ import {
 } from '../lib/preferences'
 import { needsSourceEditor } from '../lib/markdownSupport'
 import { isSameOrDescendant, pathAfterRename, pathName } from '../lib/workspaceTree'
+import { CommentHighlights } from '../lib/documentComments'
 import {
   manuscriptTextBlocks,
   revealMatch,
@@ -94,6 +100,8 @@ export default function Editor({
   }, [])
   useEffect(() => () => clearTimeout(toastTimeoutRef.current), [])
   const draftKey = initialDoc?.id ? `draft_${initialDoc.id}` : 'temp_doc'
+  const moveCommentsRef = useRef(null)
+  const commentsMarkDirtyRef = useRef(null)
   const { saveSnapshot, moveHistory, recordPersisted } = useEditorHistory({
     draftKey,
     enabled: preferences.historyEnabled !== false,
@@ -101,6 +109,20 @@ export default function Editor({
     maxEntries: preferences.historyMaxEntries || DEFAULT_PREFERENCES.historyMaxEntries,
     showToast
   })
+  const handleDocumentPersisted = useCallback(
+    async (result) => {
+      if (result.filePath) {
+        await moveCommentsRef.current?.({
+          fromKey: result.previousPath || draftKey,
+          toKey: result.filePath,
+          fileName: result.fileName,
+          filePath: result.filePath
+        })
+      }
+      await recordPersisted(result)
+    },
+    [draftKey, recordPersisted]
+  )
   const {
     session,
     filePath,
@@ -115,7 +137,7 @@ export default function Editor({
     initialDoc: { ...initialDoc, fileName: initialDoc?.fileName || defaultDocName },
     preferences,
     onSavedFile,
-    onPersist: recordPersisted,
+    onPersist: handleDocumentPersisted,
     showToast
   })
   const [isSourceMode, setIsSourceMode] = useState(
@@ -151,6 +173,23 @@ export default function Editor({
   const actionsMenuRef = useRef(null)
   const exportDropdownRef = useRef(null)
   const manuscriptDropdownRef = useRef(null)
+  const [localCommentsVisible, setLocalCommentsVisible] = useState(
+    () => preferences?.commentsVisible !== false
+  )
+  const commentsVisible = onUpdatePreferences
+    ? preferences?.commentsVisible !== false
+    : localCommentsVisible
+  const setCommentsVisible = useCallback(
+    (value) => {
+      const next = typeof value === 'function' ? value(commentsVisible) : value
+      setLocalCommentsVisible(next)
+      onUpdatePreferences?.({ commentsVisible: next })
+    },
+    [commentsVisible, onUpdatePreferences]
+  )
+  const [contextMenu, setContextMenu] = useState(null)
+  const lastContextInCanvasRef = useRef(false)
+  const stageRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const typewriterEnabled = Boolean(preferences?.typewriterMode)
   const typewriterPosition = preferences?.typewriterPosition || 'center'
@@ -249,7 +288,8 @@ export default function Editor({
           class: 'fountain-task-item'
         }
       }),
-      SearchHighlights
+      SearchHighlights,
+      CommentHighlights
     ],
     content: session.state.content,
     autofocus: workspaceJump || workspaceSearch?.isOpen ? false : 'end',
@@ -270,6 +310,7 @@ export default function Editor({
       if (isSourceMode) return
       session.change(editor.storage.markdown.getMarkdown())
       typewriter.onDocumentUpdate(editor)
+      commentsMarkDirtyRef.current?.()
     },
     onFocus: typewriter.onFocus
   })
@@ -302,6 +343,39 @@ export default function Editor({
     onReveal: revealSearchMatch
   })
   const { isOpen: isSearchOpen, open: openSearch, close: closeSearch } = search
+  const comments = useDocumentComments({
+    docKey: filePath || draftKey,
+    docName: fileName,
+    filePath,
+    editor,
+    isSourceMode,
+    source,
+    sourceRef,
+    visible: commentsVisible && !isZenMode,
+    onSetVisible: setCommentsVisible,
+    showToast
+  })
+  useEffect(() => {
+    moveCommentsRef.current = comments.moveComments
+    commentsMarkDirtyRef.current = comments.markDirtyOnDocChange
+  }, [comments.moveComments, comments.markDirtyOnDocChange])
+
+  useEffect(() => {
+    if (!window.api?.onEditorContextMenu) return
+    return window.api.onEditorContextMenu((payload) => {
+      const targetAtPoint =
+        typeof document.elementFromPoint === 'function'
+          ? document.elementFromPoint(payload.x, payload.y)
+          : null
+      const inCanvas =
+        lastContextInCanvasRef.current || Boolean(targetAtPoint?.closest?.('.editor-canvas'))
+      lastContextInCanvasRef.current = false
+      setContextMenu({
+        ...payload,
+        canComment: inCanvas && !isZenMode
+      })
+    })
+  }, [isZenMode])
   const isWorkspaceSearchOpen = workspaceSearch?.isOpen
   const closeSearchPanel = workspaceSearch?.close
   const closeWorkspaceSearch = useCallback(
@@ -423,8 +497,12 @@ export default function Editor({
   )
 
   const runTransition = useCallback(
-    (action) => runExclusive(async () => ((await saveBeforeSwitch()) ? action() : false)),
-    [runExclusive, saveBeforeSwitch]
+    (action) =>
+      runExclusive(async () => {
+        await comments.flushComments()
+        return (await saveBeforeSwitch()) ? action() : false
+      }),
+    [comments, runExclusive, saveBeforeSwitch]
   )
 
   const handleRestoreVersion = useCallback(
@@ -464,12 +542,18 @@ export default function Editor({
       const next = pathAfterRename(current, result)
       if (current && next !== current) {
         const name = pathName(next)
+        await comments.moveComments({
+          fromKey: current,
+          toKey: next,
+          fileName: name,
+          filePath: next
+        })
         session.relocate(next, name)
         onSavedFile?.(next, name, session.state.content)
       }
       await onItemRenamed?.(result)
     },
-    [session, onSavedFile, onItemRenamed]
+    [comments, session, onSavedFile, onItemRenamed]
   )
 
   const handleItemDeleted = useCallback(
@@ -477,6 +561,12 @@ export default function Editor({
       const current = session.state.filePath
       if (current && isSameOrDescendant(result.targetPath, current)) {
         saveDraft(session.state)
+        await comments.moveComments({
+          fromKey: current,
+          toKey: draftKey,
+          fileName: session.state.fileName,
+          filePath: null
+        })
         session.relocate(null, session.state.fileName)
         onSavedFile?.(null, session.state.fileName, session.state.content)
         await moveHistory({
@@ -488,7 +578,7 @@ export default function Editor({
       }
       await onItemDeleted?.(result)
     },
-    [session, draftKey, moveHistory, onSavedFile, onItemDeleted]
+    [comments, session, draftKey, moveHistory, onSavedFile, onItemDeleted]
   )
 
   const handleExport = useCallback(
@@ -767,7 +857,9 @@ export default function Editor({
   }
 
   function dismissOverlay(event) {
-    if (isManuscriptDropdownOpen) setIsManuscriptDropdownOpen(false)
+    if (contextMenu) setContextMenu(null)
+    else if (comments.draftAnchor || comments.addingToThreadId) comments.cancelDraft()
+    else if (isManuscriptDropdownOpen) setIsManuscriptDropdownOpen(false)
     else if (showStatsHud) setShowStatsHud(false)
     else if (exportMenuOpen) setExportMenuOpen(false)
     else if (actionsMenuOpen) setActionsMenuOpen(false)
@@ -788,6 +880,7 @@ export default function Editor({
     commands: {
       toggleZen: toggleZenMode,
       openHelp: () => setIsShortcutsModalOpen(true),
+      addComment: () => comments.startCommentFromSelection(),
       openSearch: () => {
         setIsManuscriptDropdownOpen(false)
         setActionsMenuOpen(false)
@@ -821,16 +914,85 @@ export default function Editor({
   })
 
   const handleCanvasClick = (e) => {
+    const commentMark = e.target.closest?.('[data-comment-id]')
+    if (commentMark) {
+      const threadId = commentMark.getAttribute('data-comment-id')
+      if (threadId && threadId !== '__draft__') {
+        comments.setActiveThreadId(threadId)
+        return
+      }
+    }
+    if (
+      comments.activeThreadId &&
+      !comments.draftAnchor &&
+      !comments.addingToThreadId &&
+      !e.target.closest?.('.comment-bubble')
+    ) {
+      comments.setActiveThreadId(null)
+    }
     if (e.target === e.currentTarget && editor) {
       editor.commands.focus('end')
     }
   }
+
+  const handleCanvasContextMenu = (event) => {
+    lastContextInCanvasRef.current = true
+    if (window.api?.onEditorContextMenu) return
+    event.preventDefault()
+    const selectionText = isSourceMode
+      ? (sourceRef.current?.value.slice(
+          sourceRef.current.selectionStart,
+          sourceRef.current.selectionEnd
+        ) ?? '')
+      : editor
+        ? editor.state.doc.textBetween(editor.state.selection.from, editor.state.selection.to, ' ')
+        : ''
+    const hasSelection = Boolean(selectionText.length)
+    setContextMenu({
+      x: event.clientX,
+      y: event.clientY,
+      misspelledWord: '',
+      dictionarySuggestions: [],
+      selectionText,
+      editFlags: {
+        canUndo: true,
+        canRedo: true,
+        canCut: hasSelection,
+        canCopy: hasSelection,
+        canPaste: true,
+        canSelectAll: true
+      },
+      canComment: !isZenMode
+    })
+  }
+
+  const handleContextEditAction = useCallback(
+    (action) => {
+      if (window.api?.execEditAction) {
+        window.api.execEditAction(action).catch(() => {})
+        return
+      }
+      if (!isSourceMode && editor && !editor.isDestroyed) {
+        if (action === 'undo') editor.chain().focus().undo().run()
+        else if (action === 'redo') editor.chain().focus().redo().run()
+        else if (action === 'selectAll') editor.chain().focus().selectAll().run()
+        else document.execCommand?.(action)
+      } else if (sourceRef.current && action === 'selectAll') {
+        sourceRef.current.select()
+      } else {
+        document.execCommand?.(action)
+      }
+    },
+    [editor, isSourceMode]
+  )
 
   const plainText = isSourceMode ? session.state.content : editor ? editor.getText() : ''
   const words = countWords(plainText)
   const characters = plainText.length
   const readingTime = Math.max(1, Math.ceil(words / 200))
   const paragraphs = plainText.split(/\n+/).filter((p) => p.trim().length > 0).length
+  const showCommentsRail =
+    commentsVisible && !isZenMode && (comments.threads.length > 0 || Boolean(comments.draftAnchor))
 
   return (
     <div
@@ -924,6 +1086,22 @@ export default function Editor({
               aria-controls={isOutlineOpen ? 'document-outline' : undefined}
             >
               <OutlineIcon aria-hidden="true" />
+            </button>
+          )}
+
+          {!isZenMode && (
+            <button
+              type="button"
+              className={`btn-icon-sober btn-comments-toggle ${commentsVisible ? 'active' : ''}`}
+              onClick={() => setCommentsVisible((prev) => !prev)}
+              title={commentsVisible ? t.comments.toggleHide : t.comments.toggleShow}
+              aria-label={t.comments.toggleAria}
+              aria-pressed={commentsVisible}
+            >
+              <CommentIcon size={16} aria-hidden="true" />
+              {comments.threads.length > 0 && (
+                <span className="comments-count-badge">{comments.threads.length}</span>
+              )}
             </button>
           )}
 
@@ -1195,33 +1373,86 @@ export default function Editor({
           <div className="editor-document-body">
             <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
               <div
-                className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
+                ref={stageRef}
+                className={`editor-page-stage ${showCommentsRail ? 'has-comments-rail' : ''}`}
                 onClick={handleCanvasClick}
               >
-                {isSourceMode && (
+                <div
+                  className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
+                  onClick={handleCanvasClick}
+                  onContextMenu={handleCanvasContextMenu}
+                >
+                  {isSourceMode && (
+                    <>
+                      <p role="status" className="source-editor-notice">
+                        {currentLang === 'en'
+                          ? 'Source editing preserves the document’s original text and Markdown syntax.'
+                          : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
+                      </p>
+                      <SourceEditor
+                        content={source}
+                        search={search}
+                        workspaceMatch={workspaceMatch}
+                        onReveal={revealSearchMatch}
+                        spellCheck={preferences.spellcheckEnabled !== false}
+                        onChange={(event) => {
+                          if (!transitionRef.current) {
+                            session.change(event.target.value)
+                            comments.markDirtyOnDocChange()
+                          }
+                        }}
+                      />
+                    </>
+                  )}
+                  <EditorContent
+                    style={isSourceMode ? { display: 'none' } : undefined}
+                    editor={editor}
+                    className="tiptap-wrapper"
+                  />
+                </div>
+
+                {!isZenMode && (
                   <>
-                    <p role="status" className="source-editor-notice">
-                      {currentLang === 'en'
-                        ? 'Source editing preserves the document’s original text and Markdown syntax.'
-                        : 'La edición de fuente conserva el texto y la sintaxis original del documento.'}
-                    </p>
-                    <SourceEditor
-                      content={source}
-                      search={search}
-                      workspaceMatch={workspaceMatch}
-                      onReveal={revealSearchMatch}
-                      spellCheck={preferences.spellcheckEnabled !== false}
-                      onChange={(event) => {
-                        if (!transitionRef.current) session.change(event.target.value)
+                    <CommentBubblesLayer
+                      visible={commentsVisible}
+                      threads={comments.threads}
+                      resolvedRanges={comments.resolvedRanges}
+                      draftAnchor={comments.draftAnchor}
+                      activeThreadId={comments.activeThreadId}
+                      addingToThreadId={comments.addingToThreadId}
+                      onSelectThread={comments.focusThreadInEditor}
+                      onHoverThread={comments.setHoveredThreadId}
+                      onStartAddingToThread={(threadId) => {
+                        comments.setActiveThreadId(threadId)
+                        comments.setAddingToThreadId(threadId)
                       }}
+                      onCancelAddingToThread={() => comments.setAddingToThreadId(null)}
+                      onSubmitDraft={comments.submitDraft}
+                      onCancelDraft={comments.cancelDraft}
+                      onAddComment={comments.addCommentToThread}
+                      onUpdateComment={comments.updateComment}
+                      onDeleteComment={comments.deleteComment}
+                      editor={editor}
+                      isSourceMode={isSourceMode}
+                      source={source}
+                      sourceRef={sourceRef}
+                      stageRef={stageRef}
+                      measureVersion={`${session.state.revision}-${preferences?.fontSize}-${preferences?.fontFamily}-${preferences?.textAlign}-${isSidebarOpen}-${isOutlineOpen}`}
+                      labels={t.comments}
+                      language={currentLang}
+                    />
+                    <CommentSelectionBubble
+                      editor={editor}
+                      isSourceMode={isSourceMode}
+                      sourceRef={sourceRef}
+                      stageRef={stageRef}
+                      disabled={Boolean(contextMenu) || Boolean(comments.draftAnchor)}
+                      label={t.comments.addButton}
+                      title={t.comments.addTitle}
+                      onComment={comments.startCommentFromSelection}
                     />
                   </>
                 )}
-                <EditorContent
-                  style={isSourceMode ? { display: 'none' } : undefined}
-                  editor={editor}
-                  className="tiptap-wrapper"
-                />
               </div>
             </main>
             {!isZenMode && isMarkdown && (
@@ -1240,6 +1471,16 @@ export default function Editor({
           </div>
         </div>
       </div>
+
+      <EditorContextMenu
+        menu={contextMenu}
+        labels={t.contextMenu}
+        onClose={() => setContextMenu(null)}
+        onComment={() => comments.startCommentFromSelection()}
+        onReplaceMisspelling={(word) => window.api?.replaceMisspelling?.(word)}
+        onAddToDictionary={(word) => window.api?.addToDictionary?.(word)}
+        onEditAction={handleContextEditAction}
+      />
 
       <footer className="editor-footer">
         <div className="footer-stats">
