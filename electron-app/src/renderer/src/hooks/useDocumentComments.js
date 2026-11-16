@@ -451,7 +451,7 @@ export default function useDocumentComments({
         mapped.find((r) => r.threadId === threadId) ||
         resolvedRanges.find((r) => r.threadId === threadId)
       if (range && !range.orphaned) {
-        editor.chain().setTextSelection({ from: range.from, to: range.to }).scrollIntoView().run()
+        editor.chain().setTextSelection(range.from).scrollIntoView().run()
       }
     },
     [editor, isSourceMode, resolvedRanges, sourceRef]

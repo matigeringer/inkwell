@@ -240,7 +240,7 @@ export default function CommentBubblesLayer({
 
   return (
     <aside
-      className="comments-margin-rail"
+      className={`comments-margin-rail ${activeThreadId || draftAnchor ? 'has-active-comment' : ''}`}
       aria-label={labels.panelTitle}
       style={{ minHeight: layout.totalHeight ? `${layout.totalHeight + 24}px` : undefined }}
     >
