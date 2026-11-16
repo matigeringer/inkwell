@@ -34,7 +34,6 @@ export default function useDocumentComments({
   const [hoveredThreadId, setHoveredThreadId] = useState(null)
   const [draftAnchor, setDraftAnchor] = useState(null)
   const [addingToThreadId, setAddingToThreadId] = useState(null)
-  const [loadedKey, setLoadedKey] = useState(null)
 
   const threadsRef = useRef(threads)
   const docMetaRef = useRef({ docKey, docName, filePath })
@@ -47,7 +46,6 @@ export default function useDocumentComments({
 
   const dirtyRef = useRef(false)
   const saveTimerRef = useRef(null)
-  const requestedKeyRef = useRef(null)
   const pendingMoveRef = useRef(null)
 
   const getCurrentPlainText = useCallback(() => {
@@ -95,7 +93,6 @@ export default function useDocumentComments({
     }
     const updatedThreads = refreshThreadAnchors(threadsRef.current)
     threadsRef.current = updatedThreads
-    setThreads(updatedThreads)
     dirtyRef.current = false
     const res = await window.api.commentsSave({
       docKey: key,
@@ -129,13 +126,9 @@ export default function useDocumentComments({
     if (!docKey) return
     if (pendingMoveRef.current === docKey) {
       pendingMoveRef.current = null
-      requestedKeyRef.current = docKey
-      Promise.resolve().then(() => setLoadedKey(docKey))
       return
     }
-    if (requestedKeyRef.current === docKey) return
     let canceled = false
-    requestedKeyRef.current = docKey
 
     const fetchComments = window.api?.commentsGet
       ? window.api.commentsGet(docKey)
@@ -151,13 +144,11 @@ export default function useDocumentComments({
         setDraftAnchor(null)
         setAddingToThreadId(null)
         dirtyRef.current = false
-        setLoadedKey(docKey)
       })
       .catch(() => {
         if (canceled) return
         threadsRef.current = []
         setThreads([])
-        setLoadedKey(docKey)
       })
     return () => {
       canceled = true
@@ -194,9 +185,8 @@ export default function useDocumentComments({
     [refreshThreadAnchors, showToast]
   )
 
-  const loaded = loadedKey === docKey
   const resolvedRanges = useMemo(() => {
-    if (!loaded) return []
+    if (!threads.length) return []
     if (!isSourceMode && editor && !editor.isDestroyed) {
       return resolveThreadsInDoc(editor.state.doc, threads)
     }
@@ -212,12 +202,17 @@ export default function useDocumentComments({
         orphaned: resolved.orphaned
       }
     })
-  }, [editor, isSourceMode, loaded, source, threads])
+  }, [editor, isSourceMode, source, threads])
 
-  // Keep ProseMirror decorations synchronized with resolved ranges, draft highlight, and visibility.
+  // Sync resolved ranges when threads or draftAnchor change, preserving live mapped positions on selection/hover updates.
   useEffect(() => {
     if (!editor || editor.isDestroyed || isSourceMode) return
-    const ranges = [...resolvedRanges]
+    const currentMapped = getMappedCommentRanges(editor).filter((r) => r.threadId !== '__draft__')
+    const sameThreads =
+      currentMapped.length === resolvedRanges.length &&
+      currentMapped.every((r, idx) => r.threadId === resolvedRanges[idx]?.threadId)
+    const baseRanges = sameThreads ? currentMapped : resolvedRanges
+    const ranges = [...baseRanges]
     if (draftAnchor && !draftAnchor.isSource) {
       ranges.push({
         threadId: '__draft__',
@@ -334,7 +329,7 @@ export default function useDocumentComments({
         ],
         createdAt: now
       }
-      const nextThreads = [...threadsRef.current, newThread]
+      const nextThreads = [...refreshThreadAnchors(threadsRef.current), newThread]
       threadsRef.current = nextThreads
       setThreads(nextThreads)
       setDraftAnchor(null)
@@ -343,7 +338,7 @@ export default function useDocumentComments({
       scheduleSave()
       return newThread
     },
-    [draftAnchor, scheduleSave]
+    [draftAnchor, refreshThreadAnchors, scheduleSave]
   )
 
   const addCommentToThread = useCallback(
@@ -357,7 +352,7 @@ export default function useDocumentComments({
         createdAt: now,
         updatedAt: now
       }
-      const nextThreads = threadsRef.current.map((thread) =>
+      const nextThreads = refreshThreadAnchors(threadsRef.current).map((thread) =>
         thread.id === threadId ? { ...thread, comments: [...thread.comments, newComment] } : thread
       )
       threadsRef.current = nextThreads
@@ -367,7 +362,7 @@ export default function useDocumentComments({
       scheduleSave()
       return true
     },
-    [scheduleSave]
+    [refreshThreadAnchors, scheduleSave]
   )
 
   const updateComment = useCallback(
@@ -375,7 +370,7 @@ export default function useDocumentComments({
       const body = rawBody.trim()
       if (!body) return false
       const now = Date.now()
-      const nextThreads = threadsRef.current.map((thread) =>
+      const nextThreads = refreshThreadAnchors(threadsRef.current).map((thread) =>
         thread.id === threadId
           ? {
               ...thread,
@@ -390,13 +385,13 @@ export default function useDocumentComments({
       scheduleSave()
       return true
     },
-    [scheduleSave]
+    [refreshThreadAnchors, scheduleSave]
   )
 
   const deleteComment = useCallback(
     (threadId, commentId) => {
       let removedThread = false
-      const nextThreads = threadsRef.current.flatMap((thread) => {
+      const nextThreads = refreshThreadAnchors(threadsRef.current).flatMap((thread) => {
         if (thread.id !== threadId) return [thread]
         const remaining = thread.comments.filter((c) => c.id !== commentId)
         if (!remaining.length) {
@@ -413,19 +408,21 @@ export default function useDocumentComments({
       }
       scheduleSave()
     },
-    [scheduleSave]
+    [refreshThreadAnchors, scheduleSave]
   )
 
   const deleteThread = useCallback(
     (threadId) => {
-      const nextThreads = threadsRef.current.filter((thread) => thread.id !== threadId)
+      const nextThreads = refreshThreadAnchors(threadsRef.current).filter(
+        (thread) => thread.id !== threadId
+      )
       threadsRef.current = nextThreads
       setThreads(nextThreads)
       setActiveThreadId((prev) => (prev === threadId ? null : prev))
       setAddingToThreadId((prev) => (prev === threadId ? null : prev))
       scheduleSave()
     },
-    [scheduleSave]
+    [refreshThreadAnchors, scheduleSave]
   )
 
   const markDirtyOnDocChange = useCallback(() => {

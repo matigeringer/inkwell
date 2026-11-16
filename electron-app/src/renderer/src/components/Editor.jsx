@@ -66,6 +66,42 @@ import {
 import { countWords } from '../../../shared/textStats'
 import { locateWorkspaceMatch, normalizeSource } from '../../../shared/workspaceMatch'
 
+function findMisspelledRangeInText(text, misspelledWord, nearOffset) {
+  if (!text || !misspelledWord) return null
+  for (const probe of [nearOffset, Math.max(0, nearOffset - 1)]) {
+    const word = findWordRangeAtOffset(text, probe)
+    if (word && text.slice(word.fromOffset, word.toOffset) === misspelledWord) {
+      return word
+    }
+  }
+  let best = null
+  let bestDist = Infinity
+  let idx = text.indexOf(misspelledWord)
+  while (idx !== -1) {
+    const dist = Math.abs(idx - nearOffset)
+    if (dist < bestDist) {
+      bestDist = dist
+      best = { fromOffset: idx, toOffset: idx + misspelledWord.length }
+    }
+    idx = text.indexOf(misspelledWord, idx + 1)
+  }
+  return best
+}
+
+function isClickOnCommentUnderline(commentMark, clientX, clientY) {
+  if (typeof commentMark?.getClientRects !== 'function') return false
+  const rects = Array.from(commentMark.getClientRects())
+  if (!rects.length) return false
+  return rects.some(
+    (rect) =>
+      rect.width > 0 &&
+      clientX >= rect.left - 2 &&
+      clientX <= rect.right + 2 &&
+      clientY >= rect.bottom - 7 &&
+      clientY <= rect.bottom + 5
+  )
+}
+
 export default function Editor({
   initialDoc,
   onSelectFile,
@@ -377,12 +413,44 @@ export default function Editor({
       const inCanvas =
         lastContextInCanvasRef.current || Boolean(targetAtPoint?.closest?.('.editor-canvas'))
       lastContextInCanvasRef.current = false
+
+      let misspelledRange = null
+      if (payload.misspelledWord) {
+        if (isSourceMode && sourceRef.current) {
+          const ta = sourceRef.current
+          misspelledRange = findMisspelledRangeInText(
+            ta.value,
+            payload.misspelledWord,
+            ta.selectionStart ?? 0
+          )
+        } else if (!isSourceMode && editor && !editor.isDestroyed) {
+          const { doc, selection } = editor.state
+          let hit = null
+          try {
+            hit = editor.view.posAtCoords?.({ left: payload.x, top: payload.y })
+          } catch {
+            hit = null
+          }
+          const nearPos = hit?.pos ?? selection.from
+          const plain = extractPlainDocumentText(doc)
+          const nearOffset = pmPosToFlatOffset(doc, nearPos)
+          const range = findMisspelledRangeInText(plain, payload.misspelledWord, nearOffset)
+          if (range) {
+            misspelledRange = {
+              from: flatOffsetToPmPos(doc, range.fromOffset),
+              to: flatOffsetToPmPos(doc, range.toOffset)
+            }
+          }
+        }
+      }
+
       setContextMenu({
         ...payload,
+        misspelledRange,
         canComment: inCanvas && !isZenMode
       })
     })
-  }, [isZenMode])
+  }, [editor, isSourceMode, isZenMode])
   const isWorkspaceSearchOpen = workspaceSearch?.isOpen
   const closeSearchPanel = workspaceSearch?.close
   const closeWorkspaceSearch = useCallback(
@@ -926,14 +994,15 @@ export default function Editor({
 
   const handleCanvasClick = (e) => {
     const down = pointerDownPosRef.current
+    pointerDownPosRef.current = null
     const isDrag = Boolean(down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4)
-    if (e.currentTarget === scrollContainerRef.current) {
-      pointerDownPosRef.current = null
-    }
-    if (isDrag) return
+    const domSelection = window.getSelection?.()?.toString() || ''
+    const hasEditorSelection =
+      !isSourceMode && editor && !editor.isDestroyed && !editor.state.selection.empty
+    if (isDrag || domSelection || hasEditorSelection) return
 
     const commentMark = e.target.closest?.('[data-comment-id]')
-    if (commentMark) {
+    if (commentMark && isClickOnCommentUnderline(commentMark, e.clientX, e.clientY)) {
       const threadId = commentMark.getAttribute('data-comment-id')
       if (threadId && threadId !== '__draft__') {
         comments.setActiveThreadId(threadId)
@@ -949,12 +1018,11 @@ export default function Editor({
       comments.setActiveThreadId(null)
     }
 
-    const domSelection = window.getSelection?.()?.toString() || ''
-    const hasEditorSelection =
-      !isSourceMode && editor && !editor.isDestroyed && !editor.state.selection.empty
-    if (domSelection || hasEditorSelection) return
-
-    if (e.target === e.currentTarget && editor && !isSourceMode) {
+    const isEmptyCanvasSurface =
+      e.target === e.currentTarget ||
+      e.target.classList?.contains('editor-page-stage') ||
+      e.target.classList?.contains('editor-canvas')
+    if (isEmptyCanvasSurface && editor && !isSourceMode) {
       editor.commands.focus('end')
     }
   }
@@ -998,46 +1066,77 @@ export default function Editor({
     }
   }, [editor, isSourceMode])
 
+  const handleCanvasMouseMove = (e) => {
+    const commentMark = e.target.closest?.('[data-comment-id]')
+    const hoveringUnderline = Boolean(
+      commentMark && isClickOnCommentUnderline(commentMark, e.clientX, e.clientY)
+    )
+    e.currentTarget.classList?.toggle('is-hovering-comment-underline', hoveringUnderline)
+  }
+
   const handleReplaceMisspelling = useCallback(
-    async (suggestion, misspelledWord = '') => {
+    async (suggestion, menuState) => {
+      const misspelledWord = menuState?.misspelledWord || ''
+      const capturedRange = menuState?.misspelledRange || null
       focusActiveEditable()
-      const revisionBefore = session.state.revision
-      await window.api?.replaceMisspelling?.(suggestion).catch(() => {})
-      await new Promise((resolve) => setTimeout(resolve, 25))
-      if (session.state.revision !== revisionBefore || !misspelledWord) return
 
-      if (isSourceMode) {
-        const ta = sourceRef.current
-        if (!ta) return
-        const pos = ta.selectionStart ?? 0
-        const word = findWordRangeAtOffset(ta.value, pos)
-        if (word && ta.value.slice(word.fromOffset, word.toOffset) === misspelledWord) {
-          ta.setRangeText(suggestion, word.fromOffset, word.toOffset, 'end')
-          session.change(ta.value)
-          comments.markDirtyOnDocChange()
+      if (misspelledWord) {
+        if (isSourceMode && sourceRef.current) {
+          const ta = sourceRef.current
+          const range =
+            capturedRange &&
+            ta.value.slice(capturedRange.fromOffset, capturedRange.toOffset) === misspelledWord
+              ? capturedRange
+              : findMisspelledRangeInText(ta.value, misspelledWord, ta.selectionStart ?? 0)
+          if (range) {
+            ta.setRangeText(suggestion, range.fromOffset, range.toOffset, 'end')
+            session.change(ta.value)
+            comments.markDirtyOnDocChange()
+            return
+          }
+        } else if (!isSourceMode && editor && !editor.isDestroyed) {
+          const { doc, selection } = editor.state
+          if (
+            capturedRange &&
+            capturedRange.to <= doc.content.size &&
+            doc.textBetween(capturedRange.from, capturedRange.to, '') === misspelledWord
+          ) {
+            editor
+              .chain()
+              .focus()
+              .insertContentAt({ from: capturedRange.from, to: capturedRange.to }, suggestion)
+              .run()
+            return
+          }
+          const selected = doc.textBetween(selection.from, selection.to, '')
+          if (selected === misspelledWord) {
+            editor
+              .chain()
+              .focus()
+              .insertContentAt({ from: selection.from, to: selection.to }, suggestion)
+              .run()
+            return
+          }
+          if (selected.trim() === misspelledWord) {
+            const lead = selected.indexOf(misspelledWord)
+            const from = selection.from + lead
+            const to = from + misspelledWord.length
+            editor.chain().focus().insertContentAt({ from, to }, suggestion).run()
+            return
+          }
+          const plain = extractPlainDocumentText(doc)
+          const offset = pmPosToFlatOffset(doc, selection.from)
+          const word = findMisspelledRangeInText(plain, misspelledWord, offset)
+          if (word) {
+            const from = flatOffsetToPmPos(doc, word.fromOffset)
+            const to = flatOffsetToPmPos(doc, word.toOffset)
+            editor.chain().focus().insertContentAt({ from, to }, suggestion).run()
+            return
+          }
         }
-        return
       }
 
-      if (!editor || editor.isDestroyed) return
-      const { doc, selection } = editor.state
-      const selected = doc.textBetween(selection.from, selection.to, '')
-      if (selected === misspelledWord) {
-        editor
-          .chain()
-          .focus()
-          .insertContentAt({ from: selection.from, to: selection.to }, suggestion)
-          .run()
-        return
-      }
-      const plain = extractPlainDocumentText(doc)
-      const offset = pmPosToFlatOffset(doc, selection.from)
-      const word = findWordRangeAtOffset(plain, offset)
-      if (word && plain.slice(word.fromOffset, word.toOffset) === misspelledWord) {
-        const from = flatOffsetToPmPos(doc, word.fromOffset)
-        const to = flatOffsetToPmPos(doc, word.toOffset)
-        editor.chain().focus().insertContentAt({ from, to }, suggestion).run()
-      }
+      await window.api?.replaceMisspelling?.(suggestion).catch(() => {})
     },
     [comments, editor, focusActiveEditable, isSourceMode, session]
   )
@@ -1472,11 +1571,10 @@ export default function Editor({
               <div
                 ref={stageRef}
                 className={`editor-page-stage ${showCommentsRail ? 'has-comments-rail' : ''}`}
-                onClick={handleCanvasClick}
               >
                 <div
                   className={`editor-canvas ${preferences?.typewriterMode ? `typewriter-mode-active typewriter-pos-${preferences?.typewriterPosition || 'center'}` : ''}`}
-                  onClick={handleCanvasClick}
+                  onMouseMove={handleCanvasMouseMove}
                   onContextMenu={handleCanvasContextMenu}
                 >
                   {isSourceMode && (
@@ -1574,7 +1672,7 @@ export default function Editor({
         labels={t.contextMenu}
         onClose={() => setContextMenu(null)}
         onComment={() => comments.startCommentFromSelection()}
-        onReplaceMisspelling={(word) => handleReplaceMisspelling(word, contextMenu?.misspelledWord)}
+        onReplaceMisspelling={(word) => handleReplaceMisspelling(word, contextMenu)}
         onAddToDictionary={handleAddToDictionary}
         onEditAction={handleContextEditAction}
       />

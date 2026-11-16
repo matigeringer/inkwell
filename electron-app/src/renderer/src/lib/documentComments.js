@@ -47,7 +47,7 @@ export const CommentHighlights = Extension.create({
             const meta = tr.getMeta(commentHighlightsKey)
             if (meta) {
               const next = {
-                ranges: meta.ranges ?? prev.ranges,
+                ranges: meta.ranges !== undefined ? meta.ranges : prev.ranges,
                 activeThreadId:
                   meta.activeThreadId !== undefined ? meta.activeThreadId : prev.activeThreadId,
                 hoveredThreadId:
@@ -68,10 +68,12 @@ export const CommentHighlights = Extension.create({
                   ? { ...range, from, to }
                   : { ...range, from, to: from, orphaned: true }
               })
-              const next = { ...prev, ranges }
               return {
-                ...next,
-                decorations: buildDecorations(tr.doc, next)
+                ...prev,
+                ranges,
+                decorations: prev.visible
+                  ? prev.decorations.map(tr.mapping, tr.doc)
+                  : DecorationSet.empty
               }
             }
             return prev

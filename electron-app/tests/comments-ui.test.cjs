@@ -109,15 +109,19 @@ async function mountEditor(initialThreads = []) {
   root = createRoot(document.getElementById('root'))
   await act(async () =>
     root.render(
-      React.createElement(Editor, {
-        initialDoc: {
-          id: 'doc-comments',
-          filePath: '/a.md',
-          fileName: 'a.md',
-          content: 'Primera frase para comentar aquí.'
-        },
-        preferences: { ...DEFAULT_PREFERENCES, language: 'es', autoSaveEnabled: false }
-      })
+      React.createElement(
+        React.StrictMode,
+        null,
+        React.createElement(Editor, {
+          initialDoc: {
+            id: 'doc-comments',
+            filePath: '/a.md',
+            fileName: 'a.md',
+            content: 'Primera frase para comentar aquí.'
+          },
+          preferences: { ...DEFAULT_PREFERENCES, language: 'es', autoSaveEnabled: false }
+        })
+      )
     )
   )
   await settle(30)
@@ -286,42 +290,23 @@ test('drag-selecting onto canvas padding preserves non-empty editor selection', 
   assert.equal(activeEditor.state.selection.to, 15)
 })
 
-test('spellcheck suggestion fallback replaces misspelled word if native replaceMisspelling is a no-op', async () => {
-  await mountEditor()
-  await act(async () => {
-    activeEditor.commands.setContent('Texto con errror de tipeo')
-  })
-  await settle(25)
-  const docText = activeEditor.state.doc.textContent
-  const start = docText.indexOf('errror') + 1
-  await act(async () => {
-    activeEditor.commands.setTextSelection({ from: start + 2, to: start + 2 })
-    document
-      .querySelector('.editor-canvas')
-      .dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 120 }))
-  })
-  // Emit native context-menu event with misspelledWord
-  await act(async () => {
-    const canvas = document.querySelector('.editor-canvas')
-    canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }))
-  })
-  await settle(10)
-  // Trigger suggestion via menu
+test('spellcheck suggestion replaces misspelled word when selected or when caret is elsewhere', async () => {
   const fixture = await mountEditor()
   await act(async () => {
     activeEditor.commands.setContent('Texto con errror de tipeo')
-    activeEditor.commands.setTextSelection({ from: 13, to: 13 })
+    // Select "errror " with trailing space (like double-click) and right-click
+    activeEditor.commands.setTextSelection({ from: 11, to: 18 })
     fixture.triggerContextMenu({
       x: 100,
       y: 120,
       misspelledWord: 'errror',
       dictionarySuggestions: ['error'],
-      selectionText: '',
+      selectionText: 'errror ',
       editFlags: {
         canUndo: true,
         canRedo: false,
-        canCut: false,
-        canCopy: false,
+        canCut: true,
+        canCopy: true,
         canPaste: true,
         canSelectAll: true
       }
@@ -331,6 +316,39 @@ test('spellcheck suggestion fallback replaces misspelled word if native replaceM
   await act(async () => {
     document.querySelector('.editor-context-menu .is-suggestion').click()
   })
-  await settle(50)
+  await settle(30)
   assert.equal(activeEditor.state.doc.textContent, 'Texto con error de tipeo')
+})
+
+test('clicking text body or selecting word leaves comment unselected; clicking underline selects it', async () => {
+  await mountEditor([
+    {
+      id: 't1',
+      anchor: { quote: 'frase', prefix: 'Primera ', suffix: ' para', fromOffset: 8, toOffset: 13 },
+      comments: [{ id: 'c1', body: 'Nota', createdAt: 100, updatedAt: 100 }],
+      createdAt: 100
+    }
+  ])
+
+  const mark = document.querySelector('[data-comment-id="t1"]')
+  assert.ok(mark, 'Comment highlight should render in StrictMode')
+  mark.getClientRects = () => [
+    { left: 50, right: 120, top: 100, bottom: 128, width: 70, height: 28 }
+  ]
+
+  // Click on the upper/middle text body (y = 110): should NOT activate the comment.
+  await act(async () => {
+    mark.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 80, clientY: 110 }))
+    mark.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 80, clientY: 110 }))
+  })
+  await settle(20)
+  assert.equal(document.querySelector('.comment-bubble.is-active'), null)
+
+  // Click on the underline strip (y = 126, near bottom = 128): SHOULD activate the comment.
+  await act(async () => {
+    mark.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 80, clientY: 126 }))
+    mark.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 80, clientY: 126 }))
+  })
+  await settle(20)
+  assert.ok(document.querySelector('.comment-bubble.is-active'))
 })

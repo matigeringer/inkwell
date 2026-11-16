@@ -60,56 +60,61 @@
 /* Text anchor highlight */
 
 :root {
-  --comment-highlight-bg: rgba(218, 128, 94, 0.13);
-  --comment-highlight-border: rgba(194, 96, 62, 0.34);
-  --comment-highlight-active-bg: rgba(218, 120, 82, 0.28);
-  --comment-highlight-active-border: rgba(194, 56, 27, 0.85);
+  --comment-highlight-bg: rgba(218, 128, 94, 0.16);
+  --comment-highlight-border: rgba(194, 74, 38, 0.72);
+  --comment-highlight-active-bg: rgba(218, 120, 82, 0.3);
+  --comment-highlight-active-border: rgba(194, 56, 27, 0.96);
 }
 
 :root[data-theme$='-dark'],
 :root[data-theme='dark'] {
-  --comment-highlight-bg: rgba(235, 146, 112, 0.11);
-  --comment-highlight-border: rgba(235, 146, 112, 0.32);
-  --comment-highlight-active-bg: rgba(235, 138, 102, 0.25);
+  --comment-highlight-bg: rgba(235, 146, 112, 0.14);
+  --comment-highlight-border: rgba(238, 118, 78, 0.72);
+  --comment-highlight-active-bg: rgba(235, 138, 102, 0.28);
   --comment-highlight-active-border: #ee6342;
 }
 
 :root[data-theme='mono-light'] {
-  --comment-highlight-bg: rgba(220, 136, 100, 0.13);
-  --comment-highlight-border: rgba(186, 98, 66, 0.34);
-  --comment-highlight-active-bg: rgba(220, 126, 88, 0.27);
-  --comment-highlight-active-border: rgba(168, 72, 42, 0.85);
+  --comment-highlight-bg: rgba(220, 136, 100, 0.16);
+  --comment-highlight-border: rgba(186, 86, 52, 0.7);
+  --comment-highlight-active-bg: rgba(220, 126, 88, 0.29);
+  --comment-highlight-active-border: rgba(168, 64, 34, 0.95);
 }
 
 :root[data-theme='mono-dark'] {
-  --comment-highlight-bg: rgba(235, 148, 114, 0.12);
-  --comment-highlight-border: rgba(235, 148, 114, 0.32);
-  --comment-highlight-active-bg: rgba(235, 140, 104, 0.26);
-  --comment-highlight-active-border: rgba(244, 158, 124, 0.85);
+  --comment-highlight-bg: rgba(235, 148, 114, 0.15);
+  --comment-highlight-border: rgba(238, 136, 98, 0.7);
+  --comment-highlight-active-bg: rgba(235, 140, 104, 0.28);
+  --comment-highlight-active-border: rgba(244, 158, 124, 0.95);
 }
 
 :root[data-theme='beige-light'] {
-  --comment-highlight-bg: rgba(210, 116, 78, 0.14);
-  --comment-highlight-border: rgba(176, 82, 48, 0.38);
-  --comment-highlight-active-bg: rgba(210, 108, 68, 0.29);
-  --comment-highlight-active-border: rgba(154, 58, 28, 0.88);
+  --comment-highlight-bg: rgba(210, 116, 78, 0.17);
+  --comment-highlight-border: rgba(168, 72, 38, 0.74);
+  --comment-highlight-active-bg: rgba(210, 108, 68, 0.31);
+  --comment-highlight-active-border: rgba(154, 52, 22, 0.96);
 }
 
 :root[data-theme='beige-dark'] {
-  --comment-highlight-bg: rgba(232, 142, 104, 0.13);
-  --comment-highlight-border: rgba(232, 142, 104, 0.36);
-  --comment-highlight-active-bg: rgba(232, 134, 94, 0.28);
-  --comment-highlight-active-border: rgba(244, 160, 122, 0.88);
+  --comment-highlight-bg: rgba(232, 142, 104, 0.16);
+  --comment-highlight-border: rgba(236, 134, 92, 0.72);
+  --comment-highlight-active-bg: rgba(232, 134, 94, 0.3);
+  --comment-highlight-active-border: rgba(244, 160, 122, 0.95);
 }
 
 .comment-anchor-mark {
   background-color: var(--comment-highlight-bg);
-  border-bottom: 1px solid var(--comment-highlight-border);
+  border-bottom: 2px solid var(--comment-highlight-border);
+  padding-bottom: 1px;
   border-radius: 2px;
-  cursor: pointer;
+  cursor: text;
   transition:
     background-color 0.15s ease,
     border-color 0.15s ease;
+}
+
+.editor-canvas.is-hovering-comment-underline .comment-anchor-mark {
+  cursor: pointer;
 }
 
 .comment-anchor-mark.is-hovered {
@@ -119,7 +124,7 @@
 
 .comment-anchor-mark.is-active {
   background-color: var(--comment-highlight-active-bg);
-  border-bottom: 2px solid var(--comment-highlight-active-border);
+  border-bottom: 2.5px solid var(--comment-highlight-active-border);
 }
 
 /* Floating comment bubble */
