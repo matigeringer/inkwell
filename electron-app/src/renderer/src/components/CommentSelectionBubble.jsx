@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CommentAddIcon } from './Icons'
 
 export default function CommentSelectionBubble({
@@ -12,9 +12,10 @@ export default function CommentSelectionBubble({
   onComment
 }) {
   const [position, setPosition] = useState(null)
+  const pointerDownRef = useRef(false)
 
   const updatePosition = useCallback(() => {
-    if (disabled) {
+    if (disabled || pointerDownRef.current) {
       setPosition(null)
       return
     }
@@ -72,6 +73,24 @@ export default function CommentSelectionBubble({
       setPosition(null)
     }
   }, [disabled, editor, isSourceMode, sourceRef, stageRef])
+
+  useEffect(() => {
+    if (disabled) return
+    const handleMouseDown = () => {
+      pointerDownRef.current = true
+      setPosition(null)
+    }
+    const handleMouseUp = () => {
+      pointerDownRef.current = false
+      requestAnimationFrame(updatePosition)
+    }
+    window.addEventListener('mousedown', handleMouseDown, true)
+    window.addEventListener('mouseup', handleMouseUp, true)
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown, true)
+      window.removeEventListener('mouseup', handleMouseUp, true)
+    }
+  }, [disabled, updatePosition])
 
   useEffect(() => {
     if (disabled) return

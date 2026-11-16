@@ -265,6 +265,72 @@ test('custom right-click context menu surfaces spellcheck suggestions and commen
   await act(async () => {
     menu.querySelector('.is-suggestion').click()
   })
-  assert.deepEqual(fixture.replacedWords, ['comentarr'.replace('comentarr', 'comentar')])
+  await settle(40)
+  assert.deepEqual(fixture.replacedWords, ['comentar'])
   assert.equal(document.querySelector('.editor-context-menu'), null)
+})
+
+test('drag-selecting onto canvas padding preserves non-empty editor selection', async () => {
+  await mountEditor()
+
+  await act(async () => {
+    activeEditor.commands.setTextSelection({ from: 1, to: 15 })
+  })
+  const canvas = document.querySelector('.editor-canvas')
+  await act(async () => {
+    canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 20, clientY: 20 }))
+    canvas.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 180, clientY: 24 }))
+  })
+  await settle(25)
+  assert.equal(activeEditor.state.selection.from, 1)
+  assert.equal(activeEditor.state.selection.to, 15)
+})
+
+test('spellcheck suggestion fallback replaces misspelled word if native replaceMisspelling is a no-op', async () => {
+  await mountEditor()
+  await act(async () => {
+    activeEditor.commands.setContent('Texto con errror de tipeo')
+  })
+  await settle(25)
+  const docText = activeEditor.state.doc.textContent
+  const start = docText.indexOf('errror') + 1
+  await act(async () => {
+    activeEditor.commands.setTextSelection({ from: start + 2, to: start + 2 })
+    document
+      .querySelector('.editor-canvas')
+      .dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 100, clientY: 120 }))
+  })
+  // Emit native context-menu event with misspelledWord
+  await act(async () => {
+    const canvas = document.querySelector('.editor-canvas')
+    canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }))
+  })
+  await settle(10)
+  // Trigger suggestion via menu
+  const fixture = await mountEditor()
+  await act(async () => {
+    activeEditor.commands.setContent('Texto con errror de tipeo')
+    activeEditor.commands.setTextSelection({ from: 13, to: 13 })
+    fixture.triggerContextMenu({
+      x: 100,
+      y: 120,
+      misspelledWord: 'errror',
+      dictionarySuggestions: ['error'],
+      selectionText: '',
+      editFlags: {
+        canUndo: true,
+        canRedo: false,
+        canCut: false,
+        canCopy: false,
+        canPaste: true,
+        canSelectAll: true
+      }
+    })
+  })
+  await settle(25)
+  await act(async () => {
+    document.querySelector('.editor-context-menu .is-suggestion').click()
+  })
+  await settle(50)
+  assert.equal(activeEditor.state.doc.textContent, 'Texto con error de tipeo')
 })

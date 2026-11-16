@@ -33,6 +33,11 @@
   min-height: 100%;
 }
 
+.editor-canvas,
+.tiptap-wrapper {
+  user-select: text;
+}
+
 .editor-page-stage.has-comments-rail {
   gap: 1.5rem;
   padding-inline: 1.25rem;

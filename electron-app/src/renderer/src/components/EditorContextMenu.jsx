@@ -11,10 +11,12 @@ export default function EditorContextMenu({
   onEditAction
 }) {
   const menuRef = useRef(null)
+  const previousFocusRef = useRef(null)
 
   useLayoutEffect(() => {
     const el = menuRef.current
     if (!el || !menu) return
+    previousFocusRef.current = document.activeElement
     const rect = el.getBoundingClientRect()
     const margin = 8
     const maxLeft = Math.max(margin, window.innerWidth - rect.width - margin)
@@ -23,7 +25,6 @@ export default function EditorContextMenu({
     const top = Math.max(margin, Math.min(menu.y, maxTop))
     el.style.left = `${left}px`
     el.style.top = `${top}px`
-    el.focus({ preventScroll: true })
   }, [menu])
 
   useEffect(() => {
@@ -39,6 +40,26 @@ export default function EditorContextMenu({
         event.preventDefault()
         event.stopPropagation()
         onClose()
+        previousFocusRef.current?.focus?.({ preventScroll: true })
+        return
+      }
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+        const items = Array.from(
+          menuRef.current?.querySelectorAll('button[role="menuitem"]:not(:disabled)') || []
+        )
+        if (!items.length) return
+        event.preventDefault()
+        event.stopPropagation()
+        const index = items.indexOf(document.activeElement)
+        if (event.key === 'ArrowDown') {
+          items[(index + 1) % items.length].focus()
+        } else if (event.key === 'ArrowUp') {
+          items[(index - 1 + items.length) % items.length].focus()
+        } else if (event.key === 'Home') {
+          items[0].focus()
+        } else if (event.key === 'End') {
+          items.at(-1).focus()
+        }
       }
     }
     document.addEventListener('mousedown', handlePointerDown, true)
@@ -57,29 +78,12 @@ export default function EditorContextMenu({
 
   const { misspelledWord, dictionarySuggestions = [], editFlags = {}, canComment } = menu
 
-  const handleMenuKeyDown = (event) => {
-    const items = Array.from(
-      menuRef.current?.querySelectorAll('button[role="menuitem"]:not(:disabled)') || []
-    )
-    if (!items.length) return
-    const index = items.indexOf(document.activeElement)
-    if (event.key === 'ArrowDown') {
-      event.preventDefault()
-      items[(index + 1) % items.length].focus()
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault()
-      items[(index - 1 + items.length) % items.length].focus()
-    } else if (event.key === 'Home') {
-      event.preventDefault()
-      items[0].focus()
-    } else if (event.key === 'End') {
-      event.preventDefault()
-      items.at(-1).focus()
-    }
-  }
-
   const runAction = (action) => {
+    const targetFocus = previousFocusRef.current
     onClose()
+    if (targetFocus && document.activeElement !== targetFocus) {
+      targetFocus.focus?.({ preventScroll: true })
+    }
     action()
   }
 
@@ -90,7 +94,6 @@ export default function EditorContextMenu({
       tabIndex={-1}
       className="editor-context-menu"
       style={{ left: `${menu.x}px`, top: `${menu.y}px` }}
-      onKeyDown={handleMenuKeyDown}
       onContextMenu={(event) => event.preventDefault()}
     >
       {misspelledWord && (

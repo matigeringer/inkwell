@@ -50,7 +50,13 @@ import {
 } from '../lib/preferences'
 import { needsSourceEditor } from '../lib/markdownSupport'
 import { isSameOrDescendant, pathAfterRename, pathName } from '../lib/workspaceTree'
-import { CommentHighlights } from '../lib/documentComments'
+import {
+  CommentHighlights,
+  extractPlainDocumentText,
+  findWordRangeAtOffset,
+  flatOffsetToPmPos,
+  pmPosToFlatOffset
+} from '../lib/documentComments'
 import {
   manuscriptTextBlocks,
   revealMatch,
@@ -189,6 +195,7 @@ export default function Editor({
   )
   const [contextMenu, setContextMenu] = useState(null)
   const lastContextInCanvasRef = useRef(false)
+  const pointerDownPosRef = useRef(null)
   const stageRef = useRef(null)
   const scrollContainerRef = useRef(null)
   const typewriterEnabled = Boolean(preferences?.typewriterMode)
@@ -913,7 +920,18 @@ export default function Editor({
     }
   })
 
+  const handleMainMouseDown = (e) => {
+    pointerDownPosRef.current = { x: e.clientX, y: e.clientY }
+  }
+
   const handleCanvasClick = (e) => {
+    const down = pointerDownPosRef.current
+    const isDrag = Boolean(down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4)
+    if (e.currentTarget === scrollContainerRef.current) {
+      pointerDownPosRef.current = null
+    }
+    if (isDrag) return
+
     const commentMark = e.target.closest?.('[data-comment-id]')
     if (commentMark) {
       const threadId = commentMark.getAttribute('data-comment-id')
@@ -930,7 +948,13 @@ export default function Editor({
     ) {
       comments.setActiveThreadId(null)
     }
-    if (e.target === e.currentTarget && editor) {
+
+    const domSelection = window.getSelection?.()?.toString() || ''
+    const hasEditorSelection =
+      !isSourceMode && editor && !editor.isDestroyed && !editor.state.selection.empty
+    if (domSelection || hasEditorSelection) return
+
+    if (e.target === e.currentTarget && editor && !isSourceMode) {
       editor.commands.focus('end')
     }
   }
@@ -966,8 +990,76 @@ export default function Editor({
     })
   }
 
+  const focusActiveEditable = useCallback(() => {
+    if (isSourceMode) {
+      sourceRef.current?.focus({ preventScroll: true })
+    } else if (editor && !editor.isDestroyed) {
+      editor.view.focus()
+    }
+  }, [editor, isSourceMode])
+
+  const handleReplaceMisspelling = useCallback(
+    async (suggestion, misspelledWord = '') => {
+      focusActiveEditable()
+      const revisionBefore = session.state.revision
+      await window.api?.replaceMisspelling?.(suggestion).catch(() => {})
+      await new Promise((resolve) => setTimeout(resolve, 25))
+      if (session.state.revision !== revisionBefore || !misspelledWord) return
+
+      if (isSourceMode) {
+        const ta = sourceRef.current
+        if (!ta) return
+        const pos = ta.selectionStart ?? 0
+        const word = findWordRangeAtOffset(ta.value, pos)
+        if (word && ta.value.slice(word.fromOffset, word.toOffset) === misspelledWord) {
+          ta.setRangeText(suggestion, word.fromOffset, word.toOffset, 'end')
+          session.change(ta.value)
+          comments.markDirtyOnDocChange()
+        }
+        return
+      }
+
+      if (!editor || editor.isDestroyed) return
+      const { doc, selection } = editor.state
+      const selected = doc.textBetween(selection.from, selection.to, '')
+      if (selected === misspelledWord) {
+        editor
+          .chain()
+          .focus()
+          .insertContentAt({ from: selection.from, to: selection.to }, suggestion)
+          .run()
+        return
+      }
+      const plain = extractPlainDocumentText(doc)
+      const offset = pmPosToFlatOffset(doc, selection.from)
+      const word = findWordRangeAtOffset(plain, offset)
+      if (word && plain.slice(word.fromOffset, word.toOffset) === misspelledWord) {
+        const from = flatOffsetToPmPos(doc, word.fromOffset)
+        const to = flatOffsetToPmPos(doc, word.toOffset)
+        editor.chain().focus().insertContentAt({ from, to }, suggestion).run()
+      }
+    },
+    [comments, editor, focusActiveEditable, isSourceMode, session]
+  )
+
+  const handleAddToDictionary = useCallback(
+    async (word) => {
+      focusActiveEditable()
+      await window.api?.addToDictionary?.(word).catch(() => {})
+      if (preferences?.spellcheckEnabled !== false) {
+        const targetEl = isSourceMode ? sourceRef.current : editor?.view?.dom
+        if (targetEl) {
+          targetEl.setAttribute('spellcheck', 'false')
+          requestAnimationFrame(() => targetEl.setAttribute('spellcheck', 'true'))
+        }
+      }
+    },
+    [editor, focusActiveEditable, isSourceMode, preferences?.spellcheckEnabled]
+  )
+
   const handleContextEditAction = useCallback(
     (action) => {
+      focusActiveEditable()
       if (window.api?.execEditAction) {
         window.api.execEditAction(action).catch(() => {})
         return
@@ -983,7 +1075,7 @@ export default function Editor({
         document.execCommand?.(action)
       }
     },
-    [editor, isSourceMode]
+    [editor, focusActiveEditable, isSourceMode]
   )
 
   const plainText = isSourceMode ? session.state.content : editor ? editor.getText() : ''
@@ -1371,7 +1463,12 @@ export default function Editor({
         <div className="editor-document-panel">
           {isSearchOpen && <ManuscriptSearch search={search} labels={t.search} />}
           <div className="editor-document-body">
-            <main className="editor-main" ref={scrollContainerRef} onClick={handleCanvasClick}>
+            <main
+              className="editor-main"
+              ref={scrollContainerRef}
+              onMouseDown={handleMainMouseDown}
+              onClick={handleCanvasClick}
+            >
               <div
                 ref={stageRef}
                 className={`editor-page-stage ${showCommentsRail ? 'has-comments-rail' : ''}`}
@@ -1477,8 +1574,8 @@ export default function Editor({
         labels={t.contextMenu}
         onClose={() => setContextMenu(null)}
         onComment={() => comments.startCommentFromSelection()}
-        onReplaceMisspelling={(word) => window.api?.replaceMisspelling?.(word)}
-        onAddToDictionary={(word) => window.api?.addToDictionary?.(word)}
+        onReplaceMisspelling={(word) => handleReplaceMisspelling(word, contextMenu?.misspelledWord)}
+        onAddToDictionary={handleAddToDictionary}
         onEditAction={handleContextEditAction}
       />
 
