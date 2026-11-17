@@ -38,22 +38,19 @@
   user-select: text;
 }
 
-.editor-page-stage.has-comments-rail {
-  gap: 1.5rem;
-  padding-inline: 1.25rem;
-}
-
-.editor-page-stage.has-comments-rail .editor-canvas {
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
 .comments-margin-rail {
-  position: relative;
-  flex: 0 0 264px;
-  width: 264px;
+  --comment-rail-width: clamp(220px, 22cqi, 264px);
+  position: absolute;
+  top: 0;
+  left: min(
+    calc(50% + var(--editor-max-width) / 2 + 1rem),
+    calc(100% - var(--comment-rail-width) - 1rem)
+  );
+  width: var(--comment-rail-width);
   margin-top: 2.75rem;
-  margin-bottom: 4rem;
+  padding-bottom: 4rem;
+  z-index: 10;
+  pointer-events: none;
   user-select: none;
 }
 
@@ -139,6 +136,7 @@
   padding: 0.7rem 0.78rem;
   box-shadow: var(--shadow-sm);
   cursor: pointer;
+  pointer-events: auto;
   transition:
     top 0.18s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.15s ease,
@@ -547,6 +545,9 @@
   }
 
   .comments-margin-rail {
+    position: static;
+    left: auto;
+    top: auto;
     flex: none;
     width: 100%;
     max-width: var(--editor-max-width);
@@ -556,6 +557,7 @@
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    pointer-events: auto;
   }
 
   .comments-margin-rail .comment-bubble {
