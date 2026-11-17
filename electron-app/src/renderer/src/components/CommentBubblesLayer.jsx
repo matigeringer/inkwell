@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { layoutCommentBubbles } from '../lib/documentComments'
+import { getMappedCommentRanges, layoutCommentBubbles } from '../lib/documentComments'
 import { PencilIcon, PlusIcon, TrashIcon } from './Icons'
 
 function formatCommentTime(timestamp, labels, language) {
@@ -143,8 +143,13 @@ export default function CommentBubblesLayer({
       }
     }
 
+    const mappedById =
+      !isSourceMode && editor && !editor.isDestroyed
+        ? new Map(getMappedCommentRanges(editor).map((r) => [r.threadId, r]))
+        : null
+
     for (const thread of threads) {
-      const range = rangeById.get(thread.id)
+      const range = mappedById?.get(thread.id) || rangeById.get(thread.id)
       if (!range) {
         nextTargets[thread.id] = 0
       } else {
@@ -211,8 +216,13 @@ export default function CommentBubblesLayer({
     }
   }, [])
 
+  const visibleThreads = useMemo(
+    () => threads.filter((thread) => !rangeById.get(thread.id)?.orphaned),
+    [rangeById, threads]
+  )
+
   const items = useMemo(() => {
-    const list = threads.map((thread) => ({
+    const list = visibleThreads.map((thread) => ({
       id: thread.id,
       targetY: targets[thread.id] ?? 0,
       height: heights[thread.id] ?? 96
@@ -225,7 +235,7 @@ export default function CommentBubblesLayer({
       })
     }
     return list
-  }, [draftAnchor, heights, targets, threads])
+  }, [draftAnchor, heights, targets, visibleThreads])
 
   const layout = useMemo(
     () =>
@@ -236,7 +246,7 @@ export default function CommentBubblesLayer({
     [activeThreadId, draftAnchor, items]
   )
 
-  if (!visible || (!threads.length && !draftAnchor)) return null
+  if (!visible || (!visibleThreads.length && !draftAnchor)) return null
 
   return (
     <aside
@@ -244,9 +254,7 @@ export default function CommentBubblesLayer({
       aria-label={labels.panelTitle}
       style={{ minHeight: layout.totalHeight ? `${layout.totalHeight + 24}px` : undefined }}
     >
-      {threads.map((thread) => {
-        const range = rangeById.get(thread.id)
-        const isOrphaned = Boolean(range?.orphaned)
+      {visibleThreads.map((thread) => {
         const isActive = activeThreadId === thread.id
         const top = layout.positions.get(thread.id) ?? 0
         const targetY = targets[thread.id] ?? top
@@ -256,7 +264,7 @@ export default function CommentBubblesLayer({
           <article
             key={thread.id}
             ref={(node) => registerCardRef(thread.id, node)}
-            className={`comment-bubble ${isActive ? 'is-active' : ''} ${isOrphaned ? 'is-orphaned' : ''}`}
+            className={`comment-bubble ${isActive ? 'is-active' : ''}`}
             style={{ top: `${top}px` }}
             onMouseEnter={() => onHoverThread?.(thread.id)}
             onMouseLeave={() => onHoverThread?.(null)}
@@ -267,13 +275,6 @@ export default function CommentBubblesLayer({
               aria-hidden="true"
               style={{ top: `${Math.max(10, stemOffset)}px` }}
             />
-
-            {isOrphaned && (
-              <div className="comment-orphaned-banner">
-                <span className="comment-orphaned-label">{labels.orphanedNotice}</span>
-                <span className="comment-orphaned-quote">“{thread.anchor.quote}”</span>
-              </div>
-            )}
 
             <div className="comment-items-list">
               {thread.comments.map((comment) => {

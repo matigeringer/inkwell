@@ -16,6 +16,7 @@ async function managerFixture(t) {
 const {
   createAnchorFromTextOffsets,
   resolveAnchorInText,
+  mapThreadsAcrossTextChange,
   findWordRangeAtOffset,
   layoutCommentBubbles
 } = load('src/renderer/src/lib/documentComments.js')
@@ -126,6 +127,45 @@ test('resolveAnchorInText re-anchors edited documents via context and marks dele
   const deleted = 'Texto completamente distinto sin la palabra clave.'
   const orphaned = resolveAnchorInText(deleted, anchor)
   assert.equal(orphaned.orphaned, true)
+
+  const editedQuote = 'En un lugar de la Mancha. En un rincón distinto.'
+  const reanchored = resolveAnchorInText(editedQuote, anchor)
+  assert.equal(reanchored.orphaned, false)
+  assert.equal(reanchored.reanchored, true)
+  assert.equal(editedQuote.slice(reanchored.fromOffset, reanchored.toOffset), 'rincón')
+})
+
+test('mapThreadsAcrossTextChange re-anchors edited text and deletes removed fragments', () => {
+  const base = 'Primera frase para comentar aquí.'
+  const start = base.indexOf('frase')
+  const threads = [
+    {
+      id: 't1',
+      anchor: createAnchorFromTextOffsets(base, start, start + 5),
+      comments: [{ id: 'c1', body: 'Revisar palabra', createdAt: 100, updatedAt: 100 }],
+      createdAt: 100
+    }
+  ]
+
+  // Edit inside/replace commented fragment
+  const replaced = 'Primera oración para comentar aquí.'
+  const afterReplace = mapThreadsAcrossTextChange(threads, base, replaced)
+  assert.equal(afterReplace.deleted.length, 0)
+  assert.equal(afterReplace.threads.length, 1)
+  assert.equal(afterReplace.threads[0].anchor.quote, 'oración')
+
+  // Partial edit before commented fragment shifts offsets
+  const prefixed = 'Intro. ' + replaced
+  const afterShift = mapThreadsAcrossTextChange(afterReplace.threads, replaced, prefixed)
+  assert.equal(afterShift.threads.length, 1)
+  assert.equal(afterShift.threads[0].anchor.quote, 'oración')
+  assert.equal(afterShift.threads[0].anchor.fromOffset, prefixed.indexOf('oración'))
+
+  // Delete commented fragment completely
+  const removed = 'Intro. Primera  para comentar aquí.'
+  const afterDelete = mapThreadsAcrossTextChange(afterShift.threads, prefixed, removed)
+  assert.equal(afterDelete.threads.length, 0)
+  assert.equal(afterDelete.deleted.length, 1)
 })
 
 test('findWordRangeAtOffset expands Unicode words cleanly', () => {

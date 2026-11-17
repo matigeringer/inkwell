@@ -72,14 +72,17 @@ async function settle(ms = 15) {
   })
 }
 
-async function mountEditor(initialThreads = []) {
+async function mountEditor(initialThreads = [], options = {}) {
   const savedComments = []
   let contextMenuListener = null
   const replacedWords = []
   const addedWords = []
+  const fileName = options.fileName || 'a.md'
+  const filePath = options.filePath || `/${fileName}`
+  const content = options.content ?? 'Primera frase para comentar aquí.'
 
   window.api = {
-    saveFile: async (data) => ({ success: true, filePath: data.filePath, fileName: 'a.md' }),
+    saveFile: async (data) => ({ success: true, filePath: data.filePath, fileName }),
     historySaveSnapshot: async () => ({ success: true }),
     historyMove: async () => ({ success: true }),
     commentsGet: async () => ({ success: true, threads: initialThreads }),
@@ -115,9 +118,9 @@ async function mountEditor(initialThreads = []) {
         React.createElement(Editor, {
           initialDoc: {
             id: 'doc-comments',
-            filePath: '/a.md',
-            fileName: 'a.md',
-            content: 'Primera frase para comentar aquí.'
+            filePath,
+            fileName,
+            content
           },
           preferences: { ...DEFAULT_PREFERENCES, language: 'es', autoSaveEnabled: false }
         })
@@ -455,4 +458,146 @@ test('clicking floating selection comment bubble opens draft composer across mou
     document.querySelector('.comment-selection-bubble'),
     'Selection bubble should recover after closing context menu'
   )
+})
+
+test('editing or replacing commented text re-anchors cleanly without warning banner', async () => {
+  const fixture = await mountEditor([
+    {
+      id: 't1',
+      anchor: {
+        quote: 'frase',
+        prefix: 'Primera ',
+        suffix: ' para comentar aquí.',
+        fromOffset: 8,
+        toOffset: 13
+      },
+      comments: [{ id: 'c1', body: 'Revisar término', createdAt: 100, updatedAt: 100 }],
+      createdAt: 100
+    }
+  ])
+
+  assert.equal(document.querySelector('.comment-orphaned-banner'), null)
+  assert.equal(document.querySelector('.comment-bubble.is-orphaned'), null)
+
+  // Replace the entire commented word "frase" (positions 9..14) with "oración"
+  await act(async () => {
+    activeEditor.chain().setTextSelection({ from: 9, to: 14 }).insertContent('oración').run()
+  })
+  await settle(400)
+
+  assert.equal(document.querySelector('.comment-orphaned-banner'), null)
+  assert.equal(document.querySelector('.comment-bubble.is-orphaned'), null)
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 1)
+  const mark = document.querySelector('[data-comment-id="t1"]')
+  assert.ok(mark, 'Highlight should remain anchored after replacing commented text')
+  assert.equal(mark.textContent, 'oración')
+  assert.equal(fixture.savedComments.at(-1).threads[0].anchor.quote, 'oración')
+})
+
+test('deleting commented text removes the comment automatically and undo restores it', async () => {
+  const fixture = await mountEditor([
+    {
+      id: 't1',
+      anchor: {
+        quote: 'frase',
+        prefix: 'Primera ',
+        suffix: ' para comentar aquí.',
+        fromOffset: 8,
+        toOffset: 13
+      },
+      comments: [{ id: 'c1', body: 'Nota temporal', createdAt: 100, updatedAt: 100 }],
+      createdAt: 100
+    }
+  ])
+
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 1)
+
+  // Delete the commented word completely.
+  await act(async () => {
+    activeEditor.chain().setTextSelection({ from: 9, to: 14 }).deleteSelection().run()
+  })
+  await settle(400)
+
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 0)
+  assert.equal(document.querySelectorAll('[data-comment-id]').length, 0)
+  assert.equal(document.querySelector('.comment-orphaned-banner'), null)
+  assert.equal(fixture.savedComments.at(-1).threads.length, 0)
+
+  // Undo restores both the deleted text and its comment.
+  await act(async () => {
+    activeEditor.commands.undo()
+  })
+  await settle(400)
+
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 1)
+  const restoredMark = document.querySelector('[data-comment-id="t1"]')
+  assert.ok(restoredMark, 'Comment highlight should restore on undo')
+  assert.equal(restoredMark.textContent, 'frase')
+  assert.equal(fixture.savedComments.at(-1).threads.length, 1)
+})
+
+test('loading a document with externally deleted fragment prunes orphaned comment without warning', async () => {
+  const fixture = await mountEditor([
+    {
+      id: 't-missing',
+      anchor: {
+        quote: 'texto inexistente',
+        prefix: 'antes ',
+        suffix: ' después',
+        fromOffset: 0,
+        toOffset: 17
+      },
+      comments: [{ id: 'c1', body: 'Huérfano', createdAt: 100, updatedAt: 100 }],
+      createdAt: 100
+    }
+  ])
+  await settle(400)
+
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 0)
+  assert.equal(document.querySelector('.comment-orphaned-banner'), null)
+  assert.equal(fixture.savedComments.at(-1).threads.length, 0)
+})
+
+test('source mode edits re-anchor modified fragment and remove comment when deleted', async () => {
+  const fixture = await mountEditor(
+    [
+      {
+        id: 't1',
+        anchor: {
+          quote: 'frase',
+          prefix: 'Primera ',
+          suffix: ' para comentar aquí.',
+          fromOffset: 8,
+          toOffset: 13
+        },
+        comments: [{ id: 'c1', body: 'En modo fuente', createdAt: 100, updatedAt: 100 }],
+        createdAt: 100
+      }
+    ],
+    { fileName: 'nota.txt', content: 'Primera frase para comentar aquí.' }
+  )
+
+  const textarea = document.querySelector('textarea')
+  assert.ok(textarea, 'Source textarea should render for .txt file')
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 1)
+
+  const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set
+  await act(async () => {
+    setter.call(textarea, 'Primera oración para comentar aquí.')
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await settle(400)
+
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 1)
+  assert.equal(document.querySelector('.comment-orphaned-banner'), null)
+  assert.equal(fixture.savedComments.at(-1).threads[0].anchor.quote, 'oración')
+
+  await act(async () => {
+    setter.call(textarea, 'Primera  para comentar aquí.')
+    textarea.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await settle(400)
+
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 0)
+  assert.equal(fixture.savedComments.at(-1).threads.length, 0)
 })

@@ -29,6 +29,92 @@ function buildDecorations(
   return decorations.length ? DecorationSet.create(doc, decorations) : DecorationSet.empty
 }
 
+function hasVisibleRangeText(doc, from, to) {
+  if (from >= to) return false
+  return doc.textBetween(from, to, '\n', ' ').trim().length > 0
+}
+
+function getExtraOutsideForSingleMap(stepMap, rangeFrom, rangeTo) {
+  let coveredStart = Infinity
+  let coveredEnd = -Infinity
+  stepMap.forEach((oldStart, oldEnd) => {
+    if (oldStart <= rangeTo && oldEnd >= rangeFrom) {
+      coveredStart = Math.min(coveredStart, oldStart)
+      coveredEnd = Math.max(coveredEnd, oldEnd)
+    }
+  })
+  if (coveredStart > coveredEnd) return Infinity
+  return Math.max(0, rangeFrom - coveredStart) + Math.max(0, coveredEnd - rangeTo)
+}
+
+function mapRangeAcrossTransaction(tr, range) {
+  if (range.orphaned) return range
+
+  const innerFrom = tr.mapping.map(range.from, 1)
+  const innerTo = tr.mapping.map(range.to, -1)
+
+  if (innerFrom < innerTo) {
+    if (range.expandOnWord) {
+      const outerFrom = tr.mapping.map(range.from, -1)
+      const outerTo = tr.mapping.map(range.to, 1)
+      if (
+        outerFrom === innerFrom &&
+        outerTo > innerTo &&
+        tr.selection.empty &&
+        tr.selection.from === outerTo
+      ) {
+        const inserted = tr.doc.textBetween(innerTo, outerTo, '\n', ' ')
+        if (inserted && !/\s/.test(inserted)) {
+          return { ...range, from: innerFrom, to: outerTo, expandOnWord: true }
+        }
+      }
+    }
+    if (!hasVisibleRangeText(tr.doc, innerFrom, innerTo)) {
+      return {
+        ...range,
+        from: innerFrom,
+        to: innerFrom,
+        orphaned: true,
+        expandOnWord: false,
+        deletedAnchor: createAnchorFromPmRange(tr.before, range.from, range.to)
+      }
+    }
+    return { ...range, from: innerFrom, to: innerTo, expandOnWord: false }
+  }
+
+  const outerFrom = tr.mapping.map(range.from, -1)
+  const outerTo = tr.mapping.map(range.to, 1)
+  const oldLen = range.to - range.from
+  const replacedLen = outerTo - outerFrom
+
+  if (
+    outerFrom < outerTo &&
+    replacedLen <= Math.max(120, oldLen * 4) &&
+    hasVisibleRangeText(tr.doc, outerFrom, outerTo)
+  ) {
+    const extraOutside =
+      tr.mapping.maps.length === 1
+        ? getExtraOutsideForSingleMap(tr.mapping.maps[0], range.from, range.to)
+        : Math.abs(tr.doc.content.size - tr.before.content.size - (replacedLen - oldLen))
+
+    if (extraOutside <= Math.max(16, oldLen)) {
+      const replacedText = tr.doc.textBetween(outerFrom, outerTo, '\n', ' ')
+      const expandOnWord =
+        tr.selection.empty && tr.selection.from === outerTo && !/\s/.test(replacedText)
+      return { ...range, from: outerFrom, to: outerTo, expandOnWord }
+    }
+  }
+
+  return {
+    ...range,
+    from: outerFrom,
+    to: outerFrom,
+    orphaned: true,
+    expandOnWord: false,
+    deletedAnchor: createAnchorFromPmRange(tr.before, range.from, range.to)
+  }
+}
+
 export const CommentHighlights = Extension.create({
   name: 'documentComments',
   addProseMirrorPlugins() {
@@ -60,20 +146,11 @@ export const CommentHighlights = Extension.create({
               }
             }
             if (tr.docChanged && prev.ranges.length) {
-              const ranges = prev.ranges.map((range) => {
-                if (range.orphaned) return range
-                const from = tr.mapping.map(range.from, 1)
-                const to = tr.mapping.map(range.to, -1)
-                return from < to
-                  ? { ...range, from, to }
-                  : { ...range, from, to: from, orphaned: true }
-              })
+              const ranges = prev.ranges.map((range) => mapRangeAcrossTransaction(tr, range))
+              const next = { ...prev, ranges }
               return {
-                ...prev,
-                ranges,
-                decorations: prev.visible
-                  ? prev.decorations.map(tr.mapping, tr.doc)
-                  : DecorationSet.empty
+                ...next,
+                decorations: buildDecorations(tr.doc, next)
               }
             }
             return prev
@@ -205,6 +282,76 @@ function commonPrefixLength(a, b) {
   return count
 }
 
+function recoverRangeFromContext(text, anchor, expectedFrom) {
+  const quote = anchor?.quote || ''
+  const prefix = anchor?.prefix || ''
+  const suffix = anchor?.suffix || ''
+  const maxSpan = Math.max(quote.length * 4, 200)
+
+  if (prefix.trim().length >= 3 && suffix.trim().length >= 3) {
+    let best = null
+    let bestDist = Infinity
+    let searchFrom = 0
+    while (searchFrom <= text.length - prefix.length) {
+      const pIdx = text.indexOf(prefix, searchFrom)
+      if (pIdx === -1) break
+      const contentStart = pIdx + prefix.length
+      const sIdx = text.indexOf(suffix, contentStart + 1)
+      if (
+        sIdx !== -1 &&
+        sIdx - contentStart <= maxSpan &&
+        text.slice(contentStart, sIdx).trim().length > 0
+      ) {
+        const dist = Math.abs(contentStart - expectedFrom)
+        if (dist < bestDist) {
+          bestDist = dist
+          best = { fromOffset: contentStart, toOffset: sIdx, orphaned: false, reanchored: true }
+        }
+      }
+      searchFrom = pIdx + 1
+    }
+    if (best) return best
+  }
+
+  if (!prefix && expectedFrom === 0 && suffix.trim().length >= 6) {
+    const sIdx = text.indexOf(suffix, 1)
+    if (sIdx !== -1 && sIdx <= maxSpan && text.slice(0, sIdx).trim().length > 0) {
+      return { fromOffset: 0, toOffset: sIdx, orphaned: false, reanchored: true }
+    }
+  }
+
+  if (!suffix && prefix.trim().length >= 6) {
+    let best = null
+    let bestDist = Infinity
+    let searchFrom = 0
+    while (searchFrom <= text.length - prefix.length) {
+      const pIdx = text.indexOf(prefix, searchFrom)
+      if (pIdx === -1) break
+      const contentStart = pIdx + prefix.length
+      if (
+        contentStart < text.length &&
+        text.length - contentStart <= maxSpan &&
+        text.slice(contentStart).trim().length > 0
+      ) {
+        const dist = Math.abs(contentStart - expectedFrom)
+        if (dist < bestDist) {
+          bestDist = dist
+          best = {
+            fromOffset: contentStart,
+            toOffset: text.length,
+            orphaned: false,
+            reanchored: true
+          }
+        }
+      }
+      searchFrom = pIdx + 1
+    }
+    if (best) return best
+  }
+
+  return null
+}
+
 export function resolveAnchorInText(text, anchor) {
   const quote = anchor?.quote || ''
   if (!quote || !text) {
@@ -246,11 +393,88 @@ export function resolveAnchorInText(text, anchor) {
     searchFrom = idx + 1
   }
 
+  const recovered =
+    bestIdx === -1 || (prefix && suffix && bestScore < 500)
+      ? recoverRangeFromContext(text, anchor, expectedFrom)
+      : null
+  if (recovered) return recovered
+
   if (bestIdx !== -1) {
     return { fromOffset: bestIdx, toOffset: bestIdx + quote.length, orphaned: false }
   }
 
   return { fromOffset: expectedFrom, toOffset: expectedFrom, orphaned: true }
+}
+
+export function mapThreadsAcrossTextChange(threads, prevText, nextText) {
+  if (!threads.length || prevText === nextText) {
+    return { threads, deleted: [] }
+  }
+
+  const minLen = Math.min(prevText.length, nextText.length)
+  let prefixLen = 0
+  while (prefixLen < minLen && prevText[prefixLen] === nextText[prefixLen]) prefixLen++
+
+  let suffixLen = 0
+  while (
+    suffixLen < minLen - prefixLen &&
+    prevText[prevText.length - 1 - suffixLen] === nextText[nextText.length - 1 - suffixLen]
+  ) {
+    suffixLen++
+  }
+
+  const oldEditStart = prefixLen
+  const oldEditEnd = prevText.length - suffixLen
+  const delta = nextText.length - prevText.length
+  const newEditEnd = oldEditEnd + delta
+
+  const surviving = []
+  const deleted = []
+
+  for (const thread of threads) {
+    const resolved = resolveAnchorInText(prevText, thread.anchor)
+    if (resolved.orphaned) {
+      deleted.push(thread)
+      continue
+    }
+
+    const from = resolved.fromOffset
+    const to = resolved.toOffset
+    const oldLen = to - from
+    let newFrom
+    let newTo
+
+    if (to <= oldEditStart) {
+      newFrom = from
+      newTo = to
+    } else if (from >= oldEditEnd) {
+      newFrom = from + delta
+      newTo = to + delta
+    } else if (from < oldEditStart && to > oldEditEnd) {
+      newFrom = from
+      newTo = to + delta
+    } else {
+      const extraOutside = Math.max(0, from - oldEditStart) + Math.max(0, oldEditEnd - to)
+      const insertedLen = newEditEnd - oldEditStart
+      if (extraOutside > Math.max(16, oldLen) || insertedLen > Math.max(120, oldLen * 4)) {
+        deleted.push({ ...thread, anchor: createAnchorFromTextOffsets(prevText, from, to) })
+        continue
+      }
+      newFrom = from < oldEditStart ? from : oldEditStart
+      newTo = to > oldEditEnd ? to + delta : newEditEnd
+    }
+
+    if (newFrom < newTo && nextText.slice(newFrom, newTo).trim().length > 0) {
+      surviving.push({
+        ...thread,
+        anchor: createAnchorFromTextOffsets(nextText, newFrom, newTo)
+      })
+    } else {
+      deleted.push({ ...thread, anchor: createAnchorFromTextOffsets(prevText, from, to) })
+    }
+  }
+
+  return { threads: surviving, deleted }
 }
 
 export function resolveThreadsInDoc(doc, threads) {

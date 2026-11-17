@@ -349,11 +349,11 @@ export default function Editor({
       }
     },
     onSelectionUpdate: typewriter.onSelectionUpdate,
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor, transaction }) => {
       if (isSourceMode) return
       session.change(editor.storage.markdown.getMarkdown())
       typewriter.onDocumentUpdate(editor)
-      commentsMarkDirtyRef.current?.()
+      commentsMarkDirtyRef.current?.(transaction)
     },
     onFocus: typewriter.onFocus
   })
