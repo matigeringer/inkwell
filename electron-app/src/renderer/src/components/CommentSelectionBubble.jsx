@@ -13,6 +13,7 @@ export default function CommentSelectionBubble({
 }) {
   const [position, setPosition] = useState(null)
   const pointerDownRef = useRef(false)
+  const bubbleRef = useRef(null)
 
   const updatePosition = useCallback(() => {
     if (disabled || pointerDownRef.current) {
@@ -75,26 +76,37 @@ export default function CommentSelectionBubble({
   }, [disabled, editor, isSourceMode, sourceRef, stageRef])
 
   useEffect(() => {
-    if (disabled) return
-    const handleMouseDown = () => {
+    if (disabled) {
+      pointerDownRef.current = false
+      return
+    }
+    const handleMouseDown = (event) => {
+      if (bubbleRef.current?.contains(event.target)) return
       pointerDownRef.current = true
       setPosition(null)
     }
-    const handleMouseUp = () => {
+    const handleMouseUp = (event) => {
+      if (!pointerDownRef.current && bubbleRef.current?.contains(event.target)) return
       pointerDownRef.current = false
       requestAnimationFrame(updatePosition)
     }
+    const handleWindowBlur = () => {
+      pointerDownRef.current = false
+    }
     window.addEventListener('mousedown', handleMouseDown, true)
     window.addEventListener('mouseup', handleMouseUp, true)
+    window.addEventListener('blur', handleWindowBlur)
     return () => {
+      pointerDownRef.current = false
       window.removeEventListener('mousedown', handleMouseDown, true)
       window.removeEventListener('mouseup', handleMouseUp, true)
+      window.removeEventListener('blur', handleWindowBlur)
     }
   }, [disabled, updatePosition])
 
   useEffect(() => {
-    if (disabled) return
     const frame = requestAnimationFrame(updatePosition)
+    if (disabled) return () => cancelAnimationFrame(frame)
 
     if (isSourceMode) {
       const textarea = sourceRef?.current
@@ -123,11 +135,15 @@ export default function CommentSelectionBubble({
 
   return (
     <button
+      ref={bubbleRef}
       type="button"
       className="comment-selection-bubble"
       style={{ top: `${position.top}px`, left: `${position.left}px` }}
       onMouseDown={(event) => event.preventDefault()}
-      onClick={onComment}
+      onClick={(event) => {
+        event.stopPropagation()
+        onComment?.()
+      }}
       title={title}
       aria-label={title}
     >

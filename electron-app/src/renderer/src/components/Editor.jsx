@@ -1641,7 +1641,11 @@ export default function Editor({
                       isSourceMode={isSourceMode}
                       sourceRef={sourceRef}
                       stageRef={stageRef}
-                      disabled={Boolean(contextMenu) || Boolean(comments.draftAnchor)}
+                      disabled={
+                        Boolean(contextMenu) ||
+                        Boolean(comments.draftAnchor) ||
+                        Boolean(comments.addingToThreadId)
+                      }
                       label={t.comments.addButton}
                       title={t.comments.addTitle}
                       onComment={comments.startCommentFromSelection}

@@ -352,3 +352,107 @@ test('clicking text body or selecting word leaves comment unselected; clicking u
   await settle(20)
   assert.ok(document.querySelector('.comment-bubble.is-active'))
 })
+
+test('clicking floating selection comment bubble opens draft composer across mousedown/mouseup/click', async () => {
+  const fixture = await mountEditor()
+
+  const stage = document.querySelector('.editor-page-stage')
+  stage.getBoundingClientRect = () => ({
+    left: 0,
+    right: 900,
+    top: 0,
+    bottom: 700,
+    width: 900,
+    height: 700
+  })
+  activeEditor.view.coordsAtPos = () => ({
+    left: 180,
+    right: 220,
+    top: 120,
+    bottom: 144
+  })
+
+  // Focus editor and select text with a mouse drag.
+  await act(async () => {
+    activeEditor.commands.focus()
+    activeEditor.view.dom.dispatchEvent(new Event('focus'))
+    window.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100, clientY: 130 }))
+    activeEditor.commands.setTextSelection({ from: 9, to: 14 })
+  })
+  await settle(20)
+  assert.equal(document.querySelector('.comment-selection-bubble'), null)
+
+  await act(async () => {
+    window.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, clientX: 220, clientY: 130 }))
+  })
+  await settle(25)
+
+  const bubble = document.querySelector('.comment-selection-bubble')
+  assert.ok(bubble, 'Selection comment bubble should appear after releasing selection drag')
+
+  // Simulate a real pointer click on a child element across separate ticks (mousedown -> settle -> mouseup -> click).
+  const labelSpan = bubble.querySelector('span')
+  await act(async () => {
+    labelSpan.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }))
+  })
+  await settle(20)
+
+  const bubbleStillMounted = document.querySelector('.comment-selection-bubble')
+  assert.ok(bubbleStillMounted, 'Selection bubble must stay mounted on mousedown so click can fire')
+
+  await act(async () => {
+    labelSpan.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }))
+    labelSpan.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+  })
+  await settle(25)
+
+  const input = document.querySelector('.comment-composer-input')
+  assert.ok(input, 'Draft comment composer should open after clicking the selection bubble')
+  assert.equal(document.querySelector('.comment-selection-bubble'), null)
+
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set
+    setter.call(input, 'Desde el botón emergente')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await act(async () => {
+    document.querySelector('.comment-btn-primary').click()
+  })
+  await settle(400)
+  assert.equal(fixture.savedComments.at(-1).threads[0].comments[0].body, 'Desde el botón emergente')
+
+  // Dismissing a right-click context menu before mouseup must not leave pointerDownRef stuck.
+  await act(async () => {
+    activeEditor.commands.focus()
+    activeEditor.view.dom.dispatchEvent(new Event('focus'))
+    activeEditor.commands.setTextSelection({ from: 1, to: 8 })
+    window.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 2 }))
+    fixture.triggerContextMenu({
+      x: 120,
+      y: 160,
+      misspelledWord: '',
+      dictionarySuggestions: [],
+      selectionText: 'Primera',
+      editFlags: {
+        canUndo: true,
+        canRedo: false,
+        canCut: true,
+        canCopy: true,
+        canPaste: true,
+        canSelectAll: true
+      }
+    })
+  })
+  await settle(25)
+  assert.ok(document.querySelector('.editor-context-menu'))
+
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  })
+  await settle(25)
+  assert.equal(document.querySelector('.editor-context-menu'), null)
+  assert.ok(
+    document.querySelector('.comment-selection-bubble'),
+    'Selection bubble should recover after closing context menu'
+  )
+})
