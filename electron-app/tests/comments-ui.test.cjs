@@ -613,3 +613,58 @@ test('source mode edits re-anchor modified fragment and remove comment when dele
   assert.equal(document.querySelectorAll('.comment-bubble').length, 0)
   assert.equal(fixture.savedComments.at(-1).threads.length, 0)
 })
+
+test('comment bubble aligns vertically with the commented text without rail margin offset', async () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const css = fs.readFileSync(
+    path.join(__dirname, '../src/renderer/src/assets/comments.css'),
+    'utf8'
+  )
+  const desktopRailRule = css.match(/\.comments-margin-rail\s*\{[^}]*\}/)?.[0] || ''
+  assert.equal(
+    /margin-top\s*:/.test(desktopRailRule),
+    false,
+    'Desktop comments rail must not add margin-top when positioned at top: 0 of stage'
+  )
+
+  await mountEditor([
+    {
+      id: 't1',
+      anchor: {
+        quote: 'frase',
+        prefix: 'Primera ',
+        suffix: ' para comentar aquí.',
+        fromOffset: 8,
+        toOffset: 13
+      },
+      comments: [{ id: 'c1', body: 'Alineado', createdAt: 100, updatedAt: 100 }],
+      createdAt: 100
+    }
+  ])
+
+  const stage = document.querySelector('.editor-page-stage')
+  stage.getBoundingClientRect = () => ({
+    left: 0,
+    right: 900,
+    top: 40,
+    bottom: 740,
+    width: 900,
+    height: 700
+  })
+
+  const mark = document.querySelector('[data-comment-id="t1"]')
+  assert.ok(mark)
+  mark.getClientRects = () => [
+    { left: 80, right: 140, top: 160, bottom: 184, width: 60, height: 24 }
+  ]
+
+  await act(async () => {
+    stage.dispatchEvent(new Event('transitionend'))
+  })
+  await settle(25)
+
+  const bubble = document.querySelector('.comment-bubble')
+  assert.ok(bubble)
+  assert.equal(bubble.style.top, '110px')
+})

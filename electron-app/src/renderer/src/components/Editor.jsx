@@ -1632,7 +1632,7 @@ export default function Editor({
                       source={source}
                       sourceRef={sourceRef}
                       stageRef={stageRef}
-                      measureVersion={`${session.state.revision}-${preferences?.fontSize}-${preferences?.fontFamily}-${preferences?.textAlign}-${isSidebarOpen}-${isOutlineOpen}`}
+                      measureVersion={`${session.state.revision}-${preferences?.fontSize}-${preferences?.fontFamily}-${preferences?.textAlign}-${preferences?.typewriterMode}-${preferences?.typewriterPosition}-${isSidebarOpen}-${isOutlineOpen}`}
                       labels={t.comments}
                       language={currentLang}
                     />

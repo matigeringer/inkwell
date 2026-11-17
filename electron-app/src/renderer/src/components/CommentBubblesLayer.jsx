@@ -121,7 +121,7 @@ export default function CommentBubblesLayer({
     const stageRect = stage.getBoundingClientRect()
     const nextTargets = {}
 
-    const measurePmPos = (pos, fallbackOffset = 0) => {
+    const measurePmPos = (pos, fallbackOffset = 0, threadId = null) => {
       if (isSourceMode) {
         const textarea = sourceRef?.current
         if (!textarea) return 0
@@ -135,6 +135,14 @@ export default function CommentBubblesLayer({
       }
       if (!editor || editor.isDestroyed) return 0
       try {
+        if (threadId) {
+          const markEl = stage.querySelector(`[data-comment-id="${threadId}"]`)
+          const rects = markEl?.getClientRects?.()
+          const rect = rects && Array.from(rects).find((r) => r.width > 0 || r.height > 0)
+          if (rect) {
+            return Math.max(0, rect.top - stageRect.top - 10)
+          }
+        }
         const clamped = Math.max(0, Math.min(pos, editor.state.doc.content.size))
         const coords = editor.view.coordsAtPos(clamped)
         return Math.max(0, coords.top - stageRect.top - 10)
@@ -155,7 +163,8 @@ export default function CommentBubblesLayer({
       } else {
         nextTargets[thread.id] = measurePmPos(
           range.from,
-          range.fromOffset ?? thread.anchor?.fromOffset ?? 0
+          range.fromOffset ?? thread.anchor?.fromOffset ?? 0,
+          thread.id
         )
       }
     }
@@ -163,7 +172,8 @@ export default function CommentBubblesLayer({
     if (draftAnchor) {
       nextTargets.__draft__ = measurePmPos(
         draftAnchor.from,
-        draftAnchor.anchor?.fromOffset ?? draftAnchor.from ?? 0
+        draftAnchor.anchor?.fromOffset ?? draftAnchor.from ?? 0,
+        '__draft__'
       )
     }
 
@@ -172,18 +182,37 @@ export default function CommentBubblesLayer({
 
   useEffect(() => {
     if (!visible) return
-    const frame = requestAnimationFrame(measureTargets)
+    let frame = requestAnimationFrame(measureTargets)
     const stage = stageRef?.current
-    if (!stage || typeof ResizeObserver === 'undefined') {
+    if (!stage) {
       return () => cancelAnimationFrame(frame)
     }
-    const observer = new ResizeObserver(() => requestAnimationFrame(measureTargets))
+    const scheduleMeasure = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(measureTargets)
+    }
+    stage.addEventListener('transitionend', scheduleMeasure)
+    if (typeof ResizeObserver === 'undefined') {
+      return () => {
+        cancelAnimationFrame(frame)
+        stage.removeEventListener('transitionend', scheduleMeasure)
+      }
+    }
+    const observer = new ResizeObserver(scheduleMeasure)
     observer.observe(stage)
+    const canvas = stage.querySelector?.('.editor-canvas')
+    if (canvas) observer.observe(canvas)
+    if (!isSourceMode && editor && !editor.isDestroyed && editor.view?.dom) {
+      observer.observe(editor.view.dom)
+    } else if (isSourceMode && sourceRef?.current) {
+      observer.observe(sourceRef.current)
+    }
     return () => {
       cancelAnimationFrame(frame)
+      stage.removeEventListener('transitionend', scheduleMeasure)
       observer.disconnect()
     }
-  }, [measureTargets, measureVersion, stageRef, visible])
+  }, [editor, isSourceMode, measureTargets, measureVersion, sourceRef, stageRef, visible])
 
   const registerCardRef = useCallback((id, node) => {
     const prevObserver = observersRef.current.get(id)

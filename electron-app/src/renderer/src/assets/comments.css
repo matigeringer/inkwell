@@ -47,7 +47,6 @@
     calc(100% - var(--comment-rail-width) - 1rem)
   );
   width: var(--comment-rail-width);
-  margin-top: 2.75rem;
   padding-bottom: 4rem;
   z-index: 10;
   pointer-events: none;
