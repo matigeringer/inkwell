@@ -346,6 +346,7 @@ test('clicking text body or selecting word leaves comment unselected; clicking u
   })
   await settle(20)
   assert.equal(document.querySelector('.comment-bubble.is-active'), null)
+  assert.equal(document.querySelector('.comment-add-another-btn'), null)
 
   // Click on the underline strip (y = 126, near bottom = 128): SHOULD activate the comment.
   await act(async () => {
@@ -354,6 +355,17 @@ test('clicking text body or selecting word leaves comment unselected; clicking u
   })
   await settle(20)
   assert.ok(document.querySelector('.comment-bubble.is-active'))
+  assert.ok(document.querySelector('.comment-add-another-btn'))
+
+  // Clicking outside the comment deselects it and hides the add-comment button.
+  await act(async () => {
+    document
+      .querySelector('.editor-canvas')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: 10, clientY: 10 }))
+  })
+  await settle(20)
+  assert.equal(document.querySelector('.comment-bubble.is-active'), null)
+  assert.equal(document.querySelector('.comment-add-another-btn'), null)
 })
 
 test('clicking floating selection comment bubble opens draft composer across mousedown/mouseup/click', async () => {

@@ -346,7 +346,7 @@ export default function CommentBubblesLayer({
                   onCancel={onCancelAddingToThread}
                 />
               </div>
-            ) : (
+            ) : isActive ? (
               <button
                 type="button"
                 className="comment-add-another-btn"
@@ -358,7 +358,7 @@ export default function CommentBubblesLayer({
                 <PlusIcon size={12} aria-hidden="true" />
                 <span>{labels.addAnother}</span>
               </button>
-            )}
+            ) : null}
           </article>
         )
       })}
