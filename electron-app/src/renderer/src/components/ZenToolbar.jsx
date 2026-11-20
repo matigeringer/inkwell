@@ -2,6 +2,7 @@ import {
   AlignCenterIcon,
   AlignJustifyIcon,
   AlignLeftIcon,
+  CommentIcon,
   HistoryIcon,
   KeyboardIcon,
   SearchIcon,
@@ -17,6 +18,9 @@ export default function ZenToolbar({
   isSearchOpen,
   openSearch,
   outlineSearch,
+  commentsVisible,
+  commentsCount = 0,
+  onToggleComments,
   toggleTypewriterMode,
   cycleTextAlign,
   onOpenHistory,
@@ -43,6 +47,19 @@ export default function ZenToolbar({
           <SearchIcon size={15} aria-hidden="true" />
         </button>
         {outlineSearch}
+        {onToggleComments && (
+          <button
+            type="button"
+            className={`zen-pill-btn zen-pill-icon-only btn-comments-toggle ${commentsVisible ? 'active' : ''}`}
+            onClick={onToggleComments}
+            title={commentsVisible ? t.comments.toggleHide : t.comments.toggleShow}
+            aria-label={t.comments.toggleAria}
+            aria-pressed={commentsVisible}
+          >
+            <CommentIcon size={15} aria-hidden="true" />
+            {commentsCount > 0 && <span className="comments-count-badge">{commentsCount}</span>}
+          </button>
+        )}
         <button
           className={`zen-pill-btn zen-pill-icon-only ${preferences?.typewriterMode ? 'active' : ''}`}
           onClick={toggleTypewriterMode}

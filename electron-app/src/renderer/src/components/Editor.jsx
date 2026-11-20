@@ -394,7 +394,7 @@ export default function Editor({
     isSourceMode,
     source,
     sourceRef,
-    visible: commentsVisible && !isZenMode,
+    visible: commentsVisible,
     onSetVisible: setCommentsVisible,
     showToast
   })
@@ -447,7 +447,7 @@ export default function Editor({
       setContextMenu({
         ...payload,
         misspelledRange,
-        canComment: inCanvas && !isZenMode
+        canComment: inCanvas
       })
     })
   }, [editor, isSourceMode, isZenMode])
@@ -1054,7 +1054,7 @@ export default function Editor({
         canPaste: true,
         canSelectAll: true
       },
-      canComment: !isZenMode
+      canComment: true
     })
   }
 
@@ -1183,7 +1183,7 @@ export default function Editor({
   const readingTime = Math.max(1, Math.ceil(words / 200))
   const paragraphs = plainText.split(/\n+/).filter((p) => p.trim().length > 0).length
   const showCommentsRail =
-    commentsVisible && !isZenMode && (comments.threads.length > 0 || Boolean(comments.draftAnchor))
+    commentsVisible && (comments.threads.length > 0 || Boolean(comments.draftAnchor))
 
   return (
     <div
@@ -1388,6 +1388,9 @@ export default function Editor({
           }
           toggleTypewriterMode={toggleTypewriterMode}
           cycleTextAlign={cycleTextAlign}
+          commentsVisible={commentsVisible}
+          commentsCount={comments.threads.length}
+          onToggleComments={() => setCommentsVisible((prev) => !prev)}
           onOpenHistory={() => setIsHistoryModalOpen(true)}
           onOpenShortcuts={() => setIsShortcutsModalOpen(true)}
           onOpenProfile={onOpenProfile}
@@ -1606,52 +1609,48 @@ export default function Editor({
                   />
                 </div>
 
-                {!isZenMode && (
-                  <>
-                    <CommentBubblesLayer
-                      visible={commentsVisible}
-                      threads={comments.threads}
-                      resolvedRanges={comments.resolvedRanges}
-                      draftAnchor={comments.draftAnchor}
-                      activeThreadId={comments.activeThreadId}
-                      addingToThreadId={comments.addingToThreadId}
-                      onSelectThread={comments.focusThreadInEditor}
-                      onHoverThread={comments.setHoveredThreadId}
-                      onStartAddingToThread={(threadId) => {
-                        comments.setActiveThreadId(threadId)
-                        comments.setAddingToThreadId(threadId)
-                      }}
-                      onCancelAddingToThread={() => comments.setAddingToThreadId(null)}
-                      onSubmitDraft={comments.submitDraft}
-                      onCancelDraft={comments.cancelDraft}
-                      onAddComment={comments.addCommentToThread}
-                      onUpdateComment={comments.updateComment}
-                      onDeleteComment={comments.deleteComment}
-                      editor={editor}
-                      isSourceMode={isSourceMode}
-                      source={source}
-                      sourceRef={sourceRef}
-                      stageRef={stageRef}
-                      measureVersion={`${session.state.revision}-${preferences?.fontSize}-${preferences?.fontFamily}-${preferences?.textAlign}-${preferences?.typewriterMode}-${preferences?.typewriterPosition}-${isSidebarOpen}-${isOutlineOpen}`}
-                      labels={t.comments}
-                      language={currentLang}
-                    />
-                    <CommentSelectionBubble
-                      editor={editor}
-                      isSourceMode={isSourceMode}
-                      sourceRef={sourceRef}
-                      stageRef={stageRef}
-                      disabled={
-                        Boolean(contextMenu) ||
-                        Boolean(comments.draftAnchor) ||
-                        Boolean(comments.addingToThreadId)
-                      }
-                      label={t.comments.addButton}
-                      title={t.comments.addTitle}
-                      onComment={comments.startCommentFromSelection}
-                    />
-                  </>
-                )}
+                <CommentBubblesLayer
+                  visible={commentsVisible}
+                  threads={comments.threads}
+                  resolvedRanges={comments.resolvedRanges}
+                  draftAnchor={comments.draftAnchor}
+                  activeThreadId={comments.activeThreadId}
+                  addingToThreadId={comments.addingToThreadId}
+                  onSelectThread={comments.focusThreadInEditor}
+                  onHoverThread={comments.setHoveredThreadId}
+                  onStartAddingToThread={(threadId) => {
+                    comments.setActiveThreadId(threadId)
+                    comments.setAddingToThreadId(threadId)
+                  }}
+                  onCancelAddingToThread={() => comments.setAddingToThreadId(null)}
+                  onSubmitDraft={comments.submitDraft}
+                  onCancelDraft={comments.cancelDraft}
+                  onAddComment={comments.addCommentToThread}
+                  onUpdateComment={comments.updateComment}
+                  onDeleteComment={comments.deleteComment}
+                  editor={editor}
+                  isSourceMode={isSourceMode}
+                  source={source}
+                  sourceRef={sourceRef}
+                  stageRef={stageRef}
+                  measureVersion={`${session.state.revision}-${preferences?.fontSize}-${preferences?.fontFamily}-${preferences?.textAlign}-${preferences?.typewriterMode}-${preferences?.typewriterPosition}-${isSidebarOpen}-${isOutlineOpen}-${isZenMode}`}
+                  labels={t.comments}
+                  language={currentLang}
+                />
+                <CommentSelectionBubble
+                  editor={editor}
+                  isSourceMode={isSourceMode}
+                  sourceRef={sourceRef}
+                  stageRef={stageRef}
+                  disabled={
+                    Boolean(contextMenu) ||
+                    Boolean(comments.draftAnchor) ||
+                    Boolean(comments.addingToThreadId)
+                  }
+                  label={t.comments.addButton}
+                  title={t.comments.addTitle}
+                  onComment={comments.startCommentFromSelection}
+                />
               </div>
             </main>
             {!isZenMode && isMarkdown && (

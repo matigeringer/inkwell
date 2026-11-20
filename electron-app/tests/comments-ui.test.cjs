@@ -122,6 +122,7 @@ async function mountEditor(initialThreads = [], options = {}) {
             fileName,
             content
           },
+          isZenMode: Boolean(options.isZenMode),
           preferences: { ...DEFAULT_PREFERENCES, language: 'es', autoSaveEnabled: false }
         })
       )
@@ -767,4 +768,75 @@ test('selected comment sets aria-current and every theme defines distinct inacti
   assert.ok(document.querySelector('.comments-margin-rail.has-active-comment'))
   assert.ok(document.querySelector('[data-comment-id="t2"].comment-anchor-mark.is-active'))
   assert.equal(document.querySelector('[data-comment-id="t1"].comment-anchor-mark.is-active'), null)
+})
+
+test('comments remain visible, toggleable from Zen toolbar, and creatable in Zen mode', async () => {
+  const fixture = await mountEditor(
+    [
+      {
+        id: 't1',
+        anchor: {
+          quote: 'frase',
+          prefix: 'Primera ',
+          suffix: ' para',
+          fromOffset: 8,
+          toOffset: 13
+        },
+        comments: [{ id: 'c1', body: 'Visible en Zen', createdAt: 100, updatedAt: 100 }],
+        createdAt: 100
+      }
+    ],
+    { isZenMode: true }
+  )
+
+  assert.ok(document.querySelector('.editor-view.zen-mode-active'))
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 1)
+  assert.equal(document.querySelectorAll('[data-comment-id="t1"]').length, 1)
+
+  const zenToggleBtn = document.querySelector('.zen-floating-toolbar .btn-comments-toggle')
+  assert.ok(zenToggleBtn, 'Zen toolbar should render comments toggle button')
+  assert.equal(zenToggleBtn.getAttribute('aria-pressed'), 'true')
+  assert.equal(zenToggleBtn.querySelector('.comments-count-badge')?.textContent, '1')
+
+  // Toggle comments off from Zen toolbar
+  await act(async () => {
+    zenToggleBtn.click()
+  })
+  await settle(25)
+  assert.equal(zenToggleBtn.getAttribute('aria-pressed'), 'false')
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 0)
+  assert.equal(document.querySelectorAll('[data-comment-id]').length, 0)
+
+  // Toggle comments back on from Zen toolbar
+  await act(async () => {
+    zenToggleBtn.click()
+  })
+  await settle(25)
+  assert.equal(zenToggleBtn.getAttribute('aria-pressed'), 'true')
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 1)
+
+  // Create a new comment via Ctrl+Alt+M while in Zen mode
+  await act(async () => {
+    activeEditor.commands.setTextSelection({ from: 20, to: 28 })
+  })
+  await act(async () => {
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm', ctrlKey: true, altKey: true }))
+  })
+  await settle(25)
+
+  const input = document.querySelector('.comment-composer-input')
+  assert.ok(input, 'Draft comment composer should open in Zen mode')
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set
+    setter.call(input, 'Nota creada en Zen')
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  await act(async () => {
+    document.querySelector('.comment-btn-primary').click()
+  })
+  await settle(400)
+
+  assert.equal(document.querySelectorAll('.comment-bubble').length, 2)
+  assert.equal(fixture.savedComments.at(-1).threads.length, 2)
+  assert.equal(fixture.savedComments.at(-1).threads[1].comments[0].body, 'Nota creada en Zen')
 })

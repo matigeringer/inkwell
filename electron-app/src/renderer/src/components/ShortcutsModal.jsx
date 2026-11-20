@@ -14,6 +14,7 @@ const SHORTCUTS = {
     ['versionHistory', ['Ctrl', 'H']],
     ['toggleTypewriter', ['Ctrl', 'Shift', 'Y']],
     ['toggleStats', ['Ctrl', 'Shift', 'C']],
+    ['addComment', ['Ctrl', 'Alt', 'M']],
     ['exitZen', ['Esc'], ['F11']],
     ['preferencesZen', ['Ctrl', ',']],
     ['fontSizeAdjust', ['Ctrl', '+'], ['Ctrl', '-']],

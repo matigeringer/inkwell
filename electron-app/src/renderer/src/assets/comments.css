@@ -22,6 +22,15 @@
   pointer-events: none;
 }
 
+.zen-pill-btn .comments-count-badge {
+  top: 1px;
+  right: 1px;
+  min-width: 13px;
+  height: 13px;
+  font-size: 0.54rem;
+  line-height: 13px;
+}
+
 /* Stage & margin rail */
 
 .editor-page-stage {

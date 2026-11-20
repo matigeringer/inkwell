@@ -13,7 +13,7 @@ function getCommand(event, isZenMode, commands) {
   if (key === '0') return commands.resetFontSize
 
   if (event.altKey) {
-    if (!isZenMode && key === 'm') return commands.addComment
+    if (key === 'm') return commands.addComment
     return
   }
 

@@ -22,10 +22,13 @@
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.zen-mode-active {
+  --editor-max-width: 860px;
+}
+
 .zen-mode-active .editor-canvas {
   padding-top: 14vh;
   padding-bottom: 25vh;
-  max-width: 860px;
 }
 
 .zen-floating-toolbar {

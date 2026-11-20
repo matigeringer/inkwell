@@ -566,6 +566,11 @@
   box-shadow: inset 1px 1px 0 var(--shadow-ink);
 }
 
+:root[data-theme^='beige-'] .btn-comments-toggle.active .comments-count-badge {
+  background-color: var(--chrome-text);
+  color: var(--chrome-bar);
+}
+
 :root[data-theme^='beige-'] .pref-segment-group {
   border-color: var(--border-medium);
   box-shadow:
