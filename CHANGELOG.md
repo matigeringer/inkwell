@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.3.0
+
+- Add margin comments to annotated manuscript passages without altering Markdown or plain-text files on disk, with support for editing, deleting, adding multiple comments per anchor, and preserving threads across edits, drafts, and renames.
+- Create comments from a floating selection button, the `Ctrl+Alt+M` shortcut, or a new custom context menu with spellcheck suggestions and standard editing actions.
+- View, toggle, and manage comments in both the main editor and Zen mode, with theme-native highlight and bubble styles across all light and dark themes.
+
 ## 1.2.0
 
 - Navigate Markdown headings with a compact, scroll-synced outline and a searchable panel.
