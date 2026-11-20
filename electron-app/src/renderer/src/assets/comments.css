@@ -53,74 +53,253 @@
   user-select: none;
 }
 
-/* Text anchor highlight */
+/* Text anchor highlight & theme tokens */
 
-:root {
-  --comment-highlight-bg: rgba(218, 128, 94, 0.16);
-  --comment-highlight-border: rgba(194, 74, 38, 0.72);
-  --comment-highlight-active-bg: rgba(218, 120, 82, 0.3);
-  --comment-highlight-active-border: rgba(194, 56, 27, 0.96);
+/* Galera Light (default) — warm ochre notes vs. signature vermillion active mark */
+:root,
+:root[data-theme='light'],
+:root[data-theme='puro-light'],
+:root[data-theme='galera-light'] {
+  --comment-highlight-bg: rgba(180, 138, 52, 0.14);
+  --comment-highlight-border: rgba(154, 110, 26, 0.58);
+  --comment-highlight-dim-bg: rgba(180, 138, 52, 0.06);
+  --comment-highlight-dim-border: rgba(154, 110, 26, 0.28);
+  --comment-highlight-hover-bg: rgba(180, 138, 52, 0.25);
+  --comment-highlight-hover-border: rgba(146, 102, 20, 0.9);
+  --comment-highlight-active-bg: rgba(194, 56, 27, 0.24);
+  --comment-highlight-active-border: #c2381b;
+  --comment-highlight-active-text: inherit;
+  --comment-highlight-active-ring: inset 0 1px 0 rgba(194, 56, 27, 0.28);
+  --comment-highlight-radius: 2px;
+
+  --comment-bubble-bg: var(--bg-card);
+  --comment-bubble-inactive-bg: #ebeae2;
+  --comment-bubble-border: var(--border-subtle);
+  --comment-bubble-inactive-border: #d9d8cf;
+  --comment-bubble-shadow: inset 2px 0 0 rgba(160, 116, 30, 0.42);
+  --comment-bubble-hover-border: rgba(154, 110, 26, 0.72);
+  --comment-bubble-hover-shadow: inset 2px 0 0 rgba(154, 110, 26, 0.75), var(--shadow-md);
+  --comment-bubble-inactive-content-opacity: 0.56;
+  --comment-bubble-active-bg: #fbf0eb;
+  --comment-bubble-active-border: #c2381b;
+  --comment-bubble-active-accent: #c2381b;
+  --comment-bubble-active-shadow:
+    inset 4px 0 0 #c2381b, 0 0 0 0.5px #c2381b, 4px 4px 0 rgba(194, 56, 27, 0.22);
+  --comment-stem-color: rgba(154, 110, 26, 0.72);
+  --comment-stem-active-color: #c2381b;
+  --comment-active-time-color: #c2381b;
 }
 
-:root[data-theme$='-dark'],
-:root[data-theme='dark'] {
-  --comment-highlight-bg: rgba(235, 146, 112, 0.14);
-  --comment-highlight-border: rgba(238, 118, 78, 0.72);
-  --comment-highlight-active-bg: rgba(235, 138, 102, 0.28);
+/* Galera Dark — muted editorial gold notes vs. bright vermillion active mark */
+:root[data-theme='dark'],
+:root[data-theme='puro-dark'],
+:root[data-theme='galera-dark'] {
+  --comment-highlight-bg: rgba(208, 174, 96, 0.13);
+  --comment-highlight-border: rgba(208, 174, 96, 0.52);
+  --comment-highlight-dim-bg: rgba(208, 174, 96, 0.055);
+  --comment-highlight-dim-border: rgba(208, 174, 96, 0.24);
+  --comment-highlight-hover-bg: rgba(208, 174, 96, 0.24);
+  --comment-highlight-hover-border: rgba(220, 188, 110, 0.9);
+  --comment-highlight-active-bg: rgba(238, 99, 66, 0.3);
   --comment-highlight-active-border: #ee6342;
+  --comment-highlight-active-text: inherit;
+  --comment-highlight-active-ring: inset 0 1px 0 rgba(238, 99, 66, 0.38);
+  --comment-highlight-radius: 2px;
+
+  --comment-bubble-bg: var(--bg-card);
+  --comment-bubble-inactive-bg: #181b16;
+  --comment-bubble-border: var(--border-subtle);
+  --comment-bubble-inactive-border: #252822;
+  --comment-bubble-shadow: inset 2px 0 0 rgba(208, 174, 96, 0.38);
+  --comment-bubble-hover-border: rgba(208, 174, 96, 0.68);
+  --comment-bubble-hover-shadow: inset 2px 0 0 rgba(208, 174, 96, 0.72), var(--shadow-md);
+  --comment-bubble-inactive-content-opacity: 0.58;
+  --comment-bubble-active-bg: #2d201b;
+  --comment-bubble-active-border: #ee6342;
+  --comment-bubble-active-accent: #ee6342;
+  --comment-bubble-active-shadow:
+    inset 4px 0 0 #ee6342, 0 0 0 0.5px rgba(238, 99, 66, 0.55), 4px 4px 0 rgba(0, 0, 0, 0.55);
+  --comment-stem-color: rgba(208, 174, 96, 0.68);
+  --comment-stem-active-color: #ee6342;
+  --comment-active-time-color: #ff8162;
 }
 
+/* Blanco y negro Light — whisper graphite notes vs. inverted pure ink active mark */
 :root[data-theme='mono-light'] {
-  --comment-highlight-bg: rgba(220, 136, 100, 0.16);
-  --comment-highlight-border: rgba(186, 86, 52, 0.7);
-  --comment-highlight-active-bg: rgba(220, 126, 88, 0.29);
-  --comment-highlight-active-border: rgba(168, 64, 34, 0.95);
+  --comment-highlight-bg: rgba(23, 23, 23, 0.055);
+  --comment-highlight-border: rgba(23, 23, 23, 0.38);
+  --comment-highlight-dim-bg: rgba(23, 23, 23, 0.025);
+  --comment-highlight-dim-border: rgba(23, 23, 23, 0.18);
+  --comment-highlight-hover-bg: rgba(23, 23, 23, 0.13);
+  --comment-highlight-hover-border: rgba(23, 23, 23, 0.74);
+  --comment-highlight-active-bg: #171717;
+  --comment-highlight-active-border: #171717;
+  --comment-highlight-active-text: #ffffff;
+  --comment-highlight-active-ring: none;
+  --comment-highlight-radius: 4px;
+
+  --comment-bubble-bg: var(--bg-surface);
+  --comment-bubble-inactive-bg: #f6f6f6;
+  --comment-bubble-border: var(--border-subtle);
+  --comment-bubble-inactive-border: #ececec;
+  --comment-bubble-shadow: none;
+  --comment-bubble-hover-border: #737373;
+  --comment-bubble-hover-shadow: 0 4px 14px rgb(0 0 0 / 8%);
+  --comment-bubble-inactive-content-opacity: 0.52;
+  --comment-bubble-active-bg: #ffffff;
+  --comment-bubble-active-border: #171717;
+  --comment-bubble-active-accent: #171717;
+  --comment-bubble-active-shadow:
+    0 0 0 1px #171717, 0 12px 30px rgb(0 0 0 / 16%), 0 2px 8px rgb(0 0 0 / 8%);
+  --comment-stem-color: #8c8c8c;
+  --comment-stem-active-color: #171717;
+  --comment-active-time-color: #171717;
 }
 
+/* Blanco y negro Dark — subtle mist notes vs. inverted pure paper active mark */
 :root[data-theme='mono-dark'] {
-  --comment-highlight-bg: rgba(235, 148, 114, 0.15);
-  --comment-highlight-border: rgba(238, 136, 98, 0.7);
-  --comment-highlight-active-bg: rgba(235, 140, 104, 0.28);
-  --comment-highlight-active-border: rgba(244, 158, 124, 0.95);
+  --comment-highlight-bg: rgba(255, 255, 255, 0.065);
+  --comment-highlight-border: rgba(255, 255, 255, 0.34);
+  --comment-highlight-dim-bg: rgba(255, 255, 255, 0.03);
+  --comment-highlight-dim-border: rgba(255, 255, 255, 0.16);
+  --comment-highlight-hover-bg: rgba(255, 255, 255, 0.15);
+  --comment-highlight-hover-border: rgba(255, 255, 255, 0.74);
+  --comment-highlight-active-bg: #f5f5f5;
+  --comment-highlight-active-border: #f5f5f5;
+  --comment-highlight-active-text: #101010;
+  --comment-highlight-active-ring: none;
+  --comment-highlight-radius: 4px;
+
+  --comment-bubble-bg: #161616;
+  --comment-bubble-inactive-bg: #141414;
+  --comment-bubble-border: #2c2c2c;
+  --comment-bubble-inactive-border: #232323;
+  --comment-bubble-shadow: none;
+  --comment-bubble-hover-border: #8a8a8a;
+  --comment-bubble-hover-shadow: 0 4px 16px rgb(0 0 0 / 36%);
+  --comment-bubble-inactive-content-opacity: 0.55;
+  --comment-bubble-active-bg: #242424;
+  --comment-bubble-active-border: #f5f5f5;
+  --comment-bubble-active-accent: #f5f5f5;
+  --comment-bubble-active-shadow:
+    0 0 0 1px #f5f5f5, 0 12px 32px rgb(0 0 0 / 62%), 0 0 0 4px rgb(255 255 255 / 7%);
+  --comment-stem-color: #777777;
+  --comment-stem-active-color: #f5f5f5;
+  --comment-active-time-color: #f5f5f5;
 }
 
+/* Beige Light — archival olive notes vs. raised parchment & rust active card */
 :root[data-theme='beige-light'] {
-  --comment-highlight-bg: rgba(210, 116, 78, 0.17);
-  --comment-highlight-border: rgba(168, 72, 38, 0.74);
-  --comment-highlight-active-bg: rgba(210, 108, 68, 0.31);
-  --comment-highlight-active-border: rgba(154, 52, 22, 0.96);
+  --comment-highlight-bg: rgba(83, 96, 68, 0.14);
+  --comment-highlight-border: rgba(83, 96, 68, 0.62);
+  --comment-highlight-dim-bg: rgba(83, 96, 68, 0.06);
+  --comment-highlight-dim-border: rgba(83, 96, 68, 0.28);
+  --comment-highlight-hover-bg: rgba(83, 96, 68, 0.24);
+  --comment-highlight-hover-border: rgba(83, 96, 68, 0.92);
+  --comment-highlight-active-bg: rgba(155, 69, 52, 0.28);
+  --comment-highlight-active-border: #9b4534;
+  --comment-highlight-active-text: inherit;
+  --comment-highlight-active-ring: inset 0 1px 0 rgba(155, 69, 52, 0.36);
+  --comment-highlight-radius: 0px;
+
+  --comment-bubble-bg: var(--bg-input);
+  --comment-bubble-inactive-bg: #ddcea8;
+  --comment-bubble-border: var(--border-medium);
+  --comment-bubble-inactive-border: #a5936e;
+  --comment-bubble-shadow: var(--shadow-sm);
+  --comment-bubble-hover-border: var(--rule-strong);
+  --comment-bubble-hover-shadow: 3px 3px 0 var(--shadow-ink);
+  --comment-bubble-inactive-content-opacity: 0.58;
+  --comment-bubble-active-bg: var(--bg-surface);
+  --comment-bubble-active-border: var(--rule-strong);
+  --comment-bubble-active-accent: #9b4534;
+  --comment-bubble-active-shadow:
+    inset 0 4px 0 #9b4534, 0 0 0 1px var(--rule-strong), 6px 6px 0 var(--shadow-ink);
+  --comment-stem-color: var(--border-medium);
+  --comment-stem-active-color: #9b4534;
+  --comment-active-time-color: var(--chrome-text);
 }
 
+/* Beige Dark — archival sage notes vs. raised umber & terracotta active card */
 :root[data-theme='beige-dark'] {
-  --comment-highlight-bg: rgba(232, 142, 104, 0.16);
-  --comment-highlight-border: rgba(236, 134, 92, 0.72);
-  --comment-highlight-active-bg: rgba(232, 134, 94, 0.3);
-  --comment-highlight-active-border: rgba(244, 160, 122, 0.95);
+  --comment-highlight-bg: rgba(178, 189, 150, 0.13);
+  --comment-highlight-border: rgba(178, 189, 150, 0.54);
+  --comment-highlight-dim-bg: rgba(178, 189, 150, 0.055);
+  --comment-highlight-dim-border: rgba(178, 189, 150, 0.24);
+  --comment-highlight-hover-bg: rgba(178, 189, 150, 0.24);
+  --comment-highlight-hover-border: rgba(178, 189, 150, 0.9);
+  --comment-highlight-active-bg: rgba(227, 155, 129, 0.3);
+  --comment-highlight-active-border: #e39b81;
+  --comment-highlight-active-text: inherit;
+  --comment-highlight-active-ring: inset 0 1px 0 rgba(227, 155, 129, 0.4);
+  --comment-highlight-radius: 0px;
+
+  --comment-bubble-bg: #28231c;
+  --comment-bubble-inactive-bg: #221e18;
+  --comment-bubble-border: var(--border-subtle);
+  --comment-bubble-inactive-border: #4a3f30;
+  --comment-bubble-shadow: var(--shadow-sm);
+  --comment-bubble-hover-border: var(--border-medium);
+  --comment-bubble-hover-shadow: 3px 3px 0 var(--shadow-ink);
+  --comment-bubble-inactive-content-opacity: 0.58;
+  --comment-bubble-active-bg: #3b3227;
+  --comment-bubble-active-border: var(--rule-strong);
+  --comment-bubble-active-accent: #e39b81;
+  --comment-bubble-active-shadow:
+    inset 0 4px 0 #e39b81, 0 0 0 1px var(--rule-strong), 6px 6px 0 var(--shadow-ink);
+  --comment-stem-color: var(--border-medium);
+  --comment-stem-active-color: #e39b81;
+  --comment-active-time-color: var(--chrome-text);
 }
 
 .comment-anchor-mark {
   background-color: var(--comment-highlight-bg);
-  border-bottom: 2px solid var(--comment-highlight-border);
+  border-bottom: 1.5px dashed var(--comment-highlight-border);
   padding-bottom: 1px;
-  border-radius: 2px;
+  border-radius: var(--comment-highlight-radius);
   cursor: text;
   transition:
     background-color 0.15s ease,
-    border-color 0.15s ease;
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.editor-page-stage:has(.comment-anchor-mark.is-active)
+  .comment-anchor-mark:not(.is-active):not(.is-hovered) {
+  background-color: var(--comment-highlight-dim-bg);
+  border-bottom-color: var(--comment-highlight-dim-border);
 }
 
 .editor-canvas.is-hovering-comment-underline .comment-anchor-mark {
   cursor: pointer;
 }
 
-.comment-anchor-mark.is-hovered {
-  background-color: var(--comment-highlight-active-bg);
-  border-bottom-color: var(--comment-highlight-active-border);
+.comment-anchor-mark.is-hovered:not(.is-active) {
+  background-color: var(--comment-highlight-hover-bg);
+  border-bottom: 1.5px solid var(--comment-highlight-hover-border);
 }
 
+.fountain-editor-content .comment-anchor-mark.is-active,
 .comment-anchor-mark.is-active {
   background-color: var(--comment-highlight-active-bg);
+  color: var(--comment-highlight-active-text);
   border-bottom: 2.5px solid var(--comment-highlight-active-border);
+  box-shadow: var(--comment-highlight-active-ring);
+}
+
+:root[data-theme^='mono-'] .fountain-editor-content .comment-anchor-mark.is-active {
+  padding-block: 1px;
+  border-bottom-width: 1.5px;
+  box-shadow:
+    3px 0 0 var(--comment-highlight-active-bg),
+    -3px 0 0 var(--comment-highlight-active-bg);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+:root[data-theme^='mono-'] .fountain-editor-content .comment-anchor-mark.is-active * {
+  color: inherit;
 }
 
 /* Floating comment bubble */
@@ -129,11 +308,11 @@
   position: absolute;
   left: 0;
   right: 0;
-  background-color: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background-color: var(--comment-bubble-bg);
+  border: 1px solid var(--comment-bubble-border);
   border-radius: var(--radius);
   padding: 0.7rem 0.78rem;
-  box-shadow: var(--shadow-sm);
+  box-shadow: var(--comment-bubble-shadow);
   cursor: pointer;
   pointer-events: auto;
   transition:
@@ -146,50 +325,63 @@
 }
 
 .comments-margin-rail.has-active-comment .comment-bubble:not(.is-active) {
-  opacity: 0.68;
+  background-color: var(--comment-bubble-inactive-bg);
+  border-color: var(--comment-bubble-inactive-border);
+  box-shadow: none;
+}
+
+.comments-margin-rail.has-active-comment .comment-bubble:not(.is-active) .comment-items-list {
+  opacity: var(--comment-bubble-inactive-content-opacity);
+  transition: opacity 0.15s ease;
 }
 
 .comments-margin-rail.has-active-comment .comment-bubble:not(.is-active):hover {
-  opacity: 0.96;
+  background-color: var(--comment-bubble-bg);
+  border-color: var(--comment-bubble-hover-border);
+  box-shadow: var(--comment-bubble-hover-shadow);
+}
+
+.comments-margin-rail.has-active-comment .comment-bubble:not(.is-active):hover .comment-items-list {
+  opacity: 0.94;
 }
 
 .comment-bubble:hover {
-  border-color: var(--border-medium);
-  box-shadow: var(--shadow-md);
+  border-color: var(--comment-bubble-hover-border);
+  box-shadow: var(--comment-bubble-hover-shadow);
 }
 
 .comment-bubble.is-active {
   z-index: 4;
   opacity: 1;
-  background-color: color-mix(in srgb, var(--comment-highlight-bg) 45%, var(--bg-card));
-  border-color: var(--comment-highlight-active-border);
-  box-shadow:
-    inset 3px 0 0 var(--comment-highlight-active-border),
-    var(--shadow-md);
-  transform: translateX(-6px);
+  background-color: var(--comment-bubble-active-bg);
+  border-color: var(--comment-bubble-active-border);
+  box-shadow: var(--comment-bubble-active-shadow);
+  transform: translateX(-7px);
 }
 
 .comment-bubble-stem {
   position: absolute;
-  left: -20px;
-  width: 20px;
+  left: -16px;
+  width: 16px;
   height: 1.5px;
-  background-color: var(--border-medium);
+  background-color: var(--comment-stem-color);
   opacity: 0;
   pointer-events: none;
   transition:
     opacity 0.15s ease,
-    background-color 0.15s ease;
+    background-color 0.15s ease,
+    height 0.15s ease;
 }
 
 .comment-bubble-stem::before {
   content: '';
   position: absolute;
-  left: -2.5px;
-  top: -2px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+  left: -3px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 0;
+  transform: translateY(-50%) rotate(45deg);
   background-color: inherit;
 }
 
@@ -199,7 +391,8 @@
 }
 
 .comment-bubble.is-active .comment-bubble-stem {
-  background-color: var(--accent-primary);
+  height: 2px;
+  background-color: var(--comment-stem-active-color);
 }
 
 .comment-draft-quote {
@@ -213,7 +406,7 @@
   -webkit-box-orient: vertical;
   margin-bottom: 0.5rem;
   padding-left: 0.45rem;
-  border-left: 2px solid var(--accent-primary);
+  border-left: 2px solid var(--comment-bubble-active-accent);
 }
 
 .comment-items-list {
@@ -236,9 +429,29 @@
 }
 
 .comment-entry-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-family: var(--font-mono);
   font-size: 0.66rem;
   color: var(--text-muted);
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.comment-bubble.is-active .comment-entry:first-child .comment-entry-time {
+  color: var(--comment-active-time-color);
+  font-weight: 600;
+}
+
+.comment-bubble.is-active .comment-entry:first-child .comment-entry-time::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  flex-shrink: 0;
+  background-color: var(--comment-bubble-active-accent);
+  transform: rotate(45deg);
 }
 
 .comment-entry-actions {
@@ -571,7 +784,32 @@
 
 /* Theme refinements */
 
-:root[data-theme^='beige-'] .comment-bubble,
+:root[data-theme^='mono-'] .comment-bubble {
+  border-radius: var(--radius);
+}
+
+:root[data-theme^='mono-'] .comment-bubble-stem::before {
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+:root[data-theme^='mono-']
+  .comment-bubble.is-active
+  .comment-entry:first-child
+  .comment-entry-time {
+  background-color: var(--accent-primary);
+  color: var(--accent-text);
+  padding: 0.08rem 0.45rem;
+  border-radius: 999px;
+}
+
+:root[data-theme^='mono-']
+  .comment-bubble.is-active
+  .comment-entry:first-child
+  .comment-entry-time::before {
+  display: none;
+}
+
 :root[data-theme^='beige-'] .editor-context-menu,
 :root[data-theme^='beige-'] .comment-selection-bubble {
   border-color: var(--rule-strong);
@@ -582,6 +820,41 @@
   border-radius: 0;
 }
 
-:root[data-theme^='mono-'] .comment-bubble {
-  border-radius: var(--radius);
+:root[data-theme^='beige-'] .comment-selection-bubble:hover {
+  background-color: var(--chrome-bar);
+  border-color: var(--rule-strong);
+  color: var(--chrome-text);
+}
+
+:root[data-theme^='beige-'] .comment-bubble.is-active {
+  padding-top: 0.85rem;
+}
+
+:root[data-theme^='beige-'] .comment-bubble-stem::before {
+  border-radius: 0;
+  transform: translateY(-50%);
+}
+
+:root[data-theme^='beige-']
+  .comment-bubble.is-active
+  .comment-entry:first-child
+  .comment-entry-time {
+  background-color: var(--chrome-bar);
+  color: var(--chrome-text);
+  padding: 0.08rem 0.42rem;
+  letter-spacing: 0.03em;
+}
+
+:root[data-theme^='beige-']
+  .comment-bubble.is-active
+  .comment-entry:first-child
+  .comment-entry-time::before {
+  display: none;
+}
+
+:root[data-theme^='beige-'] .comment-bubble.is-active .comment-add-another-btn:hover {
+  background-color: var(--chrome-bar);
+  border-style: solid;
+  border-color: var(--rule-strong);
+  color: var(--chrome-text);
 }

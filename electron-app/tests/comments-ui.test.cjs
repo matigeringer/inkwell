@@ -668,3 +668,103 @@ test('comment bubble aligns vertically with the commented text without rail marg
   assert.ok(bubble)
   assert.equal(bubble.style.top, '110px')
 })
+
+test('selected comment sets aria-current and every theme defines distinct inactive vs active comment palettes', async () => {
+  const fs = require('node:fs')
+  const path = require('node:path')
+  const css = fs.readFileSync(
+    path.join(__dirname, '../src/renderer/src/assets/comments.css'),
+    'utf8'
+  )
+
+  const themeSelectors = [
+    ":root[data-theme='puro-light']",
+    ":root[data-theme='puro-dark']",
+    ":root[data-theme='mono-light']",
+    ":root[data-theme='mono-dark']",
+    ":root[data-theme='beige-light']",
+    ":root[data-theme='beige-dark']"
+  ]
+  const requiredTokens = [
+    '--comment-highlight-bg',
+    '--comment-highlight-hover-bg',
+    '--comment-highlight-active-bg',
+    '--comment-highlight-active-border',
+    '--comment-bubble-bg',
+    '--comment-bubble-inactive-bg',
+    '--comment-bubble-active-bg',
+    '--comment-bubble-active-border',
+    '--comment-bubble-active-shadow'
+  ]
+
+  for (const selector of themeSelectors) {
+    const idx = css.indexOf(selector)
+    assert.notEqual(idx, -1, `Expected theme selector ${selector} in comments.css`)
+    const open = css.indexOf('{', idx)
+    const close = css.indexOf('}', open)
+    const block = css.slice(open, close + 1)
+    for (const token of requiredTokens) {
+      assert.ok(block.includes(`${token}:`), `Expected ${token} inside ${selector} block`)
+    }
+    const bgMatch = block.match(/--comment-highlight-bg:\s*([^;]+);/)
+    const activeBgMatch = block.match(/--comment-highlight-active-bg:\s*([^;]+);/)
+    assert.notEqual(
+      bgMatch?.[1]?.trim(),
+      activeBgMatch?.[1]?.trim(),
+      `Active and inactive highlight colors must differ in ${selector}`
+    )
+  }
+
+  // Ensure Beige theme refinement does not override active bubble border/shadow with higher specificity.
+  assert.equal(
+    /:root\[data-theme\^='beige-'\]\s+\.comment-bubble(?!\.is-active)\s*[,{]/.test(css),
+    false,
+    'Beige theme must not clobber .comment-bubble.is-active border/shadow with a generic .comment-bubble rule'
+  )
+
+  await mountEditor([
+    {
+      id: 't1',
+      anchor: {
+        quote: 'Primera',
+        prefix: '',
+        suffix: ' frase',
+        fromOffset: 0,
+        toOffset: 7
+      },
+      comments: [{ id: 'c1', body: 'Primero', createdAt: 100, updatedAt: 100 }],
+      createdAt: 100
+    },
+    {
+      id: 't2',
+      anchor: {
+        quote: 'frase',
+        prefix: 'Primera ',
+        suffix: ' para',
+        fromOffset: 8,
+        toOffset: 13
+      },
+      comments: [{ id: 'c2', body: 'Segundo', createdAt: 200, updatedAt: 200 }],
+      createdAt: 200
+    }
+  ])
+
+  const bubbles = Array.from(document.querySelectorAll('.comment-bubble'))
+  assert.equal(bubbles.length, 2)
+  assert.equal(bubbles[0].getAttribute('aria-current'), null)
+  assert.equal(bubbles[1].getAttribute('aria-current'), null)
+
+  await act(async () => {
+    bubbles[1].click()
+  })
+  await settle(20)
+
+  const updated = Array.from(document.querySelectorAll('.comment-bubble'))
+  assert.equal(updated[0].classList.contains('is-active'), false)
+  assert.equal(updated[0].getAttribute('aria-current'), null)
+  assert.equal(updated[1].classList.contains('is-active'), true)
+  assert.equal(updated[1].getAttribute('aria-current'), 'true')
+  assert.ok(document.querySelector('.comments-margin-rail.has-active-comment'))
+  assert.ok(document.querySelector('[data-comment-id="t2"].comment-anchor-mark.is-active'))
+  assert.equal(document.querySelector('[data-comment-id="t1"].comment-anchor-mark.is-active'), null)
+})

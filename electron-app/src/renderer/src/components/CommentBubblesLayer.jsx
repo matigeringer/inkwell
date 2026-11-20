@@ -294,6 +294,7 @@ export default function CommentBubblesLayer({
             key={thread.id}
             ref={(node) => registerCardRef(thread.id, node)}
             className={`comment-bubble ${isActive ? 'is-active' : ''}`}
+            aria-current={isActive ? 'true' : undefined}
             style={{ top: `${top}px` }}
             onMouseEnter={() => onHoverThread?.(thread.id)}
             onMouseLeave={() => onHoverThread?.(null)}
